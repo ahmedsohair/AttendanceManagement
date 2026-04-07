@@ -39,7 +39,10 @@ module.exports = {
       package: "com.ahmedsohair.attendancemanagement"
     },
     ios: {
-      bundleIdentifier: "com.ahmedsohair.attendancemanagement"
+      bundleIdentifier: "com.ahmedsohair.attendancemanagement",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false
+      }
     },
     extra: {
       apiBaseUrl,
