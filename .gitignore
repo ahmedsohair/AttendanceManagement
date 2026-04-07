@@ -14,3 +14,6 @@ apps/admin/data/uploads
 apps/mobile/android/.gradle
 apps/mobile/android/app/build
 apps/mobile/android/build
+apps/mobile/android/.cxx
+apps/mobile/android/app/.cxx
+apps/mobile/android/app/.externalNativeBuild

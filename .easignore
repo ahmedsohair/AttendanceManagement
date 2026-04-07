@@ -1,0 +1,10 @@
+*
+!.easignore
+!package.json
+!package-lock.json
+!apps/
+!apps/mobile/
+!apps/mobile/**
+!packages/
+!packages/shared/
+!packages/shared/**

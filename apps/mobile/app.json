@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "Attendance Management System",
-    "slug": "algo-attendance",
+    "slug": "attendance-management-system",
+    "owner": "ahmedsohair",
     "scheme": "attendancemanagement",
     "version": "1.0.0",
     "orientation": "portrait",
