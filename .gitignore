@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+build
+.expo
+.expo-shared
+coverage
+*.log
+.env
+.env.local
+apps/admin/data/store.json
+apps/admin/data/uploads

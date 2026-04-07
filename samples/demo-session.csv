@@ -1,0 +1,7 @@
+student_id,student_name,room,zone,cohort,course_code,program,seat
+4024770,Ahmed Sofi,PG-201,A,Postgrad,ALGO101,Computer Science,01
+4024771,Sara Khan,PG-201,A,Postgrad,ALGO101,Computer Science,02
+4024772,John Chen,PG-201,B,Postgrad,ALGO101,Computer Science,03
+4024773,Mina Ali,PG-202,A,Postgrad,ALGO101,Computer Science,01
+3024774,David Singh,UG-101,A,Undergrad,ALGO101,Information Technology,01
+3024775,Emily Tran,UG-101,B,Undergrad,ALGO101,Information Technology,02

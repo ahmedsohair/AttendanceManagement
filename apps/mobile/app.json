@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Algo Attendance",
+    "slug": "algo-attendance",
+    "scheme": "algoattendance",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "Allow Algo Attendance to access the camera for live student ID scanning.",
+          "enableFrameProcessors": true
+        }
+      ]
+    ],
+    "android": {
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.algoattendance"
+    }
+  }
+}

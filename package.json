@@ -1,0 +1,20 @@
+{
+  "name": "algo-attendance",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.1"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:admin": "npm --workspace @algo-attendance/admin run dev",
+    "dev:mobile": "npm --workspace @algo-attendance/mobile run start",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "verify:supabase": "node scripts/verify-supabase.mjs",
+    "create:admin": "node --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/create-admin.mjs"
+  }
+}
