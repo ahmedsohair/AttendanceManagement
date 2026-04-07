@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 function getSupabaseSessionConfig() {
@@ -27,14 +28,10 @@ export async function GET(request: NextRequest) {
   try {
     const { url, publishableKey } = getSupabaseSessionConfig();
     const code = request.nextUrl.searchParams.get("code");
+    const tokenHash = request.nextUrl.searchParams.get("token_hash");
+    const type = request.nextUrl.searchParams.get("type") as EmailOtpType | null;
     const nextPath = getSafeNextPath(request.nextUrl.searchParams.get("next"));
     const response = NextResponse.redirect(new URL(nextPath, request.url));
-
-    if (!code) {
-      return NextResponse.redirect(
-        new URL("/reset-password?error=Missing+recovery+code.", request.url)
-      );
-    }
 
     const supabase = createServerClient(url, publishableKey, {
       cookies: {
@@ -49,17 +46,41 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      return NextResponse.redirect(
-        new URL(
-          `/reset-password?error=${encodeURIComponent(error.message)}`,
-          request.url
-        )
-      );
+    if (code) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) {
+        return NextResponse.redirect(
+          new URL(
+            `/reset-password?error=${encodeURIComponent(error.message)}`,
+            request.url
+          )
+        );
+      }
+
+      return response;
     }
 
-    return response;
+    if (tokenHash && type) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type
+      });
+
+      if (error) {
+        return NextResponse.redirect(
+          new URL(
+            `/reset-password?error=${encodeURIComponent(error.message)}`,
+            request.url
+          )
+        );
+      }
+
+      return response;
+    }
+
+    return NextResponse.redirect(
+      new URL("/reset-password?error=Missing+recovery+code.", request.url)
+    );
   } catch (error) {
     return NextResponse.redirect(
       new URL(
