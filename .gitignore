@@ -4,9 +4,13 @@ dist
 build
 .expo
 .expo-shared
+.expo-export*
 coverage
 *.log
 .env
 .env.local
 apps/admin/data/store.json
 apps/admin/data/uploads
+apps/mobile/android/.gradle
+apps/mobile/android/app/build
+apps/mobile/android/build
