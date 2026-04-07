@@ -86,6 +86,7 @@ Current production-track scope:
 - Supabase-backed sessions, rooms, allocations, attendance, incidents, reports, and invigilator assignments
 - Web admin sign-in via Supabase Auth session cookies
 - Mobile invigilator sign-in via Supabase email/password auth and bearer tokens
+- Password reset for admin and invigilator accounts via Supabase recovery emails
 - Protected admin and mobile API routes that derive the signed-in user server-side
 
 To create the first administrator account:
@@ -99,8 +100,50 @@ For Expo mobile auth, also set:
 - `EXPO_PUBLIC_SUPABASE_URL`
 - `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
+For password reset emails to work in production:
+
+- add `https://attendance-management-admin.vercel.app/auth/callback` to your Supabase redirect URLs
+- add your local callback URL if you want recovery in development, for example `http://localhost:3000/auth/callback`
+
+## Installable Mobile Builds
+
+The Expo app now includes EAS build profiles in [apps/mobile/eas.json](C:\dev\AlgoAttendance\apps\mobile\eas.json).
+
+Recommended release flow:
+
+1. Log in to Expo:
+
+```powershell
+npx eas-cli@latest login
+```
+
+2. Configure the project once:
+
+```powershell
+npm.cmd run build:mobile:configure
+```
+
+3. Create an installable Android APK for internal testing:
+
+```powershell
+npm.cmd run build:mobile:android:preview
+```
+
+4. Create production store builds:
+
+```powershell
+npm.cmd run build:mobile:android:production
+npm.cmd run build:mobile:ios:production
+```
+
+Notes:
+
+- Android preview builds use an installable APK.
+- iOS production builds require an Apple Developer account.
+- Internal iOS installs require Apple device registration or TestFlight distribution, depending on your chosen profile.
+
 Still recommended before a full public rollout:
 
 - Add database migrations/versioning workflow
-- Add deployment config for Next.js hosting and mobile release builds
-- Add password reset and staff account lifecycle tooling
+- Add password reset branding/templates in Supabase Auth emails
+- Add staff account lifecycle tooling beyond password recovery

@@ -20,6 +20,7 @@ import {
   login,
   lookupAttendance,
   markAttendance,
+  requestPasswordReset,
   restoreCurrentUser,
   type RoomWithSession
 } from "./src/api/client";
@@ -81,6 +82,32 @@ function LoginScreen({
     loadApiBaseUrl().then(setApiBaseUrl).catch(() => undefined);
   }, []);
 
+  async function handlePasswordReset() {
+    if (!email.trim()) {
+      Alert.alert(
+        "Enter your email",
+        "Type the email linked to your invigilator account, then request a reset."
+      );
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await requestPasswordReset(email);
+      Alert.alert(
+        "Reset email sent",
+        "Check your inbox for the password reset link. Open it in a browser to choose a new password."
+      );
+    } catch (error) {
+      Alert.alert(
+        "Reset failed",
+        error instanceof Error ? error.message : "Unable to send reset email."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit() {
     setBusy(true);
     try {
@@ -127,10 +154,17 @@ function LoginScreen({
         secureTextEntry
         placeholderTextColor="#8f8f8f"
       />
+      <View style={styles.inlineButtons}>
+        <Pressable onPress={handlePasswordReset} disabled={busy}>
+          <Text style={styles.linkLabel}>Forgot password?</Text>
+        </Pressable>
+      </View>
       <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
         <Text style={styles.primaryLabel}>{busy ? "Signing in..." : "Sign In"}</Text>
       </Pressable>
-      <Text style={styles.copy}>The backend URL is managed by the app configuration.</Text>
+      <Text style={styles.copy}>
+        Password resets open in a browser and return to the hosted admin system.
+      </Text>
     </View>
   );
 }
@@ -792,6 +826,10 @@ const styles = StyleSheet.create({
     color: "#5f6368",
     marginTop: 4,
     lineHeight: 20
+  },
+  linkLabel: {
+    color: "#b4001f",
+    fontWeight: "700"
   },
   input: {
     backgroundColor: "#ffffff",

@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function AdminLoginForm({
   initialNextPath,
-  unauthorized
+  unauthorized,
+  reset
 }: {
   initialNextPath: string;
   unauthorized: boolean;
+  reset?: string;
 }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -88,6 +91,24 @@ export function AdminLoginForm({
           {error}
         </p>
       ) : null}
+
+      {reset === "requested" ? (
+        <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
+          Password reset email sent. Check your inbox for the recovery link.
+        </p>
+      ) : null}
+
+      {reset === "updated" ? (
+        <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
+          Password updated. Sign in with your new password.
+        </p>
+      ) : null}
+
+      <div className="inline-actions" style={{ marginTop: 12 }}>
+        <Link href="/reset-password" className="subtle" style={{ color: "var(--accent-dark)" }}>
+          Forgot password?
+        </Link>
+      </div>
     </div>
   );
 }

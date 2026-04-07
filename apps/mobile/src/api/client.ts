@@ -9,6 +9,7 @@ import {
   getAccessToken,
   hasActiveSession,
   isSupabaseAuthConfigured,
+  requestPasswordReset as requestSupabasePasswordReset,
   signInInvigilator,
   signOutInvigilator
 } from "../lib/supabase";
@@ -84,6 +85,16 @@ export async function login(email: string, password: string) {
   });
   const payload = await readJson<{ user: User }>(response);
   return payload.user;
+}
+
+export async function requestPasswordReset(email: string) {
+  if (!isSupabaseAuthConfigured()) {
+    throw new Error("Password reset requires Supabase Auth to be enabled.");
+  }
+
+  const apiBase = await getApiBase();
+  const redirectTo = `${apiBase}/auth/callback?next=/update-password`;
+  await requestSupabasePasswordReset(email, redirectTo);
 }
 
 export async function loadCurrentUser() {

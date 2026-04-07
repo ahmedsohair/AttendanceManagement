@@ -3,7 +3,7 @@ import { AdminLoginForm } from "@/components/admin-login-form";
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; reset?: string }>;
 }) {
   const params = await searchParams;
 
@@ -11,6 +11,7 @@ export default async function LoginPage({
     <AdminLoginForm
       initialNextPath={params.next || "/"}
       unauthorized={params.error === "unauthorized"}
+      reset={params.reset}
     />
   );
 }

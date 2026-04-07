@@ -15,9 +15,9 @@ const supabasePublishableKey =
 
 module.exports = {
   expo: {
-    name: "Algo Attendance",
+    name: "Attendance Management System",
     slug: "algo-attendance",
-    scheme: "algoattendance",
+    scheme: "attendancemanagement",
     version: "1.0.0",
     orientation: "portrait",
     platforms: ["ios", "android"],
@@ -35,7 +35,10 @@ module.exports = {
     ],
     android: {
       permissions: ["android.permission.CAMERA"],
-      package: "com.anonymous.algoattendance"
+      package: "com.ahmedsohair.attendancemanagement"
+    },
+    ios: {
+      bundleIdentifier: "com.ahmedsohair.attendancemanagement"
     },
     extra: {
       apiBaseUrl,

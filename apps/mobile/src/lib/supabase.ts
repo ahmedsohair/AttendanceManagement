@@ -64,6 +64,18 @@ export async function signInInvigilator(email: string, password: string) {
   }
 }
 
+export async function requestPasswordReset(email: string, redirectTo: string) {
+  const supabase = getMobileSupabaseClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim().toLowerCase(),
+    { redirectTo }
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function signOutInvigilator() {
   if (!isSupabaseAuthConfigured()) {
     return;
