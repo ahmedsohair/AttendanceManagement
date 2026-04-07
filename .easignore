@@ -1,0 +1,8 @@
+.git
+.eas-inspect
+.env.local
+apps/admin
+samples
+scripts
+supabase
+README.md
