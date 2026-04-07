@@ -21,7 +21,6 @@ import {
   lookupAttendance,
   markAttendance,
   restoreCurrentUser,
-  saveApiBaseUrl,
   type RoomWithSession
 } from "./src/api/client";
 import { useOfflineQueue } from "./src/hooks/useOfflineQueue";
@@ -75,7 +74,7 @@ function LoginScreen({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [apiBaseUrl, setApiBaseUrl] = useState("http://localhost:3000");
+  const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -85,14 +84,13 @@ function LoginScreen({
   async function submit() {
     setBusy(true);
     try {
-      await saveApiBaseUrl(apiBaseUrl);
       const user = await login(email, password);
       onLoggedIn(user);
     } catch (error) {
       Alert.alert(
         "Login failed",
         error instanceof Error
-          ? `${error.message}\n\nUse your computer IP address here, for example http://192.168.1.10:3000`
+          ? error.message
           : "Try again."
       );
     } finally {
@@ -108,15 +106,10 @@ function LoginScreen({
         Use the invigilator credentials created by your administrator to load your
         published exam rooms.
       </Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        autoCorrect={false}
-        value={apiBaseUrl}
-        onChangeText={setApiBaseUrl}
-        placeholder="Server URL"
-        placeholderTextColor="#8f8f8f"
-      />
+      <View style={styles.endpointCard}>
+        <Text style={styles.endpointLabel}>Connected backend</Text>
+        <Text style={styles.endpointValue}>{apiBaseUrl || "Loading..."}</Text>
+      </View>
       <TextInput
         style={styles.input}
         autoCapitalize="none"
@@ -137,7 +130,7 @@ function LoginScreen({
       <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
         <Text style={styles.primaryLabel}>{busy ? "Signing in..." : "Sign In"}</Text>
       </Pressable>
-      <Text style={styles.copy}>Use the backend URL of the running admin server.</Text>
+      <Text style={styles.copy}>The backend URL is managed by the app configuration.</Text>
     </View>
   );
 }
@@ -809,6 +802,27 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginTop: 12,
     color: "#111111"
+  },
+  endpointCard: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#d7d7d7",
+    backgroundColor: "#fff6f7"
+  },
+  endpointLabel: {
+    color: "#b4001f",
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: "uppercase"
+  },
+  endpointValue: {
+    color: "#111111",
+    marginTop: 6,
+    fontWeight: "600"
   },
   commentInput: {
     minHeight: 92,

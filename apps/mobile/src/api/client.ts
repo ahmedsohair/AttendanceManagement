@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import type {
   LookupResult,
@@ -14,7 +13,6 @@ import {
   signOutInvigilator
 } from "../lib/supabase";
 
-const apiBaseStorageKey = "algo-attendance-api-base-url";
 type ExpoExtra = {
   apiBaseUrl?: string;
 };
@@ -33,8 +31,7 @@ function normalizeApiBase(url: string) {
 }
 
 async function getApiBase() {
-  const stored = await AsyncStorage.getItem(apiBaseStorageKey);
-  return normalizeApiBase(stored || defaultApiBase);
+  return normalizeApiBase(defaultApiBase);
 }
 
 async function getAuthHeaders() {
@@ -66,13 +63,7 @@ export interface RoomWithSession extends Room {
 }
 
 export async function loadApiBaseUrl() {
-  return getApiBase();
-}
-
-export async function saveApiBaseUrl(url: string) {
-  const normalized = normalizeApiBase(url);
-  await AsyncStorage.setItem(apiBaseStorageKey, normalized);
-  return normalized;
+  return normalizeApiBase(defaultApiBase);
 }
 
 export async function login(email: string, password: string) {
