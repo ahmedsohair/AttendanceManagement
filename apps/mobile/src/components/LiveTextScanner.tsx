@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
+  type AppStateStatus,
   Pressable,
   StyleSheet,
   Text,
@@ -60,6 +62,8 @@ export function LiveTextScanner({
   });
   const [previewText, setPreviewText] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
+  const [appActive, setAppActive] = useState(AppState.currentState === "active");
+  const previewTextRef = useRef("");
   const lastCandidateRef = useRef<{ value: string; count: number; seenAt: number } | null>(
     null
   );
@@ -74,8 +78,21 @@ export function LiveTextScanner({
   useEffect(() => {
     lockedRef.current = false;
     lastCandidateRef.current = null;
+    previewTextRef.current = "";
     setPreviewText("");
+    setCameraReady(false);
   }, [resetSignal]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      "change",
+      (state: AppStateStatus) => {
+        setAppActive(state === "active");
+      }
+    );
+
+    return () => subscription.remove();
+  }, []);
 
   const handleRecognizedText = useRunOnJS((text: string) => {
     if (!enabled || lockedRef.current) {
@@ -83,7 +100,11 @@ export function LiveTextScanner({
     }
 
     const candidate = extractStudentIdCandidate(text);
-    setPreviewText(candidate || "");
+    const nextPreviewText = candidate || "";
+    if (previewTextRef.current !== nextPreviewText) {
+      previewTextRef.current = nextPreviewText;
+      setPreviewText(nextPreviewText);
+    }
 
     if (!candidate) {
       lastCandidateRef.current = null;
@@ -118,7 +139,7 @@ export function LiveTextScanner({
     (frame) => {
       "worklet";
 
-      runAtTargetFps(6, () => {
+      runAtTargetFps(3, () => {
         "worklet";
 
         runAsync(frame, () => {
@@ -135,6 +156,8 @@ export function LiveTextScanner({
     },
     [enabled, handleRecognizedText, textRecognition]
   );
+
+  const cameraActive = enabled && appActive;
 
   if (!hasPermission) {
     return (
@@ -166,15 +189,20 @@ export function LiveTextScanner({
   return (
     <View style={styles.overlay}>
       <Camera
+        key={`student-id-scanner-${resetSignal}`}
         style={StyleSheet.absoluteFill}
         device={device}
-        isActive
+        isActive={cameraActive}
         photo={false}
         video={false}
         audio={false}
-        frameProcessor={frameProcessor}
+        frameProcessor={cameraActive ? frameProcessor : undefined}
         pixelFormat="yuv"
         onInitialized={() => setCameraReady(true)}
+        onError={(error) => {
+          previewTextRef.current = error.message;
+          setPreviewText(error.message);
+        }}
       />
 
       <View style={styles.chrome}>
