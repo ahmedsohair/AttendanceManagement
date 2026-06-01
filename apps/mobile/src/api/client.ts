@@ -20,12 +20,13 @@ type ExpoExtra = {
 const runtimeEnv =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ||
   {};
+const hostedApiBaseUrl = "https://attendance-management-admin.vercel.app";
 const defaultApiBase =
   (((Constants.expoConfig?.extra || {}) as ExpoExtra).apiBaseUrl ||
     runtimeEnv.EXPO_PUBLIC_API_BASE_URL ||
     runtimeEnv.NEXT_PUBLIC_API_BASE_URL ||
     "").replace(/\/$/, "") ||
-  "http://localhost:3000";
+  hostedApiBaseUrl;
 
 function normalizeApiBase(url: string) {
   return url.trim().replace(/\/$/, "");

@@ -12,18 +12,20 @@ const runtimeEnv =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ||
   {};
 const extra = (Constants.expoConfig?.extra || {}) as ExpoExtra;
+const hostedSupabaseUrl = "https://mtoyhpyxqhfwhcrysqon.supabase.co";
+const hostedSupabasePublishableKey = "sb_publishable_k5pAfbNTjePhFXVEIneHuA_YyBpRK76";
 
 const supabaseUrl =
   extra.supabaseUrl ||
   runtimeEnv.EXPO_PUBLIC_SUPABASE_URL ||
   runtimeEnv.NEXT_PUBLIC_SUPABASE_URL ||
-  "";
+  hostedSupabaseUrl;
 
 const supabasePublishableKey =
   extra.supabasePublishableKey ||
   runtimeEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
   runtimeEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-  "";
+  hostedSupabasePublishableKey;
 
 let cachedClient: SupabaseClient | null = null;
 
