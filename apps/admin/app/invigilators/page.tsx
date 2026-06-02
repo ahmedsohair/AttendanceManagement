@@ -85,7 +85,7 @@ async function submitAccessCodeReset(formData: FormData) {
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "New invigilator access code generated."
-    )}&accessCode=${encodeURIComponent(accessCode)}`
+    )}&accessCode=${encodeURIComponent(accessCode)}&codeUserId=${encodeURIComponent(userId)}`
   );
 }
 
@@ -110,7 +110,12 @@ async function submitInvigilatorDelete(formData: FormData) {
 export default async function InvigilatorsPage({
   searchParams
 }: {
-  searchParams?: Promise<{ message?: string; error?: string; accessCode?: string }>;
+  searchParams?: Promise<{
+    message?: string;
+    error?: string;
+    accessCode?: string;
+    codeUserId?: string;
+  }>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
@@ -126,7 +131,7 @@ export default async function InvigilatorsPage({
         <h2 className="section-title">Add Invigilator</h2>
         {params.message ? <p className="pill ok">{params.message}</p> : null}
         {params.error ? <p className="pill warn">{params.error}</p> : null}
-        {params.accessCode ? (
+        {params.accessCode && !params.codeUserId ? (
           <div className="access-code-box">
             <div>
               <div className="kicker">Share This Code</div>
@@ -163,12 +168,31 @@ export default async function InvigilatorsPage({
                     <div className="subtle">{invigilator.email}</div>
                   </div>
                   <div className="staff-actions">
-                    <form action={submitAccessCodeReset}>
-                      <input name="userId" type="hidden" value={invigilator.id} />
-                      <button className="secondary compact-button" type="submit">
-                        Code
-                      </button>
-                    </form>
+                    <details className="inline-details">
+                      <summary className="compact-button">Code</summary>
+                      <div className="inline-popover">
+                        {params.accessCode && params.codeUserId === invigilator.id ? (
+                          <div className="access-code-box compact-code-box">
+                            <div>
+                              <div className="kicker">New Code</div>
+                              <div className="access-code-value">{params.accessCode}</div>
+                            </div>
+                            <div className="subtle">
+                              Share this now. Existing codes cannot be viewed later.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="subtle">
+                            Existing access codes are stored securely and cannot be
+                            viewed. Generate a new code if this invigilator needs access.
+                          </div>
+                        )}
+                        <form className="assignment-form" action={submitAccessCodeReset}>
+                          <input name="userId" type="hidden" value={invigilator.id} />
+                          <button type="submit">Generate New Code</button>
+                        </form>
+                      </div>
+                    </details>
                     <details className="inline-details">
                       <summary className="compact-button">Edit</summary>
                       <div className="inline-popover">
@@ -207,6 +231,29 @@ export default async function InvigilatorsPage({
                     </details>
                   </div>
                 </div>
+
+                <details className="assignment-details mobile-details">
+                  <summary>Code</summary>
+                  {params.accessCode && params.codeUserId === invigilator.id ? (
+                    <div className="access-code-box compact-code-box">
+                      <div>
+                        <div className="kicker">New Code</div>
+                        <div className="access-code-value">{params.accessCode}</div>
+                      </div>
+                      <div className="subtle">
+                        Share this now. Existing codes cannot be viewed later.
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="subtle">
+                      Existing access codes are stored securely and cannot be viewed.
+                    </div>
+                  )}
+                  <form className="assignment-form" action={submitAccessCodeReset}>
+                    <input name="userId" type="hidden" value={invigilator.id} />
+                    <button type="submit">Generate New Code</button>
+                  </form>
+                </details>
 
                 <details className="assignment-details mobile-details">
                   <summary>Edit</summary>

@@ -123,14 +123,21 @@ export default async function DashboardPage() {
                 <div key={session.id} className="card" style={{ padding: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                     <div>
-                      <div style={{ fontWeight: 700 }}>{session.name}</div>
+                      <Link className="inline-link" href={`/sessions/${session.id}`}>
+                        {session.name}
+                      </Link>
                       <div className="subtle">
                         {session.examDate} | {session.startTime}
                       </div>
                     </div>
-                    <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
-                      <button type="submit">Publish</button>
-                    </form>
+                    <div className="inline-actions">
+                      <Link className="button secondary" href={`/sessions/${session.id}`}>
+                        Manage
+                      </Link>
+                      <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
+                        <button type="submit">Publish</button>
+                      </form>
+                    </div>
                   </div>
                 </div>
               ))

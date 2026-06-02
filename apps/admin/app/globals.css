@@ -348,10 +348,6 @@ textarea:focus {
   box-shadow: var(--shadow);
 }
 
-.mobile-details {
-  display: none;
-}
-
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -377,6 +373,14 @@ textarea:focus {
   font-size: 28px;
   font-weight: 900;
   letter-spacing: 0.08em;
+}
+
+.compact-code-box {
+  margin: 0;
+}
+
+.compact-code-box .access-code-value {
+  font-size: 22px;
 }
 
 .checkbox-grid {
@@ -422,6 +426,10 @@ textarea:focus {
 .assignment-form {
   display: grid;
   gap: 12px;
+}
+
+.assignment-details.mobile-details {
+  display: none;
 }
 
 .disclosure-card > summary {
@@ -498,7 +506,7 @@ textarea:focus {
     display: none;
   }
 
-  .mobile-details {
+  .assignment-details.mobile-details {
     display: grid;
   }
 
