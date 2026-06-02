@@ -138,6 +138,7 @@ async function createDigitOcrWorker(
 export function WebScannerApp() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const scanRegionRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const scanTimerRef = useRef<number | null>(null);
@@ -439,7 +440,7 @@ export function WebScannerApp() {
         runOcrScan().catch((error) =>
           setOcrStatus(error instanceof Error ? error.message : "OCR scan failed.")
         );
-      }, 1400);
+      }, 900);
     } catch (error) {
       setCameraActive(false);
       setOcrStatus("");
@@ -480,30 +481,65 @@ export function WebScannerApp() {
     }
 
     const video = videoRef.current;
-    if (!video.videoWidth || !video.videoHeight) {
+    const canvas = canvasRef.current;
+    const scanRegion = scanRegionRef.current;
+    if (!video.videoWidth || !video.videoHeight || !scanRegion) {
       return;
     }
-
-    const canvas = canvasRef.current;
-    const maxWidth = 900;
-    const scale = Math.min(1, maxWidth / video.videoWidth);
-    canvas.width = Math.round(video.videoWidth * scale);
-    canvas.height = Math.round(video.videoHeight * scale);
 
     const context = canvas.getContext("2d");
     if (!context) {
       return;
     }
 
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const videoRect = video.getBoundingClientRect();
+    const regionRect = scanRegion.getBoundingClientRect();
+    const coverScale = Math.max(
+      videoRect.width / video.videoWidth,
+      videoRect.height / video.videoHeight
+    );
+    const renderedVideoWidth = video.videoWidth * coverScale;
+    const renderedVideoHeight = video.videoHeight * coverScale;
+    const hiddenX = Math.max(0, (renderedVideoWidth - videoRect.width) / 2);
+    const hiddenY = Math.max(0, (renderedVideoHeight - videoRect.height) / 2);
+    const sourceX = Math.max(
+      0,
+      Math.round((regionRect.left - videoRect.left + hiddenX) / coverScale)
+    );
+    const sourceY = Math.max(
+      0,
+      Math.round((regionRect.top - videoRect.top + hiddenY) / coverScale)
+    );
+    const sourceWidth = Math.min(
+      video.videoWidth - sourceX,
+      Math.round(regionRect.width / coverScale)
+    );
+    const sourceHeight = Math.min(
+      video.videoHeight - sourceY,
+      Math.round(regionRect.height / coverScale)
+    );
 
-    const crop = {
-      x: Math.round(canvas.width * 0.05),
-      y: Math.round(canvas.height * 0.26),
-      width: Math.round(canvas.width * 0.9),
-      height: Math.round(canvas.height * 0.48)
-    };
-    const imageData = context.getImageData(crop.x, crop.y, crop.width, crop.height);
+    if (sourceWidth <= 0 || sourceHeight <= 0) {
+      return;
+    }
+
+    const outputWidth = Math.min(760, Math.max(420, sourceWidth));
+    const outputHeight = Math.round(outputWidth * (sourceHeight / sourceWidth));
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    context.drawImage(
+      video,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      outputWidth,
+      outputHeight
+    );
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const pixels = imageData.data;
     for (let index = 0; index < pixels.length; index += 4) {
       const gray = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
@@ -513,11 +549,9 @@ export function WebScannerApp() {
       pixels[index + 2] = contrast;
     }
 
-    canvas.width = crop.width;
-    canvas.height = crop.height;
     context.putImageData(imageData, 0, 0);
 
-    setOcrStatus("Reading with ONNX OCR...");
+    setOcrStatus("Reading red box with ONNX OCR...");
     const [result] = await ocrWorkerRef.current.predict(canvas, {
       textDetLimitSideLen: 640,
       textDetLimitType: "max",
@@ -640,6 +674,7 @@ export function WebScannerApp() {
         </div>
 
         <div className="web-scan-guide">
+          <div ref={scanRegionRef} className="web-scan-region" />
           <span>Place student number here</span>
         </div>
 

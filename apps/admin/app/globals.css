@@ -586,6 +586,7 @@ textarea:focus {
 }
 
 .web-scan-guide {
+  position: relative;
   align-self: center;
   justify-self: center;
   width: min(86vw, 680px);
@@ -597,8 +598,7 @@ textarea:focus {
   box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.14);
 }
 
-.web-scan-guide::before {
-  content: "";
+.web-scan-region {
   width: 78%;
   height: 42%;
   border: 4px solid var(--accent);
