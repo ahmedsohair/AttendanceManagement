@@ -25,27 +25,15 @@ export function listPublishedRoomsForUser(store: DataStore, userId: string) {
   }
 
   const rooms = store.rooms.filter((room) => room.examSessionId === activeSession.id);
+  if (user.role === "admin") {
+    return rooms;
+  }
+
   if (!user.assignedRoomIds.length) {
-    return rooms;
+    return [];
   }
 
-  const directlyAssigned = rooms.filter((room) => user.assignedRoomIds.includes(room.id));
-  if (directlyAssigned.length) {
-    return directlyAssigned;
-  }
-
-  const assignedCodes = new Set(
-    user.assignedRoomIds
-      .map((roomId) => store.rooms.find((room) => room.id === roomId)?.code)
-      .filter((code): code is string => Boolean(code))
-  );
-
-  if (!assignedCodes.size) {
-    return rooms;
-  }
-
-  const matchedByCode = rooms.filter((room) => assignedCodes.has(room.code));
-  return matchedByCode.length ? matchedByCode : rooms;
+  return rooms.filter((room) => user.assignedRoomIds.includes(room.id));
 }
 
 export function getRoomLiveState(store: DataStore, roomId: string) {

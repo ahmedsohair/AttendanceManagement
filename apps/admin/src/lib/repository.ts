@@ -288,44 +288,29 @@ export async function createInvigilator(input: {
     ? await resolveAssignedRoomIds(supabase, requestedAssignedRoomIds)
     : existingAssignedRoomIds;
 
-  let authUser = await findAuthUserByEmail(supabase, normalizedEmail);
+  const existingAuthUser = await findAuthUserByEmail(supabase, normalizedEmail);
 
-  if (!authUser) {
-    const authResponse = await supabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password: input.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: input.fullName,
-        role: "invigilator"
-      }
-    });
-
-    if (authResponse.error || !authResponse.data.user) {
-      throw new Error(authResponse.error?.message || "Unable to create auth account.");
-    }
-
-    authUser = authResponse.data.user;
-  } else {
-    const updateAuthResponse = await supabase.auth.admin.updateUserById(authUser.id, {
-      email: normalizedEmail,
-      password: input.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: input.fullName,
-        role: "invigilator"
-      }
-    });
-
-    if (updateAuthResponse.error || !updateAuthResponse.data.user) {
-      throw new Error(
-        updateAuthResponse.error?.message || "Unable to update auth account."
-      );
-    }
-
-    authUser = updateAuthResponse.data.user;
+  if (existingPublicUserId || existingAuthUser) {
+    throw new Error(
+      "An invigilator with this email already exists. Edit their room assignments instead."
+    );
   }
 
+  const authResponse = await supabase.auth.admin.createUser({
+    email: normalizedEmail,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: input.fullName,
+      role: "invigilator"
+    }
+  });
+
+  if (authResponse.error || !authResponse.data.user) {
+    throw new Error(authResponse.error?.message || "Unable to create auth account.");
+  }
+
+  const authUser = authResponse.data.user;
   const authUserId = assertUuid(authUser.id, "Auth user ID");
 
   if (!existingPublicUserId) {
@@ -427,6 +412,73 @@ export async function createInvigilator(input: {
     if (assignmentsResponse.error) {
       throw new Error(assignmentsResponse.error.message);
     }
+  }
+}
+
+export async function updateInvigilatorRoomAssignments(input: {
+  userId: string;
+  assignedRoomIds: string[];
+}) {
+  const requestedAssignedRoomIds = input.assignedRoomIds
+    .map((roomId) => roomId.trim())
+    .filter(Boolean);
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === input.userId);
+
+    if (!user || user.role !== "invigilator") {
+      throw new Error("Invigilator not found.");
+    }
+
+    user.assignedRoomIds = Array.from(new Set(requestedAssignedRoomIds));
+    await writeStore(store);
+    return;
+  }
+
+  const userId = assertUuid(input.userId, "Invigilator ID");
+  const validAssignedRoomIds = Array.from(
+    new Set(requestedAssignedRoomIds.filter((roomId) => uuidPattern.test(roomId)))
+  );
+
+  const supabase = getSupabaseAdmin();
+  const userResponse = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (userResponse.error) {
+    throw new Error(userResponse.error.message);
+  }
+
+  if (!userResponse.data || userResponse.data.role !== "invigilator") {
+    throw new Error("Invigilator not found.");
+  }
+
+  const clearAssignmentsResponse = await supabase
+    .from("room_assignments")
+    .delete()
+    .eq("user_id", userId);
+
+  if (clearAssignmentsResponse.error) {
+    throw new Error(clearAssignmentsResponse.error.message);
+  }
+
+  if (!validAssignedRoomIds.length) {
+    return;
+  }
+
+  const assignmentsResponse = await supabase.from("room_assignments").insert(
+    validAssignedRoomIds.map((roomId) => ({
+      id: nextId(),
+      room_id: roomId,
+      user_id: userId
+    }))
+  );
+
+  if (assignmentsResponse.error) {
+    throw new Error(assignmentsResponse.error.message);
   }
 }
 

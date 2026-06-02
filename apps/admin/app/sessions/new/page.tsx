@@ -4,12 +4,14 @@ import { useState } from "react";
 
 export default function NewSessionPage() {
   const [message, setMessage] = useState<string>("");
+  const [importedSessionId, setImportedSessionId] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setMessage("");
+    setImportedSessionId("");
 
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
@@ -26,7 +28,8 @@ export default function NewSessionPage() {
       return;
     }
 
-    setMessage(`Imported exam ${payload.sessionId}. Publish it from the dashboard.`);
+    setImportedSessionId(payload.sessionId || "");
+    setMessage(`Imported exam ${payload.sessionId}. Open it to assign invigilators.`);
     formElement.reset();
   }
 
@@ -49,7 +52,19 @@ export default function NewSessionPage() {
             {busy ? "Importing..." : "Upload Exam Spreadsheet"}
           </button>
         </form>
-        {message ? <p className="subtle">{message}</p> : null}
+        {message ? (
+          <p className="subtle">
+            {message}
+            {importedSessionId ? (
+              <>
+                {" "}
+                <a className="inline-link" href={`/sessions/${importedSessionId}`}>
+                Assign invigilators
+                </a>
+              </>
+            ) : null}
+          </p>
+        ) : null}
       </div>
 
       <div className="card tint">

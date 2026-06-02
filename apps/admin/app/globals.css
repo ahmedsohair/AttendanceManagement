@@ -271,6 +271,18 @@ textarea:focus {
   padding-bottom: 0;
 }
 
+.detail-row.stacked {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -296,6 +308,33 @@ textarea:focus {
 .checkbox-card input {
   width: auto;
   margin-top: 3px;
+}
+
+.checkbox-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.assignment-details {
+  display: grid;
+  gap: 10px;
+}
+
+.assignment-details summary {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.assignment-form {
+  display: grid;
+  gap: 12px;
+}
+
+.inline-link {
+  color: var(--accent-dark);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 900px) {

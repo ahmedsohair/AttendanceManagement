@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import {
   Camera,
-  runAsync,
   runAtTargetFps,
   useCameraDevice,
   useCameraPermission,
@@ -139,19 +138,17 @@ export function LiveTextScanner({
     (frame) => {
       "worklet";
 
-      runAtTargetFps(3, () => {
+      runAtTargetFps(2, () => {
         "worklet";
 
-        runAsync(frame, () => {
-          "worklet";
-          if (!enabled) {
-            return;
-          }
-          const result = textRecognition(frame, { outputOrientation: "portrait" });
-          if (result.text) {
-            handleRecognizedText(result.text);
-          }
-        });
+        if (!enabled) {
+          return;
+        }
+
+        const result = textRecognition(frame, { outputOrientation: "portrait" });
+        if (result.text) {
+          handleRecognizedText(result.text);
+        }
       });
     },
     [enabled, handleRecognizedText, textRecognition]
