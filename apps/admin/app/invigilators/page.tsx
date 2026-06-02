@@ -162,22 +162,54 @@ export default async function InvigilatorsPage({
                     <div style={{ fontWeight: 700 }}>{invigilator.fullName}</div>
                     <div className="subtle">{invigilator.email}</div>
                   </div>
-                  <div className="pill">
-                    {invigilator.assignedRoomIds.length
-                      ? `${invigilator.assignedRoomIds.length} room(s)`
-                      : "No rooms assigned"}
+                  <div className="staff-actions">
+                    <form action={submitAccessCodeReset}>
+                      <input name="userId" type="hidden" value={invigilator.id} />
+                      <button className="secondary compact-button" type="submit">
+                        Code
+                      </button>
+                    </form>
+                    <details className="inline-details">
+                      <summary className="compact-button">Edit</summary>
+                      <div className="inline-popover">
+                        <form className="assignment-form" action={submitInvigilatorDetails}>
+                          <input name="userId" type="hidden" value={invigilator.id} />
+                          <input
+                            name="email"
+                            type="email"
+                            defaultValue={invigilator.email}
+                            placeholder="Email address"
+                            required
+                          />
+                          <input
+                            name="fullName"
+                            defaultValue={invigilator.fullName}
+                            placeholder="Full name"
+                          />
+                          <button type="submit">Save</button>
+                        </form>
+                      </div>
+                    </details>
+                    <details className="inline-details">
+                      <summary className="compact-button danger-compact">Delete</summary>
+                      <div className="inline-popover">
+                        <form className="assignment-form" action={submitInvigilatorDelete}>
+                          <input name="userId" type="hidden" value={invigilator.id} />
+                          <div className="subtle">
+                            Deletion is blocked if this invigilator has attendance or
+                            incident audit history.
+                          </div>
+                          <button className="danger" type="submit">
+                            Delete
+                          </button>
+                        </form>
+                      </div>
+                    </details>
                   </div>
                 </div>
 
-                <form action={submitAccessCodeReset} className="inline-actions">
-                  <input name="userId" type="hidden" value={invigilator.id} />
-                  <button className="secondary" type="submit">
-                    Generate New Code
-                  </button>
-                </form>
-
-                <details className="assignment-details">
-                  <summary>Edit invigilator details</summary>
+                <details className="assignment-details mobile-details">
+                  <summary>Edit</summary>
                   <form className="assignment-form" action={submitInvigilatorDetails}>
                     <input name="userId" type="hidden" value={invigilator.id} />
                     <input
@@ -196,8 +228,8 @@ export default async function InvigilatorsPage({
                   </form>
                 </details>
 
-                <details className="assignment-details danger-details">
-                  <summary>Remove invigilator</summary>
+                <details className="assignment-details danger-details mobile-details">
+                  <summary>Delete</summary>
                   <form className="assignment-form" action={submitInvigilatorDelete}>
                     <input name="userId" type="hidden" value={invigilator.id} />
                     <div className="subtle">

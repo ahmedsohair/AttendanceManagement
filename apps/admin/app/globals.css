@@ -294,6 +294,64 @@ textarea:focus {
   gap: 14px;
 }
 
+.staff-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.compact-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.danger-compact {
+  background: #111;
+  border-color: #111;
+  color: white;
+}
+
+.inline-details {
+  position: relative;
+}
+
+.inline-details summary {
+  list-style: none;
+}
+
+.inline-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.inline-popover {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  min-width: 320px;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: white;
+  box-shadow: var(--shadow);
+}
+
+.mobile-details {
+  display: none;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -434,5 +492,18 @@ textarea:focus {
 
   body {
     padding: 16px;
+  }
+
+  .staff-actions {
+    display: none;
+  }
+
+  .mobile-details {
+    display: grid;
+  }
+
+  .inline-popover {
+    position: static;
+    min-width: 0;
   }
 }
