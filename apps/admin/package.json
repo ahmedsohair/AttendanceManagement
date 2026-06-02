@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@algo-attendance/shared": "0.1.0",
+    "@paddleocr/paddleocr-js": "^0.3.2",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
     "next": "^15.2.4",

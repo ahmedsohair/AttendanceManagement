@@ -40,9 +40,16 @@ type LiveRoomState = {
 };
 
 type OcrWorker = {
-  setParameters(params: Record<string, string>): Promise<unknown>;
-  recognize(image: HTMLCanvasElement): Promise<{ data: { text: string } }>;
-  terminate(): Promise<unknown>;
+  predict(
+    image: HTMLCanvasElement,
+    params?: Record<string, string | number>
+  ): Promise<
+    Array<{
+      items: Array<{ text: string; score: number }>;
+      metrics?: { totalMs: number; detectedBoxes: number; recognizedCount: number };
+    }>
+  >;
+  dispose(): Promise<unknown>;
 };
 
 const deviceIdStorageKey = "ams-web-scanner-device-id";
@@ -108,25 +115,24 @@ async function readJson<T>(response: Response): Promise<T> {
 async function createDigitOcrWorker(
   onStatus: (message: string) => void
 ): Promise<OcrWorker> {
-  const tesseract = await import("tesseract.js");
-  const worker = (await tesseract.createWorker("eng", 1, {
-    logger: (message) => {
-      if (message.status) {
-        onStatus(
-          message.progress
-            ? `${message.status} ${Math.round(message.progress * 100)}%`
-            : message.status
-        );
-      }
+  onStatus("Loading ONNX OCR models...");
+  const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  const ocr = await PaddleOCR.create({
+    lang: "en",
+    ocrVersion: "PP-OCRv5",
+    worker: true,
+    textDetectionBatchSize: 1,
+    textRecognitionBatchSize: 4,
+    ortOptions: {
+      backend: "wasm",
+      numThreads: 1,
+      simd: true,
+      wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/"
     }
-  })) as OcrWorker;
-
-  await worker.setParameters({
-    tessedit_char_whitelist: "0123456789",
-    tessedit_pageseg_mode: tesseract.PSM.SPARSE_TEXT
   });
 
-  return worker;
+  onStatus("ONNX OCR ready.");
+  return ocr as OcrWorker;
 }
 
 export function WebScannerApp() {
@@ -237,7 +243,7 @@ export function WebScannerApp() {
         window.clearInterval(scanTimerRef.current);
       }
       streamRef.current?.getTracks().forEach((track) => track.stop());
-      ocrWorkerRef.current?.terminate().catch(() => undefined);
+      ocrWorkerRef.current?.dispose().catch(() => undefined);
     };
   }, []);
 
@@ -492,10 +498,10 @@ export function WebScannerApp() {
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const crop = {
-      x: Math.round(canvas.width * 0.06),
-      y: Math.round(canvas.height * 0.34),
-      width: Math.round(canvas.width * 0.88),
-      height: Math.round(canvas.height * 0.36)
+      x: Math.round(canvas.width * 0.05),
+      y: Math.round(canvas.height * 0.26),
+      width: Math.round(canvas.width * 0.9),
+      height: Math.round(canvas.height * 0.48)
     };
     const imageData = context.getImageData(crop.x, crop.y, crop.width, crop.height);
     const pixels = imageData.data;
@@ -511,9 +517,17 @@ export function WebScannerApp() {
     canvas.height = crop.height;
     context.putImageData(imageData, 0, 0);
 
-    setOcrStatus("Reading...");
-    const result = await ocrWorkerRef.current.recognize(canvas);
-    const candidate = extractStudentIdCandidate(result.data.text || "");
+    setOcrStatus("Reading with ONNX OCR...");
+    const [result] = await ocrWorkerRef.current.predict(canvas, {
+      textDetLimitSideLen: 640,
+      textDetLimitType: "max",
+      textDetThresh: 0.25,
+      textDetBoxThresh: 0.35,
+      textDetUnclipRatio: 1.6,
+      textRecScoreThresh: 0.15
+    });
+    const recognizedText = (result?.items || []).map((item) => item.text).join(" ");
+    const candidate = extractStudentIdCandidate(recognizedText);
 
     if (!candidate) {
       setOcrStatus("Looking for a student number...");
@@ -521,7 +535,11 @@ export function WebScannerApp() {
       return;
     }
 
-    setOcrStatus(`Detected candidate: ${candidate}`);
+    setOcrStatus(
+      `Detected candidate: ${candidate}${
+        result?.metrics?.totalMs ? ` (${Math.round(result.metrics.totalMs)}ms)` : ""
+      }`
+    );
     const now = Date.now();
     if (
       lastCandidateRef.current?.value === candidate &&
