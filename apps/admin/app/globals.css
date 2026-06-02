@@ -351,6 +351,56 @@ textarea:focus {
   gap: 12px;
 }
 
+.disclosure-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure-card > summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.disclosure-card[open] > summary {
+  margin-bottom: 16px;
+}
+
+.disclosure-card[open] > summary::after {
+  content: "Close";
+}
+
+.summary-title {
+  display: block;
+  margin: 6px 0 0;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.search-form input {
+  width: min(320px, 100%);
+}
+
 .inline-link {
   color: var(--accent-dark);
   font-weight: 800;

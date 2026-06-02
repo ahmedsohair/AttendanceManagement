@@ -62,11 +62,12 @@ export default async function SessionDetailPage({
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ message?: string; error?: string }>;
+  searchParams?: Promise<{ message?: string; error?: string; q?: string }>;
 }) {
   await requireAdminPageUser();
   const { id } = await params;
   const notices = (await searchParams) || {};
+  const searchTerm = (notices.q || "").trim().toLowerCase();
   const store = await readStore();
   const session = store.examSessions.find((item) => item.id === id);
 
@@ -81,6 +82,32 @@ export default async function SessionDetailPage({
   const invigilators = store.users
     .filter((user) => user.role === "invigilator")
     .sort((left, right) => left.fullName.localeCompare(right.fullName));
+  const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
+  const allocationByStudentId = new Map(
+    store.studentAllocations
+      .filter((allocation) => allocation.examSessionId === id)
+      .map((allocation) => [allocation.studentId, allocation])
+  );
+  const attendanceRows = report.attendance
+    .map((event) => ({
+      event,
+      allocation: allocationByStudentId.get(event.studentId),
+      markedInRoom: roomMap.get(event.markedInRoomId),
+      expectedRoom: roomMap.get(event.expectedRoomId),
+      markedBy: userMap.get(event.markedByUserId)
+    }))
+    .filter((row) => {
+      if (!searchTerm) {
+        return true;
+      }
+
+      return (
+        row.event.studentId.toLowerCase().includes(searchTerm) ||
+        (row.allocation?.studentName || "").toLowerCase().includes(searchTerm)
+      );
+    })
+    .sort((left, right) => right.event.createdAt.localeCompare(left.event.createdAt));
 
   return (
     <div className="stack">
@@ -118,9 +145,22 @@ export default async function SessionDetailPage({
         </Link>
       </div>
 
-      <div className="card tint">
-        <div className="kicker">Room Access</div>
-        <h2 className="section-title">Assign Invigilators To This Exam</h2>
+      <details className="card tint disclosure-card">
+        <summary>
+          <span>
+            <span className="kicker">Room Access</span>
+            <span className="section-title summary-title">
+              Assign Invigilators To This Exam
+            </span>
+          </span>
+          <span className="pill">
+            {invigilators.filter((invigilator) =>
+              invigilator.assignedRoomIds.some((roomId) =>
+                sessionRooms.some((room) => room.id === roomId)
+              )
+            ).length} assigned
+          </span>
+        </summary>
         {notices.message ? <p className="pill ok">{notices.message}</p> : null}
         {notices.error ? <p className="pill warn">{notices.error}</p> : null}
         {invigilators.length ? (
@@ -168,7 +208,7 @@ export default async function SessionDetailPage({
             Add invigilators first, then return here to assign them to rooms.
           </div>
         )}
-      </div>
+      </details>
 
       <div className="card">
         <h2 className="section-title">Room Summary</h2>
@@ -192,6 +232,84 @@ export default async function SessionDetailPage({
                 <td>{summary.redirectedCount}</td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+          <div>
+            <div className="kicker">Attendance Review</div>
+            <h2 className="section-title">Marked Students</h2>
+          </div>
+          <form className="search-form" action={`/sessions/${session.id}`} method="get">
+            <input
+              name="q"
+              placeholder="Search student number"
+              defaultValue={notices.q || ""}
+            />
+            <button className="secondary" type="submit">
+              Search
+            </button>
+            {notices.q ? (
+              <Link className="button secondary" href={`/sessions/${session.id}`}>
+                Clear
+              </Link>
+            ) : null}
+          </form>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Student Name</th>
+              <th>Marked In</th>
+              <th>Expected Room</th>
+              <th>Marked By</th>
+              <th>Status</th>
+              <th>Comment</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {attendanceRows.length ? (
+              attendanceRows.map((row) => (
+                <tr key={row.event.id}>
+                  <td>{row.event.studentId}</td>
+                  <td>{row.allocation?.studentName || "-"}</td>
+                  <td>{row.markedInRoom?.code || row.event.markedInRoomId}</td>
+                  <td>{row.expectedRoom?.code || row.event.expectedRoomId}</td>
+                  <td>
+                    {row.markedBy ? (
+                      <>
+                        <strong>{row.markedBy.fullName}</strong>
+                        <br />
+                        <span className="subtle">{row.markedBy.email}</span>
+                      </>
+                    ) : (
+                      row.event.markedByUserId
+                    )}
+                  </td>
+                  <td>
+                    {row.event.roomMismatch ? (
+                      <span className="pill warn">Mismatch present</span>
+                    ) : (
+                      <span className="pill ok">Present</span>
+                    )}
+                  </td>
+                  <td>{row.event.comment || "-"}</td>
+                  <td>{row.event.createdAt}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="subtle">
+                  {searchTerm
+                    ? "No attendance entries match that student number."
+                    : "No attendance has been marked for this exam yet."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

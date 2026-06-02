@@ -14,6 +14,7 @@ export async function GET(
   const report = buildExamSessionReport(store, examSessionId);
 
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
 
   const buffer = buildWorkbookSheets({
     summary: report.summaries.map((item) => ({
@@ -33,6 +34,8 @@ export async function GET(
       room_mismatch: item.roomMismatch,
       override_type: item.overrideType,
       comment: item.comment || "",
+      marked_by: userMap.get(item.markedByUserId)?.fullName || item.markedByUserId,
+      marked_by_email: userMap.get(item.markedByUserId)?.email || "",
       user_id: item.markedByUserId,
       device_id: item.deviceId
     })),
@@ -44,6 +47,8 @@ export async function GET(
         ? roomMap.get(item.expectedRoomId)?.code || item.expectedRoomId
         : "",
       incident_type: item.incidentType,
+      invigilator: item.userId ? userMap.get(item.userId)?.fullName || item.userId : "",
+      invigilator_email: item.userId ? userMap.get(item.userId)?.email || "" : "",
       user_id: item.userId,
       comment:
         typeof item.details.comment === "string" ? item.details.comment : "",

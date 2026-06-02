@@ -8,6 +8,7 @@ export default async function MismatchesPage() {
   const store = await readStore();
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
   const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
 
   const mismatches = store.attendanceEvents
     .filter((event) => event.roomMismatch)
@@ -24,6 +25,7 @@ export default async function MismatchesPage() {
             <th>Exam</th>
             <th>Marked In</th>
             <th>Expected Room</th>
+            <th>Marked By</th>
             <th>Override</th>
             <th>Comment</th>
             <th>Timestamp</th>
@@ -38,6 +40,19 @@ export default async function MismatchesPage() {
                 <td>{roomMap.get(event.markedInRoomId)?.code || event.markedInRoomId}</td>
                 <td>{roomMap.get(event.expectedRoomId)?.code || event.expectedRoomId}</td>
                 <td>
+                  {userMap.get(event.markedByUserId) ? (
+                    <>
+                      <strong>{userMap.get(event.markedByUserId)?.fullName}</strong>
+                      <br />
+                      <span className="subtle">
+                        {userMap.get(event.markedByUserId)?.email}
+                      </span>
+                    </>
+                  ) : (
+                    event.markedByUserId
+                  )}
+                </td>
+                <td>
                   <span className="pill warn">{event.overrideType}</span>
                 </td>
                 <td>{event.comment || "-"}</td>
@@ -46,7 +61,7 @@ export default async function MismatchesPage() {
             ))
           ) : (
             <tr>
-              <td colSpan={7} className="subtle">
+              <td colSpan={8} className="subtle">
                 No mismatch-present overrides have been recorded.
               </td>
             </tr>

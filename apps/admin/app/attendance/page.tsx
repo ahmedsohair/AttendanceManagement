@@ -8,6 +8,7 @@ export default async function AttendancePage() {
   const store = await readStore();
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
   const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
 
   const attendance = [...store.attendanceEvents].sort((left, right) =>
     right.createdAt.localeCompare(left.createdAt)
@@ -24,6 +25,7 @@ export default async function AttendancePage() {
             <th>Exam</th>
             <th>Marked In</th>
             <th>Expected Room</th>
+            <th>Marked By</th>
             <th>Source</th>
             <th>Comment</th>
             <th>Timestamp</th>
@@ -38,6 +40,19 @@ export default async function AttendancePage() {
                 <td>{roomMap.get(event.markedInRoomId)?.code || event.markedInRoomId}</td>
                 <td>{roomMap.get(event.expectedRoomId)?.code || event.expectedRoomId}</td>
                 <td>
+                  {userMap.get(event.markedByUserId) ? (
+                    <>
+                      <strong>{userMap.get(event.markedByUserId)?.fullName}</strong>
+                      <br />
+                      <span className="subtle">
+                        {userMap.get(event.markedByUserId)?.email}
+                      </span>
+                    </>
+                  ) : (
+                    event.markedByUserId
+                  )}
+                </td>
+                <td>
                   {event.roomMismatch ? (
                     <span className="pill warn">{event.source} | mismatch</span>
                   ) : (
@@ -50,7 +65,7 @@ export default async function AttendancePage() {
             ))
           ) : (
             <tr>
-              <td colSpan={7} className="subtle">
+              <td colSpan={8} className="subtle">
                 No attendance has been marked yet.
               </td>
             </tr>
