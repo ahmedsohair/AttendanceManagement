@@ -289,6 +289,27 @@ textarea:focus {
   gap: 10px;
 }
 
+.access-code-box {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #111;
+  color: white;
+}
+
+.access-code-box .subtle {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.access-code-value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
 .checkbox-grid {
   display: grid;
   gap: 10px;

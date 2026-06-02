@@ -32,6 +32,18 @@ function normalizeApiBase(url: string) {
   return url.trim().replace(/\/$/, "");
 }
 
+function normalizeAccessCode(input: string) {
+  const compact = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const withoutPrefix = compact.startsWith("AMS") ? compact.slice(3) : compact;
+  const body = withoutPrefix.slice(0, 8);
+
+  if (!body) {
+    return "";
+  }
+
+  return `AMS-${body.slice(0, 4)}${body.length > 4 ? `-${body.slice(4)}` : ""}`;
+}
+
 async function getApiBase() {
   return normalizeApiBase(defaultApiBase);
 }
@@ -68,10 +80,23 @@ export async function loadApiBaseUrl() {
   return normalizeApiBase(defaultApiBase);
 }
 
-export async function login(email: string, password: string) {
+export async function login(accessCodeInput: string) {
   const apiBase = await getApiBase();
+  const accessCode = normalizeAccessCode(accessCodeInput);
+
+  if (!accessCode) {
+    throw new Error("Enter your invigilator access code.");
+  }
+
+  const response = await fetch(`${apiBase}/api/mobile/access-login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessCode })
+  });
+  const payload = await readJson<{ email: string; user?: User }>(response);
+
   if (isSupabaseAuthConfigured()) {
-    await signInInvigilator(email, password);
+    await signInInvigilator(payload.email, accessCode);
     const user = await loadCurrentUser();
     if (!user) {
       throw new Error("Signed in, but no staff profile was found for this account.");
@@ -79,12 +104,10 @@ export async function login(email: string, password: string) {
     return user;
   }
 
-  const response = await fetch(`${apiBase}/api/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email })
-  });
-  const payload = await readJson<{ user: User }>(response);
+  if (!payload.user) {
+    throw new Error("Signed in, but no staff profile was found for this code.");
+  }
+
   return payload.user;
 }
 

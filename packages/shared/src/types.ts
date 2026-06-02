@@ -14,6 +14,7 @@ export interface User {
   fullName: string;
   role: UserRole;
   assignedRoomIds: string[];
+  accessCodeHash?: string;
 }
 
 export interface ExamSession {

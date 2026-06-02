@@ -3,8 +3,14 @@ create table if not exists users (
   email text unique not null,
   full_name text not null,
   role text not null check (role in ('admin', 'invigilator')),
+  access_code_hash text unique,
   created_at timestamptz not null default now()
 );
+
+alter table users add column if not exists access_code_hash text unique;
+create unique index if not exists idx_users_access_code_hash
+on users(access_code_hash)
+where access_code_hash is not null;
 
 create table if not exists exam_sessions (
   id uuid primary key default gen_random_uuid(),

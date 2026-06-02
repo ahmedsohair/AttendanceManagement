@@ -5,6 +5,7 @@ import {
   type SessionImportPayload,
   type User
 } from "@algo-attendance/shared";
+import { generateAccessCode, hashAccessCode } from "./access-code";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { nextId, nowIso, readStore, writeStore } from "./store";
 
@@ -233,9 +234,10 @@ export async function createInvigilator(input: {
   email: string;
   fullName: string;
   assignedRoomIds: string[];
-  password: string;
 }) {
   const normalizedEmail = input.email.trim().toLowerCase();
+  const accessCode = generateAccessCode();
+  const accessCodeHash = hashAccessCode(accessCode);
   const requestedAssignedRoomIds = input.assignedRoomIds.map((roomId) => roomId.trim()).filter(Boolean);
 
   if (!isSupabaseConfigured()) {
@@ -252,11 +254,12 @@ export async function createInvigilator(input: {
       email: normalizedEmail,
       fullName: input.fullName,
       role: "invigilator",
-      assignedRoomIds: requestedAssignedRoomIds
+      assignedRoomIds: requestedAssignedRoomIds,
+      accessCodeHash
     });
 
     await writeStore(store);
-    return;
+    return { accessCode };
   }
 
   const supabase = getSupabaseAdmin();
@@ -298,7 +301,7 @@ export async function createInvigilator(input: {
 
   const authResponse = await supabase.auth.admin.createUser({
     email: normalizedEmail,
-    password: input.password,
+    password: accessCode,
     email_confirm: true,
     user_metadata: {
       full_name: input.fullName,
@@ -318,7 +321,8 @@ export async function createInvigilator(input: {
       id: authUserId,
       email: normalizedEmail,
       full_name: input.fullName,
-      role: "invigilator"
+      role: "invigilator",
+      access_code_hash: accessCodeHash
     });
 
     if (insertUserResponse.error) {
@@ -331,7 +335,8 @@ export async function createInvigilator(input: {
       .update({
         email: normalizedEmail,
         full_name: input.fullName,
-        role: "invigilator"
+        role: "invigilator",
+        access_code_hash: accessCodeHash
       })
       .eq("id", authUserId);
 
@@ -345,7 +350,8 @@ export async function createInvigilator(input: {
         id: authUserId,
         email: normalizedEmail,
         full_name: input.fullName,
-        role: "invigilator"
+        role: "invigilator",
+        access_code_hash: accessCodeHash
       },
       { onConflict: "id" }
     );
@@ -413,6 +419,61 @@ export async function createInvigilator(input: {
       throw new Error(assignmentsResponse.error.message);
     }
   }
+
+  return { accessCode };
+}
+
+export async function resetInvigilatorAccessCode(userIdInput: string) {
+  const accessCode = generateAccessCode();
+  const accessCodeHash = hashAccessCode(accessCode);
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === userIdInput);
+
+    if (!user || user.role !== "invigilator") {
+      throw new Error("Invigilator not found.");
+    }
+
+    user.accessCodeHash = accessCodeHash;
+    await writeStore(store);
+    return { accessCode };
+  }
+
+  const userId = assertUuid(userIdInput, "Invigilator ID");
+  const supabase = getSupabaseAdmin();
+  const userResponse = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (userResponse.error) {
+    throw new Error(userResponse.error.message);
+  }
+
+  if (!userResponse.data || userResponse.data.role !== "invigilator") {
+    throw new Error("Invigilator not found.");
+  }
+
+  const authResponse = await supabase.auth.admin.updateUserById(userId, {
+    password: accessCode
+  });
+
+  if (authResponse.error) {
+    throw new Error(authResponse.error.message);
+  }
+
+  const updateResponse = await supabase
+    .from("users")
+    .update({ access_code_hash: accessCodeHash })
+    .eq("id", userId);
+
+  if (updateResponse.error) {
+    throw new Error(updateResponse.error.message);
+  }
+
+  return { accessCode };
 }
 
 export async function updateInvigilatorRoomAssignments(input: {

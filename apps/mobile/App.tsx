@@ -20,7 +20,6 @@ import {
   login,
   lookupAttendance,
   markAttendance,
-  requestPasswordReset,
   restoreCurrentUser,
   type RoomWithSession
 } from "./src/api/client";
@@ -73,8 +72,7 @@ function LoginScreen({
 }: {
   onLoggedIn: (user: User) => void;
 }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [accessCode, setAccessCode] = useState("");
   const [apiBaseUrl, setApiBaseUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -82,36 +80,10 @@ function LoginScreen({
     loadApiBaseUrl().then(setApiBaseUrl).catch(() => undefined);
   }, []);
 
-  async function handlePasswordReset() {
-    if (!email.trim()) {
-      Alert.alert(
-        "Enter your email",
-        "Type the email linked to your invigilator account, then request a reset."
-      );
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await requestPasswordReset(email);
-      Alert.alert(
-        "Reset email sent",
-        "Check your inbox for the password reset link. Open it in a browser to choose a new password."
-      );
-    } catch (error) {
-      Alert.alert(
-        "Reset failed",
-        error instanceof Error ? error.message : "Unable to send reset email."
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function submit() {
     setBusy(true);
     try {
-      const user = await login(email, password);
+      const user = await login(accessCode);
       onLoggedIn(user);
     } catch (error) {
       Alert.alert(
@@ -130,8 +102,8 @@ function LoginScreen({
       <Text style={styles.eyebrow}>Attendance Management System</Text>
       <Text style={styles.hero}>Invigilator Login</Text>
       <Text style={styles.copy}>
-        Use the invigilator credentials created by your administrator to load your
-        published exam rooms.
+        Enter the access code provided by your exam administrator to load your
+        assigned rooms.
       </Text>
       <View style={styles.endpointCard}>
         <Text style={styles.endpointLabel}>Connected backend</Text>
@@ -139,31 +111,18 @@ function LoginScreen({
       </View>
       <TextInput
         style={styles.input}
-        autoCapitalize="none"
+        autoCapitalize="characters"
         autoCorrect={false}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
+        value={accessCode}
+        onChangeText={setAccessCode}
+        placeholder="Invigilator access code"
         placeholderTextColor="#8f8f8f"
       />
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        secureTextEntry
-        placeholderTextColor="#8f8f8f"
-      />
-      <View style={styles.inlineButtons}>
-        <Pressable onPress={handlePasswordReset} disabled={busy}>
-          <Text style={styles.linkLabel}>Forgot password?</Text>
-        </Pressable>
-      </View>
       <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
         <Text style={styles.primaryLabel}>{busy ? "Signing in..." : "Sign In"}</Text>
       </Pressable>
       <Text style={styles.copy}>
-        Password resets open in a browser and return to the hosted admin system.
+        If your code is lost or expired, ask the administrator to generate a new one.
       </Text>
     </View>
   );
