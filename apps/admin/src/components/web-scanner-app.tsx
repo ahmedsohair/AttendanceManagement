@@ -365,7 +365,7 @@ export function WebScannerApp() {
       } else if (payload.result.status === "already_marked") {
         setStatusMessage(`Already marked at ${payload.result.attendance.createdAt}.`);
       } else {
-        setStatusMessage("Student not found in this exam session.");
+        setStatusMessage("Student not found. Edit the number if OCR misread it, then look up again.");
       }
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Lookup failed.");
@@ -633,7 +633,6 @@ export function WebScannerApp() {
     return (
       <div className="web-scan-shell">
         <section className="web-scan-card">
-          <div className="kicker">Cross-platform scanner</div>
           <h1>Invigilator Web Login</h1>
           <p className="subtle">
             Use the same access code as the Android app. This scanner works from
@@ -799,7 +798,7 @@ export function WebScannerApp() {
                 onClick={() => lookupStudent(studentId, lastSource)}
                 disabled={busy}
               >
-                Recheck
+                Lookup Edited ID
               </button>
               {lastLookup?.status === "ready_to_mark" ? (
                 <button type="button" onClick={() => markStudent()} disabled={busy}>
