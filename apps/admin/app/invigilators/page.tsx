@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { requireAdminPageUser } from "@/lib/auth";
 import {
   createInvigilator as createInvigilatorRecord,
+  deleteInvigilator,
   resetInvigilatorAccessCode,
+  updateInvigilatorDetails,
   updateInvigilatorRoomAssignments
 } from "@/lib/repository";
 import { readStore } from "@/lib/store";
@@ -70,6 +72,26 @@ async function submitRoomAssignments(formData: FormData) {
   redirect("/invigilators?message=Room%20assignments%20updated.");
 }
 
+async function submitInvigilatorDetails(formData: FormData) {
+  "use server";
+
+  const userId = String(formData.get("userId") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const fullName = String(formData.get("fullName") || "").trim();
+
+  try {
+    await requireAdminPageUser();
+    await updateInvigilatorDetails({ userId, email, fullName });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to update invigilator.";
+    redirect(`/invigilators?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/invigilators");
+  redirect("/invigilators?message=Invigilator%20updated.");
+}
+
 async function submitAccessCodeReset(formData: FormData) {
   "use server";
 
@@ -92,6 +114,24 @@ async function submitAccessCodeReset(formData: FormData) {
       "New invigilator access code generated."
     )}&accessCode=${encodeURIComponent(accessCode)}`
   );
+}
+
+async function submitInvigilatorDelete(formData: FormData) {
+  "use server";
+
+  const userId = String(formData.get("userId") || "").trim();
+
+  try {
+    await requireAdminPageUser();
+    await deleteInvigilator(userId);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to delete invigilator.";
+    redirect(`/invigilators?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/invigilators");
+  redirect("/invigilators?message=Invigilator%20deleted.");
 }
 
 export default async function InvigilatorsPage({
@@ -198,6 +238,26 @@ export default async function InvigilatorsPage({
                 </form>
 
                 <details className="assignment-details">
+                  <summary>Edit invigilator details</summary>
+                  <form className="assignment-form" action={submitInvigilatorDetails}>
+                    <input name="userId" type="hidden" value={invigilator.id} />
+                    <input
+                      name="email"
+                      type="email"
+                      defaultValue={invigilator.email}
+                      placeholder="Email address"
+                      required
+                    />
+                    <input
+                      name="fullName"
+                      defaultValue={invigilator.fullName}
+                      placeholder="Full name"
+                    />
+                    <button type="submit">Save Details</button>
+                  </form>
+                </details>
+
+                <details className="assignment-details">
                   <summary>Edit room assignments</summary>
                   <form className="assignment-form" action={submitRoomAssignments}>
                     <input name="userId" type="hidden" value={invigilator.id} />
@@ -225,6 +285,21 @@ export default async function InvigilatorsPage({
                       in the mobile app.
                     </div>
                     <button type="submit">Save Assignments</button>
+                  </form>
+                </details>
+
+                <details className="assignment-details danger-details">
+                  <summary>Remove invigilator</summary>
+                  <form className="assignment-form" action={submitInvigilatorDelete}>
+                    <input name="userId" type="hidden" value={invigilator.id} />
+                    <div className="subtle">
+                      Deletion is only allowed if this invigilator has not marked
+                      attendance or created incidents. If they have audit history,
+                      clear their room assignments instead.
+                    </div>
+                    <button className="danger" type="submit">
+                      Delete Invigilator
+                    </button>
                   </form>
                 </details>
               </div>

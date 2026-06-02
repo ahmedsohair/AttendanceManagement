@@ -476,6 +476,183 @@ export async function resetInvigilatorAccessCode(userIdInput: string) {
   return { accessCode };
 }
 
+export async function updateInvigilatorDetails(input: {
+  userId: string;
+  email: string;
+  fullName: string;
+}) {
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const fullName = input.fullName.trim() || normalizedEmail.split("@")[0] || "Invigilator";
+
+  if (!normalizedEmail) {
+    throw new Error("Email is required.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === input.userId);
+
+    if (!user || user.role !== "invigilator") {
+      throw new Error("Invigilator not found.");
+    }
+
+    const duplicate = store.users.find(
+      (candidate) =>
+        candidate.id !== input.userId &&
+        candidate.email.toLowerCase() === normalizedEmail
+    );
+
+    if (duplicate) {
+      throw new Error("Another user already has this email address.");
+    }
+
+    user.email = normalizedEmail;
+    user.fullName = fullName;
+    await writeStore(store);
+    return;
+  }
+
+  const userId = assertUuid(input.userId, "Invigilator ID");
+  const supabase = getSupabaseAdmin();
+  const userResponse = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (userResponse.error) {
+    throw new Error(userResponse.error.message);
+  }
+
+  if (!userResponse.data || userResponse.data.role !== "invigilator") {
+    throw new Error("Invigilator not found.");
+  }
+
+  const duplicateResponse = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", normalizedEmail)
+    .neq("id", userId)
+    .maybeSingle();
+
+  if (duplicateResponse.error) {
+    throw new Error(duplicateResponse.error.message);
+  }
+
+  if (duplicateResponse.data) {
+    throw new Error("Another user already has this email address.");
+  }
+
+  const authResponse = await supabase.auth.admin.updateUserById(userId, {
+    email: normalizedEmail,
+    user_metadata: {
+      full_name: fullName,
+      role: "invigilator"
+    }
+  });
+
+  if (authResponse.error) {
+    throw new Error(authResponse.error.message);
+  }
+
+  const updateResponse = await supabase
+    .from("users")
+    .update({
+      email: normalizedEmail,
+      full_name: fullName
+    })
+    .eq("id", userId);
+
+  if (updateResponse.error) {
+    throw new Error(updateResponse.error.message);
+  }
+}
+
+export async function deleteInvigilator(userIdInput: string) {
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === userIdInput);
+
+    if (!user || user.role !== "invigilator") {
+      throw new Error("Invigilator not found.");
+    }
+
+    const hasAuditHistory =
+      store.attendanceEvents.some((event) => event.markedByUserId === userIdInput) ||
+      store.incidents.some((incident) => incident.userId === userIdInput);
+
+    if (hasAuditHistory) {
+      throw new Error(
+        "This invigilator has audit history and cannot be deleted. Remove their room assignments instead."
+      );
+    }
+
+    store.users = store.users.filter((candidate) => candidate.id !== userIdInput);
+    await writeStore(store);
+    return;
+  }
+
+  const userId = assertUuid(userIdInput, "Invigilator ID");
+  const supabase = getSupabaseAdmin();
+  const userResponse = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (userResponse.error) {
+    throw new Error(userResponse.error.message);
+  }
+
+  if (!userResponse.data || userResponse.data.role !== "invigilator") {
+    throw new Error("Invigilator not found.");
+  }
+
+  const [attendanceResponse, incidentResponse] = await Promise.all([
+    supabase
+      .from("attendance_events")
+      .select("id")
+      .eq("marked_by_user_id", userId)
+      .limit(1),
+    supabase.from("incidents").select("id").eq("user_id", userId).limit(1)
+  ]);
+
+  if (attendanceResponse.error) {
+    throw new Error(attendanceResponse.error.message);
+  }
+
+  if (incidentResponse.error) {
+    throw new Error(incidentResponse.error.message);
+  }
+
+  if ((attendanceResponse.data || []).length || (incidentResponse.data || []).length) {
+    throw new Error(
+      "This invigilator has audit history and cannot be deleted. Remove their room assignments instead."
+    );
+  }
+
+  const assignmentDeleteResponse = await supabase
+    .from("room_assignments")
+    .delete()
+    .eq("user_id", userId);
+
+  if (assignmentDeleteResponse.error) {
+    throw new Error(assignmentDeleteResponse.error.message);
+  }
+
+  const userDeleteResponse = await supabase.from("users").delete().eq("id", userId);
+
+  if (userDeleteResponse.error) {
+    throw new Error(userDeleteResponse.error.message);
+  }
+
+  const authDeleteResponse = await supabase.auth.admin.deleteUser(userId);
+
+  if (authDeleteResponse.error) {
+    throw new Error(authDeleteResponse.error.message);
+  }
+}
+
 export async function updateInvigilatorRoomAssignments(input: {
   userId: string;
   assignedRoomIds: string[];

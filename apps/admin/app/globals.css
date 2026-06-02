@@ -357,6 +357,10 @@ textarea:focus {
   font-weight: 800;
 }
 
+.danger-details summary {
+  color: #111;
+}
+
 .assignment-form {
   display: grid;
   gap: 12px;
