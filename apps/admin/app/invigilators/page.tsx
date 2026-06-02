@@ -5,8 +5,7 @@ import {
   createInvigilator as createInvigilatorRecord,
   deleteInvigilator,
   resetInvigilatorAccessCode,
-  updateInvigilatorDetails,
-  updateInvigilatorRoomAssignments
+  updateInvigilatorDetails
 } from "@/lib/repository";
 import { readStore } from "@/lib/store";
 
@@ -18,10 +17,6 @@ async function submitInvigilator(formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const submittedFullName = String(formData.get("fullName") || "").trim();
   const fullName = submittedFullName || email.split("@")[0] || "Invigilator";
-  const assignedRoomIds = formData
-    .getAll("assignedRoomIds")
-    .map((value) => String(value))
-    .filter(Boolean);
   let accessCode = "";
 
   try {
@@ -34,7 +29,7 @@ async function submitInvigilator(formData: FormData) {
     const result = await createInvigilatorRecord({
       email,
       fullName,
-      assignedRoomIds
+      assignedRoomIds: []
     });
     accessCode = result.accessCode;
   } catch (error) {
@@ -48,28 +43,6 @@ async function submitInvigilator(formData: FormData) {
       "Invigilator created. Share this access code with them."
     )}&accessCode=${encodeURIComponent(accessCode)}`
   );
-}
-
-async function submitRoomAssignments(formData: FormData) {
-  "use server";
-
-  const userId = String(formData.get("userId") || "").trim();
-  const assignedRoomIds = formData
-    .getAll("assignedRoomIds")
-    .map((value) => String(value))
-    .filter(Boolean);
-
-  try {
-    await requireAdminPageUser();
-    await updateInvigilatorRoomAssignments({ userId, assignedRoomIds });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to update room assignments.";
-    redirect(`/invigilators?error=${encodeURIComponent(message)}`);
-  }
-
-  revalidatePath("/invigilators");
-  redirect("/invigilators?message=Room%20assignments%20updated.");
 }
 
 async function submitInvigilatorDetails(formData: FormData) {
@@ -146,18 +119,6 @@ export default async function InvigilatorsPage({
     .filter((user) => user.role === "invigilator")
     .sort((left, right) => left.fullName.localeCompare(right.fullName));
 
-  const availableRooms = store.rooms
-    .map((room) => ({
-      ...room,
-      session: store.examSessions.find((session) => session.id === room.examSessionId)
-    }))
-    .filter((room) => room.session)
-    .sort((left, right) =>
-      `${left.session?.examDate}-${left.session?.startTime}-${left.code}`.localeCompare(
-        `${right.session?.examDate}-${right.session?.startTime}-${right.code}`
-      )
-    );
-
   return (
     <div className="layout-two">
       <div className="card">
@@ -180,33 +141,11 @@ export default async function InvigilatorsPage({
         <form className="form-grid" action={submitInvigilator}>
           <input name="email" type="email" placeholder="Email address" required />
           <input name="fullName" placeholder="Full name (optional)" />
-          <div>
-            <div style={{ fontWeight: 700, marginBottom: 10 }}>Assign Rooms</div>
-            <div className="checkbox-grid">
-              {availableRooms.length ? (
-                availableRooms.map((room) => (
-                  <label key={room.id} className="checkbox-card">
-                    <input name="assignedRoomIds" type="checkbox" value={room.id} />
-                    <span>
-                      <strong>{room.code}</strong>
-                      <br />
-                      <span className="subtle">
-                        {room.session?.name} | {room.session?.examDate}
-                      </span>
-                    </span>
-                  </label>
-                ))
-              ) : (
-                <div className="subtle">
-                  Add an exam first to assign room access.
-                </div>
-              )}
-            </div>
-          </div>
           <button type="submit">Create Invigilator</button>
           <div className="subtle">
             The system generates an access code automatically. The invigilator
-            uses only that code in the mobile app.
+            uses only that code in the mobile app. Room access is assigned from
+            each exam panel.
           </div>
         </form>
       </div>
@@ -254,37 +193,6 @@ export default async function InvigilatorsPage({
                       placeholder="Full name"
                     />
                     <button type="submit">Save Details</button>
-                  </form>
-                </details>
-
-                <details className="assignment-details">
-                  <summary>Edit room assignments</summary>
-                  <form className="assignment-form" action={submitRoomAssignments}>
-                    <input name="userId" type="hidden" value={invigilator.id} />
-                    <div className="checkbox-grid compact">
-                      {availableRooms.map((room) => (
-                        <label key={room.id} className="checkbox-card">
-                          <input
-                            name="assignedRoomIds"
-                            type="checkbox"
-                            value={room.id}
-                            defaultChecked={invigilator.assignedRoomIds.includes(room.id)}
-                          />
-                          <span>
-                            <strong>{room.code}</strong>
-                            <br />
-                            <span className="subtle">
-                              {room.session?.name} | {room.session?.examDate}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="subtle">
-                      If no rooms are selected, this invigilator will not see any room
-                      in the mobile app.
-                    </div>
-                    <button type="submit">Save Assignments</button>
                   </form>
                 </details>
 

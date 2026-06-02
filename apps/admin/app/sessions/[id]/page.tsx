@@ -3,7 +3,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
-import { updateInvigilatorRoomAssignments } from "@/lib/repository";
+import {
+  createInvigilator as createInvigilatorRecord,
+  updateInvigilatorRoomAssignments
+} from "@/lib/repository";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -57,12 +60,68 @@ async function submitSessionAssignments(formData: FormData) {
   redirect(`/sessions/${sessionId}?message=Invigilator%20assignments%20updated.`);
 }
 
+async function submitSessionInvigilator(formData: FormData) {
+  "use server";
+
+  const sessionId = String(formData.get("sessionId") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const submittedFullName = String(formData.get("fullName") || "").trim();
+  const fullName = submittedFullName || email.split("@")[0] || "Invigilator";
+  const assignedRoomIds = formData
+    .getAll("assignedRoomIds")
+    .map((value) => String(value))
+    .filter(Boolean);
+  let accessCode = "";
+
+  try {
+    await requireAdminPageUser();
+
+    if (!email) {
+      throw new Error("Email is required.");
+    }
+
+    const store = await readStore();
+    const sessionRoomIds = new Set(
+      store.rooms
+        .filter((room) => room.examSessionId === sessionId)
+        .map((room) => room.id)
+    );
+    const validAssignedRoomIds = assignedRoomIds.filter((roomId) =>
+      sessionRoomIds.has(roomId)
+    );
+
+    const result = await createInvigilatorRecord({
+      email,
+      fullName,
+      assignedRoomIds: validAssignedRoomIds
+    });
+    accessCode = result.accessCode;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to create invigilator.";
+    redirect(`/sessions/${sessionId}?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath(`/sessions/${sessionId}`);
+  revalidatePath("/invigilators");
+  redirect(
+    `/sessions/${sessionId}?message=${encodeURIComponent(
+      "Invigilator created and assigned. Share this access code with them."
+    )}&accessCode=${encodeURIComponent(accessCode)}`
+  );
+}
+
 export default async function SessionDetailPage({
   params,
   searchParams
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ message?: string; error?: string; q?: string }>;
+  searchParams?: Promise<{
+    message?: string;
+    error?: string;
+    q?: string;
+    accessCode?: string;
+  }>;
 }) {
   await requireAdminPageUser();
   const { id } = await params;
@@ -185,9 +244,56 @@ export default async function SessionDetailPage({
         </summary>
         {notices.message ? <p className="pill ok">{notices.message}</p> : null}
         {notices.error ? <p className="pill warn">{notices.error}</p> : null}
+        {notices.accessCode ? (
+          <div className="access-code-box">
+            <div>
+              <div className="kicker">Share This Code</div>
+              <div className="access-code-value">{notices.accessCode}</div>
+            </div>
+            <div className="subtle">
+              This is shown once. If it is lost, generate a new code from the
+              Invigilators page.
+            </div>
+          </div>
+        ) : null}
+
+        <details className="assignment-details">
+          <summary>Add a new invigilator for this exam</summary>
+          <form className="assignment-form" action={submitSessionInvigilator}>
+            <input name="sessionId" type="hidden" value={session.id} />
+            <input name="email" type="email" placeholder="Email address" required />
+            <input name="fullName" placeholder="Full name (optional)" />
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: 10 }}>
+                Assign rooms in {session.name}
+              </div>
+              <div className="checkbox-grid compact">
+                {sessionRooms.map((room) => (
+                  <label key={room.id} className="checkbox-card">
+                    <input name="assignedRoomIds" type="checkbox" value={room.id} />
+                    <span>
+                      <strong>{room.code}</strong>
+                      <br />
+                      <span className="subtle">{room.displayName}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <button type="submit">Create And Assign Invigilator</button>
+          </form>
+        </details>
+
         {invigilators.length ? (
           <form className="assignment-form" action={submitSessionAssignments}>
             <input name="sessionId" type="hidden" value={session.id} />
+            <div>
+              <div style={{ fontWeight: 800 }}>Assign existing invigilators</div>
+              <div className="subtle">
+                Only rooms from this exam are shown here. Assignments from other
+                exams are preserved.
+              </div>
+            </div>
             <div className="detail-list">
               {invigilators.map((invigilator) => (
                 <div key={invigilator.id} className="detail-row stacked">
