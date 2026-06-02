@@ -493,6 +493,203 @@ textarea:focus {
   text-underline-offset: 3px;
 }
 
+.web-scan-shell {
+  display: grid;
+  min-height: 62vh;
+  place-items: center;
+}
+
+.web-scan-card {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(230, 0, 40, 0.06), rgba(18, 18, 18, 0.02)),
+    var(--panel);
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+.web-scan-card h1,
+.web-camera-top h1 {
+  margin: 4px 0;
+  font-size: clamp(28px, 8vw, 46px);
+  line-height: 1;
+}
+
+.web-room-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.web-room-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  border-radius: 22px;
+  border: 1px solid rgba(230, 0, 40, 0.18);
+  background: #fff5f6;
+  color: var(--ink);
+  text-align: left;
+  box-shadow: none;
+}
+
+.web-room-card strong {
+  font-size: 26px;
+}
+
+.web-room-card span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.web-camera-page {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: #070707;
+}
+
+.web-camera-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.web-camera-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  color: white;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.66), transparent 30%),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.72), transparent 36%);
+}
+
+.web-camera-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.web-camera-top p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.web-scan-guide {
+  align-self: center;
+  justify-self: center;
+  width: min(86vw, 680px);
+  height: min(30vh, 230px);
+  display: grid;
+  place-items: center;
+  border: 3px solid rgba(255, 255, 255, 0.78);
+  border-radius: 28px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.14);
+}
+
+.web-scan-guide::before {
+  content: "";
+  width: 78%;
+  height: 42%;
+  border: 4px solid var(--accent);
+  border-radius: 18px;
+  background: rgba(230, 0, 40, 0.08);
+}
+
+.web-scan-guide span {
+  position: absolute;
+  margin-top: min(22vh, 176px);
+  color: rgba(255, 255, 255, 0.86);
+  font-weight: 800;
+}
+
+.web-camera-bottom {
+  display: grid;
+  gap: 12px;
+}
+
+.web-manual-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  background: rgba(17, 17, 17, 0.64);
+}
+
+.web-manual-row input {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.web-stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.web-stat-row div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  background: rgba(17, 17, 17, 0.64);
+}
+
+.web-stat-row strong {
+  font-size: 24px;
+}
+
+.web-stat-row span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+}
+
+.web-ocr-status {
+  border-radius: 18px;
+  padding: 12px 14px;
+  background: rgba(17, 17, 17, 0.72);
+  color: rgba(255, 255, 255, 0.88);
+  font-weight: 800;
+  text-align: center;
+}
+
+.web-review-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  align-items: end;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.web-review-card {
+  display: grid;
+  gap: 12px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: white;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.web-review-card h2 {
+  margin: 0;
+}
+
 @media (max-width: 900px) {
   .layout-two {
     grid-template-columns: 1fr;
@@ -517,5 +714,17 @@ textarea:focus {
   .inline-popover {
     position: static;
     min-width: 0;
+  }
+
+  .web-stat-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .web-manual-row {
+    grid-template-columns: 1fr;
+  }
+
+  .web-scan-card {
+    padding: 18px;
   }
 }
