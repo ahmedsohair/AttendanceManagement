@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { buildExamSessionReport } from "@algo-attendance/shared";
+import {
+  buildExamSessionReport,
+  isActiveExamSession,
+  isClosedExamSession,
+  isDraftExamSession
+} from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
@@ -8,10 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   await requireAdminPageUser();
   const store = await readStore();
-  const publishedSessions = store.examSessions.filter((session) => session.published);
-  const draftSessions = store.examSessions.filter((session) => !session.published);
+  const activeSessions = store.examSessions.filter(isActiveExamSession);
+  const draftSessions = store.examSessions.filter(isDraftExamSession);
+  const closedSessions = store.examSessions.filter(isClosedExamSession);
 
-  const overall = publishedSessions.reduce(
+  const overall = activeSessions.reduce(
     (acc, session) => {
       const report = buildExamSessionReport(store, session.id);
       acc.present += report.attendance.length;
@@ -26,9 +32,9 @@ export default async function DashboardPage() {
     <div className="stack">
       <div className="grid">
         <Link className="card metric-card" href="/sessions">
-          <div className="subtle">Published Sessions</div>
-          <div className="metric">{publishedSessions.length}</div>
-          <div className="metric-hint">Open published exam details</div>
+          <div className="subtle">Active Exams</div>
+          <div className="metric">{activeSessions.length}</div>
+          <div className="metric-hint">Open active exam details</div>
         </Link>
         <Link className="card metric-card" href="/attendance">
           <div className="subtle">Attendance Marked</div>
@@ -52,7 +58,7 @@ export default async function DashboardPage() {
           <div className="inline-actions" style={{ justifyContent: "space-between" }}>
             <div>
               <div className="kicker">Live Overview</div>
-              <h2 className="section-title">Published Exams</h2>
+              <h2 className="section-title">Active Exams</h2>
             </div>
             <Link className="button secondary" href="/sessions">
               View all sessions
@@ -68,8 +74,8 @@ export default async function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {publishedSessions.length ? (
-                publishedSessions.map((session) => {
+              {activeSessions.length ? (
+                activeSessions.map((session) => {
                   const roomCount = store.rooms.filter(
                     (room) => room.examSessionId === session.id
                   ).length;
@@ -96,7 +102,7 @@ export default async function DashboardPage() {
               ) : (
                 <tr>
                   <td colSpan={4} className="subtle">
-                    No published exams yet.
+                    No active exams yet.
                   </td>
                 </tr>
               )}
@@ -133,6 +139,59 @@ export default async function DashboardPage() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+          <div>
+            <div className="kicker">History</div>
+            <h2 className="section-title">Closed Exams</h2>
+          </div>
+          <Link className="button secondary" href="/sessions">
+            View all exams
+          </Link>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Date</th>
+              <th>Rooms</th>
+              <th>Report</th>
+            </tr>
+          </thead>
+          <tbody>
+            {closedSessions.length ? (
+              closedSessions.slice(0, 5).map((session) => {
+                const roomCount = store.rooms.filter(
+                  (room) => room.examSessionId === session.id
+                ).length;
+                return (
+                  <tr key={session.id}>
+                    <td>
+                      <Link href={`/sessions/${session.id}`}>{session.name}</Link>
+                    </td>
+                    <td>
+                      {session.examDate} | {session.startTime}
+                    </td>
+                    <td>{roomCount}</td>
+                    <td>
+                      <a className="pill" href={`/api/reports/${session.id}/export`}>
+                        Download XLSX
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={4} className="subtle">
+                  No closed exams yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

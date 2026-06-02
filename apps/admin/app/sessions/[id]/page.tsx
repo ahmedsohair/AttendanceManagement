@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { buildExamSessionReport } from "@algo-attendance/shared";
+import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
 import { updateInvigilatorRoomAssignments } from "@/lib/repository";
 import { readStore } from "@/lib/store";
@@ -75,6 +75,7 @@ export default async function SessionDetailPage({
     return <div className="card">Exam session not found.</div>;
   }
 
+  const sessionStatus = getExamSessionStatus(session);
   const report = buildExamSessionReport(store, id);
   const sessionRooms = store.rooms
     .filter((room) => room.examSessionId === id)
@@ -114,7 +115,13 @@ export default async function SessionDetailPage({
       <div className="card">
         <div className="inline-actions" style={{ justifyContent: "space-between" }}>
           <div>
-            <div className="pill">{session.published ? "Published" : "Draft"}</div>
+            <div className={sessionStatus === "active" ? "pill ok" : "pill"}>
+              {sessionStatus === "active"
+                ? "Active"
+                : sessionStatus === "closed"
+                  ? "Closed"
+                  : "Draft"}
+            </div>
             <h2 className="section-title" style={{ marginTop: 14 }}>
               {session.name}
             </h2>
@@ -122,9 +129,24 @@ export default async function SessionDetailPage({
               {session.examDate} | {session.startTime}
             </div>
           </div>
-          <a className="button secondary" href={`/api/reports/${session.id}/export`}>
-            Export XLSX
-          </a>
+          <div className="inline-actions">
+            {sessionStatus === "draft" ? (
+              <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
+                <button type="submit">Publish</button>
+              </form>
+            ) : null}
+            {sessionStatus === "active" ? (
+              <form action={`/api/exam-sessions/${session.id}/close`} method="post">
+                <button className="secondary" type="submit">Close Exam</button>
+              </form>
+            ) : null}
+            <a className="button secondary" href={`/api/reports/${session.id}/export`}>
+              Export XLSX
+            </a>
+            <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
+              <button className="danger" type="submit">Delete</button>
+            </form>
+          </div>
         </div>
       </div>
 

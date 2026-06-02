@@ -1,16 +1,14 @@
-import { buildExamSessionReport } from "@algo-attendance/shared";
+import { buildExamSessionReport, isActiveExamSession } from "@algo-attendance/shared";
 import type { DataStore } from "@algo-attendance/shared";
 
-function getActivePublishedSession(store: DataStore) {
+function getActiveExamSessions(store: DataStore) {
   return store.examSessions
-    .filter((session) => session.published)
+    .filter(isActiveExamSession)
     .sort((left, right) => {
       const leftKey = `${left.examDate}T${left.startTime}`;
       const rightKey = `${right.examDate}T${right.startTime}`;
-      return (
-        rightKey.localeCompare(leftKey) || right.createdAt.localeCompare(left.createdAt)
-      );
-    })[0];
+      return rightKey.localeCompare(leftKey) || right.createdAt.localeCompare(left.createdAt);
+    });
 }
 
 export function listPublishedRoomsForUser(store: DataStore, userId: string) {
@@ -19,12 +17,13 @@ export function listPublishedRoomsForUser(store: DataStore, userId: string) {
     throw new Error("User not found.");
   }
 
-  const activeSession = getActivePublishedSession(store);
-  if (!activeSession) {
+  const activeSessions = getActiveExamSessions(store);
+  if (!activeSessions.length) {
     return [];
   }
 
-  const rooms = store.rooms.filter((room) => room.examSessionId === activeSession.id);
+  const activeSessionIds = new Set(activeSessions.map((session) => session.id));
+  const rooms = store.rooms.filter((room) => activeSessionIds.has(room.examSessionId));
   if (user.role === "admin") {
     return rooms;
   }

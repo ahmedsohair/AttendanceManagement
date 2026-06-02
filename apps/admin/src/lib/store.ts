@@ -59,11 +59,19 @@ async function readFileStore(): Promise<DataStore> {
 
 async function readSupabaseStore(): Promise<DataStore> {
   const supabase = getSupabaseAdmin();
+  let sessionsResponse = await supabase
+    .from("exam_sessions")
+    .select("id, name, exam_date, start_time, published, status, created_at");
+
+  if (sessionsResponse.error?.message.includes("status")) {
+    sessionsResponse = await supabase
+      .from("exam_sessions")
+      .select("id, name, exam_date, start_time, published, created_at");
+  }
 
   const [
     usersResponse,
     roomAssignmentsResponse,
-    sessionsResponse,
     roomsResponse,
     allocationsResponse,
     attendanceResponse,
@@ -71,9 +79,6 @@ async function readSupabaseStore(): Promise<DataStore> {
   ] = await Promise.all([
     supabase.from("users").select("id, email, full_name, role"),
     supabase.from("room_assignments").select("room_id, user_id"),
-    supabase
-      .from("exam_sessions")
-      .select("id, name, exam_date, start_time, published, created_at"),
     supabase.from("rooms").select("id, exam_session_id, code, display_name, capacity"),
     supabase
       .from("student_allocations")
@@ -129,6 +134,7 @@ async function readSupabaseStore(): Promise<DataStore> {
       examDate: row.exam_date,
       startTime: row.start_time,
       published: row.published,
+      status: row.status ?? (row.published ? "active" : "draft"),
       createdAt: row.created_at
     })),
     rooms: (roomsResponse.data || []).map((row) => ({

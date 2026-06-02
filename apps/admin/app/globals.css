@@ -101,6 +101,17 @@ button.secondary {
   box-shadow: none;
 }
 
+button.danger,
+.button.danger {
+  background: #111;
+  color: #fff;
+}
+
+button.danger:hover,
+.button.danger:hover {
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.18);
+}
+
 .button.secondary:hover,
 button.secondary:hover {
   border-color: rgba(230, 0, 40, 0.35);

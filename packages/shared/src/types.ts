@@ -7,6 +7,7 @@ export type IncidentType =
   | "student_not_found";
 
 export type UserRole = "admin" | "invigilator";
+export type ExamSessionStatus = "draft" | "active" | "closed";
 
 export interface User {
   id: string;
@@ -23,6 +24,7 @@ export interface ExamSession {
   examDate: string;
   startTime: string;
   published: boolean;
+  status?: ExamSessionStatus;
   createdAt: string;
 }
 

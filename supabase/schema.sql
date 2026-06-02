@@ -18,9 +18,18 @@ create table if not exists exam_sessions (
   exam_date date not null,
   start_time text not null,
   published boolean not null default false,
+  status text not null default 'draft' check (status in ('draft', 'active', 'closed')),
   created_by uuid references users(id),
   created_at timestamptz not null default now()
 );
+
+alter table exam_sessions
+add column if not exists status text not null default 'draft'
+check (status in ('draft', 'active', 'closed'));
+
+update exam_sessions
+set status = case when published then 'active' else 'draft' end
+where status is null or status = '';
 
 create table if not exists rooms (
   id uuid primary key default gen_random_uuid(),
@@ -103,7 +112,7 @@ alter table incidents enable row level security;
 
 create policy "invigilators can read published sessions"
 on exam_sessions for select
-using (published = true);
+using (status = 'active');
 
 create policy "invigilators can read assigned rooms"
 on rooms for select

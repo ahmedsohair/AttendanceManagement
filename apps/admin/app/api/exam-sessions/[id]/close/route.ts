@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
-import { publishExamSession } from "@/lib/repository";
+import { closeExamSession } from "@/lib/repository";
 
 export async function POST(
   request: Request,
@@ -9,7 +9,7 @@ export async function POST(
   const { id } = await params;
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    await publishExamSession(id);
+    await closeExamSession(id);
     return new NextResponse(null, {
       status: 303,
       headers: {
@@ -18,7 +18,7 @@ export async function POST(
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Unable to publish session.";
+      error instanceof Error ? error.message : "Unable to close session.";
     const status = message === "Session not found." ? 404 : 400;
     return NextResponse.json({ message }, { status });
   }

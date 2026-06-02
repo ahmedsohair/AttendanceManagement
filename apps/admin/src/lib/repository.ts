@@ -76,7 +76,7 @@ async function resolveAssignedRoomIds(
     supabase.from("rooms").select("id, code, exam_session_id"),
     supabase
       .from("exam_sessions")
-      .select("id, published, created_at, exam_date, start_time")
+      .select("id, published, status, created_at, exam_date, start_time")
   ]);
 
   if (roomsResponse.error) {
@@ -127,8 +127,8 @@ async function resolveAssignedRoomIds(
     const candidates = [...(roomsByCode.get(legacyRoomCode) || [])].sort((left, right) => {
       const leftSession = sessionById.get(left.exam_session_id);
       const rightSession = sessionById.get(right.exam_session_id);
-      const leftPublished = leftSession?.published ? 1 : 0;
-      const rightPublished = rightSession?.published ? 1 : 0;
+      const leftPublished = leftSession?.status === "active" || leftSession?.published ? 1 : 0;
+      const rightPublished = rightSession?.status === "active" || rightSession?.published ? 1 : 0;
 
       return (
         rightPublished - leftPublished ||
@@ -560,6 +560,7 @@ export async function importExamSession(payload: SessionImportPayload) {
       examDate: payload.examDate,
       startTime: payload.startTime,
       published: false,
+      status: "draft",
       createdAt: nowIso()
     });
     store.rooms.push(...normalized.rooms);
@@ -594,6 +595,7 @@ export async function importExamSession(payload: SessionImportPayload) {
     exam_date: payload.examDate,
     start_time: payload.startTime,
     published: false,
+    status: "draft",
     created_at: createdAt
   });
 
@@ -643,27 +645,17 @@ export async function publishExamSession(sessionId: string) {
       throw new Error("Session not found.");
     }
 
-    for (const candidate of store.examSessions) {
-      candidate.published = candidate.id === sessionId;
-    }
+    session.published = true;
+    session.status = "active";
 
     await writeStore(store);
     return;
   }
 
   const supabase = getSupabaseAdmin();
-  const clearResponse = await supabase
-    .from("exam_sessions")
-    .update({ published: false })
-    .not("id", "is", null);
-
-  if (clearResponse.error) {
-    throw new Error(clearResponse.error.message);
-  }
-
   const publishResponse = await supabase
     .from("exam_sessions")
-    .update({ published: true })
+    .update({ published: true, status: "active" })
     .eq("id", sessionId)
     .select("id")
     .maybeSingle();
@@ -673,6 +665,88 @@ export async function publishExamSession(sessionId: string) {
   }
 
   if (!publishResponse.data) {
+    throw new Error("Session not found.");
+  }
+}
+
+export async function closeExamSession(sessionId: string) {
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const session = store.examSessions.find((item) => item.id === sessionId);
+    if (!session) {
+      throw new Error("Session not found.");
+    }
+
+    session.published = false;
+    session.status = "closed";
+    await writeStore(store);
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const closeResponse = await supabase
+    .from("exam_sessions")
+    .update({ published: false, status: "closed" })
+    .eq("id", sessionId)
+    .select("id")
+    .maybeSingle();
+
+  if (closeResponse.error) {
+    throw new Error(closeResponse.error.message);
+  }
+
+  if (!closeResponse.data) {
+    throw new Error("Session not found.");
+  }
+}
+
+export async function deleteExamSession(sessionId: string) {
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const session = store.examSessions.find((item) => item.id === sessionId);
+    if (!session) {
+      throw new Error("Session not found.");
+    }
+
+    const roomIds = new Set(
+      store.rooms
+        .filter((room) => room.examSessionId === sessionId)
+        .map((room) => room.id)
+    );
+
+    store.examSessions = store.examSessions.filter((item) => item.id !== sessionId);
+    store.rooms = store.rooms.filter((room) => room.examSessionId !== sessionId);
+    store.studentAllocations = store.studentAllocations.filter(
+      (allocation) => allocation.examSessionId !== sessionId
+    );
+    store.attendanceEvents = store.attendanceEvents.filter(
+      (event) => event.examSessionId !== sessionId
+    );
+    store.incidents = store.incidents.filter(
+      (incident) => incident.examSessionId !== sessionId
+    );
+    store.users = store.users.map((user) => ({
+      ...user,
+      assignedRoomIds: user.assignedRoomIds.filter((roomId) => !roomIds.has(roomId))
+    }));
+
+    await writeStore(store);
+    return;
+  }
+
+  const supabase = getSupabaseAdmin();
+  const deleteResponse = await supabase
+    .from("exam_sessions")
+    .delete()
+    .eq("id", sessionId)
+    .select("id")
+    .maybeSingle();
+
+  if (deleteResponse.error) {
+    throw new Error(deleteResponse.error.message);
+  }
+
+  if (!deleteResponse.data) {
     throw new Error("Session not found.");
   }
 }
