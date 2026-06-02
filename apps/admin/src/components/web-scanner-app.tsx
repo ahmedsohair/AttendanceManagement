@@ -201,17 +201,6 @@ export function WebScannerApp() {
   }, []);
 
   useEffect(() => {
-    loadCurrentUser()
-      .then((currentUser) => {
-        if (currentUser.role === "invigilator" || currentUser.role === "admin") {
-          return loadRooms();
-        }
-        return [];
-      })
-      .catch(() => undefined);
-  }, [loadCurrentUser, loadRooms]);
-
-  useEffect(() => {
     userRef.current = user;
   }, [user]);
 
@@ -271,6 +260,7 @@ export function WebScannerApp() {
       );
 
       const supabase = getSupabaseBrowserClient();
+      await supabase.auth.signOut();
       const { error } = await supabase.auth.signInWithPassword({
         email: loginPayload.email,
         password: normalizedCode
