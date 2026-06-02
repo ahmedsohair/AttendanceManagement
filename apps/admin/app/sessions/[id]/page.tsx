@@ -7,7 +7,6 @@ import {
   createInvigilator as createInvigilatorRecord,
   updateInvigilatorRoomAssignments
 } from "@/lib/repository";
-import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -108,7 +107,7 @@ async function submitSessionInvigilator(formData: FormData) {
   redirect(
     `/sessions/${sessionId}?message=${encodeURIComponent(
       "Invigilator created and assigned. Share this access code with them."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeEmail=${encodeURIComponent(email)}`
+    )}&accessCode=${encodeURIComponent(accessCode)}`
   );
 }
 
@@ -122,7 +121,6 @@ export default async function SessionDetailPage({
     error?: string;
     q?: string;
     accessCode?: string;
-    codeEmail?: string;
   }>;
 }) {
   await requireAdminPageUser();
@@ -256,14 +254,6 @@ export default async function SessionDetailPage({
               This is shown once. If it is lost, generate a new code from the
               Invigilators page.
             </div>
-            {notices.codeEmail ? (
-              <a
-                className="button"
-                href={buildAccessCodeMailto(notices.codeEmail, notices.accessCode)}
-              >
-                Email Code
-              </a>
-            ) : null}
           </div>
         ) : null}
 

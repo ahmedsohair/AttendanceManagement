@@ -5,7 +5,6 @@ import {
   createInvigilator as createInvigilatorRecord,
   updateInvigilatorRoomAssignments
 } from "@/lib/repository";
-import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { readStore } from "@/lib/store";
 import { NewExamImportForm } from "@/components/new-exam-import-form";
 
@@ -123,7 +122,7 @@ async function submitNewExamInvigilator(formData: FormData) {
       sessionId
     )}&message=${encodeURIComponent(
       "Invigilator created and assigned. Share this access code with them."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeEmail=${encodeURIComponent(email)}`
+    )}&accessCode=${encodeURIComponent(accessCode)}`
   );
 }
 
@@ -135,7 +134,6 @@ export default async function NewSessionPage({
     message?: string;
     error?: string;
     accessCode?: string;
-    codeEmail?: string;
   }>;
 }) {
   await requireAdminPageUser();
@@ -190,14 +188,6 @@ export default async function NewSessionPage({
             This is shown once. If it is lost, generate a new code from the
             Invigilators page.
           </div>
-          {params.codeEmail ? (
-            <a
-              className="button"
-              href={buildAccessCodeMailto(params.codeEmail, params.accessCode)}
-            >
-              Email Code
-            </a>
-          ) : null}
         </div>
       ) : null}
 

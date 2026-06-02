@@ -364,10 +364,6 @@ textarea:focus {
   color: white;
 }
 
-.access-code-box .button {
-  justify-self: start;
-}
-
 .access-code-box .subtle {
   color: rgba(255, 255, 255, 0.72);
 }

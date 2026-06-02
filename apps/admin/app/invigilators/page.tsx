@@ -7,7 +7,6 @@ import {
   resetInvigilatorAccessCode,
   updateInvigilatorDetails
 } from "@/lib/repository";
-import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +41,7 @@ async function submitInvigilator(formData: FormData) {
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "Invigilator created. Share this access code with them."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeEmail=${encodeURIComponent(email)}`
+    )}&accessCode=${encodeURIComponent(accessCode)}`
   );
 }
 
@@ -70,7 +69,6 @@ async function submitAccessCodeReset(formData: FormData) {
   "use server";
 
   const userId = String(formData.get("userId") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
   let accessCode = "";
 
   try {
@@ -87,9 +85,7 @@ async function submitAccessCodeReset(formData: FormData) {
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "New invigilator access code generated."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeUserId=${encodeURIComponent(
-      userId
-    )}&codeEmail=${encodeURIComponent(email)}`
+    )}&accessCode=${encodeURIComponent(accessCode)}&codeUserId=${encodeURIComponent(userId)}`
   );
 }
 
@@ -119,7 +115,6 @@ export default async function InvigilatorsPage({
     error?: string;
     accessCode?: string;
     codeUserId?: string;
-    codeEmail?: string;
   }>;
 }) {
   await requireAdminPageUser();
@@ -146,14 +141,6 @@ export default async function InvigilatorsPage({
               This is shown once. If it is lost, generate a new code from the
               invigilator card.
             </div>
-            {params.codeEmail ? (
-              <a
-                className="button"
-                href={buildAccessCodeMailto(params.codeEmail, params.accessCode)}
-              >
-                Email Code
-              </a>
-            ) : null}
           </div>
         ) : null}
         <form className="form-grid" action={submitInvigilator}>
@@ -193,15 +180,6 @@ export default async function InvigilatorsPage({
                             <div className="subtle">
                               Share this now. Existing codes cannot be viewed later.
                             </div>
-                            <a
-                              className="button"
-                              href={buildAccessCodeMailto(
-                                params.codeEmail || invigilator.email,
-                                params.accessCode
-                              )}
-                            >
-                              Email Code
-                            </a>
                           </div>
                         ) : (
                           <div className="subtle">
@@ -211,7 +189,6 @@ export default async function InvigilatorsPage({
                         )}
                         <form className="assignment-form" action={submitAccessCodeReset}>
                           <input name="userId" type="hidden" value={invigilator.id} />
-                          <input name="email" type="hidden" value={invigilator.email} />
                           <button type="submit">Generate New Code</button>
                         </form>
                       </div>
@@ -266,15 +243,6 @@ export default async function InvigilatorsPage({
                       <div className="subtle">
                         Share this now. Existing codes cannot be viewed later.
                       </div>
-                      <a
-                        className="button"
-                        href={buildAccessCodeMailto(
-                          params.codeEmail || invigilator.email,
-                          params.accessCode
-                        )}
-                      >
-                        Email Code
-                      </a>
                     </div>
                   ) : (
                     <div className="subtle">
@@ -283,7 +251,6 @@ export default async function InvigilatorsPage({
                   )}
                   <form className="assignment-form" action={submitAccessCodeReset}>
                     <input name="userId" type="hidden" value={invigilator.id} />
-                    <input name="email" type="hidden" value={invigilator.email} />
                     <button type="submit">Generate New Code</button>
                   </form>
                 </details>
