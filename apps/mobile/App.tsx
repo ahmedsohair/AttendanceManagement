@@ -564,12 +564,17 @@ function AttendanceScreen({
 
       {LiveTextScannerComponent ? (
         <View style={StyleSheet.absoluteFill}>
-          <LiveTextScannerComponent
-            onCancel={closeScanner}
-            onDetected={handleDetectedStudentId}
-            enabled={!scannerOverlayVisible && !busy}
-            resetSignal={scanResetKey}
-          />
+          {scannerOverlayVisible ? (
+            <View style={[StyleSheet.absoluteFill, styles.scannerPausedBackdrop]} />
+          ) : (
+            <LiveTextScannerComponent
+              key={scanResetKey}
+              onCancel={closeScanner}
+              onDetected={handleDetectedStudentId}
+              enabled={!busy}
+              resetSignal={scanResetKey}
+            />
+          )}
 
           <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
             <View style={styles.scannerTopBar}>
@@ -1010,6 +1015,9 @@ const styles = StyleSheet.create({
     color: "#b4001f",
     marginTop: 4,
     fontWeight: "600"
+  },
+  scannerPausedBackdrop: {
+    backgroundColor: "#090909"
   },
   scannerTopBar: {
     paddingTop: 54,
