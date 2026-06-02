@@ -585,6 +585,10 @@ textarea:focus {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.web-torch-button {
+  flex: 0 0 auto;
+}
+
 .web-scan-guide {
   position: relative;
   align-self: center;
@@ -666,6 +670,16 @@ textarea:focus {
   text-align: center;
 }
 
+.web-camera-note {
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(17, 17, 17, 0.58);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .web-review-sheet {
   position: absolute;
   inset: 0;
@@ -722,6 +736,16 @@ textarea:focus {
 
   .web-manual-row {
     grid-template-columns: 1fr;
+  }
+
+  .web-camera-top {
+    display: grid;
+    grid-template-columns: auto 1fr;
+  }
+
+  .web-torch-button {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .web-scan-card {

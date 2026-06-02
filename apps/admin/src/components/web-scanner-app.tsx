@@ -52,6 +52,13 @@ type OcrWorker = {
   dispose(): Promise<unknown>;
 };
 
+type TorchMediaTrack = MediaStreamTrack & {
+  getCapabilities(): MediaTrackCapabilities & { torch?: boolean };
+  applyConstraints(constraints: MediaTrackConstraints & {
+    advanced?: Array<MediaTrackConstraintSet & { torch?: boolean }>;
+  }): Promise<void>;
+};
+
 const deviceIdStorageKey = "ams-web-scanner-device-id";
 const onnxModelTimeoutMs = 45000;
 
@@ -161,6 +168,76 @@ async function createDigitOcrWorker(
   return ocr as OcrWorker;
 }
 
+function preprocessLowLightImageData(imageData: ImageData) {
+  const { data, width, height } = imageData;
+  const gray = new Uint8ClampedArray(width * height);
+  let min = 255;
+  let max = 0;
+
+  for (let pixelIndex = 0, dataIndex = 0; pixelIndex < gray.length; pixelIndex += 1, dataIndex += 4) {
+    const value = Math.round(
+      data[dataIndex] * 0.299 + data[dataIndex + 1] * 0.587 + data[dataIndex + 2] * 0.114
+    );
+    gray[pixelIndex] = value;
+    if (value < min) {
+      min = value;
+    }
+    if (value > max) {
+      max = value;
+    }
+  }
+
+  const range = Math.max(20, max - min);
+  for (let index = 0; index < gray.length; index += 1) {
+    const normalized = ((gray[index] - min) / range) * 255;
+    gray[index] = Math.max(0, Math.min(255, Math.round(normalized * 1.18 - 16)));
+  }
+
+  const integral = new Float64Array((width + 1) * (height + 1));
+  for (let y = 0; y < height; y += 1) {
+    let rowSum = 0;
+    for (let x = 0; x < width; x += 1) {
+      rowSum += gray[y * width + x];
+      const integralIndex = (y + 1) * (width + 1) + x + 1;
+      integral[integralIndex] = integral[integralIndex - (width + 1)] + rowSum;
+    }
+  }
+
+  const radius = Math.max(8, Math.round(Math.min(width, height) / 28));
+  for (let y = 0, dataIndex = 0; y < height; y += 1) {
+    const y0 = Math.max(0, y - radius);
+    const y1 = Math.min(height - 1, y + radius);
+
+    for (let x = 0; x < width; x += 1, dataIndex += 4) {
+      const x0 = Math.max(0, x - radius);
+      const x1 = Math.min(width - 1, x + radius);
+      const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+      const sum =
+        integral[(y1 + 1) * (width + 1) + x1 + 1] -
+        integral[y0 * (width + 1) + x1 + 1] -
+        integral[(y1 + 1) * (width + 1) + x0] +
+        integral[y0 * (width + 1) + x0];
+      const localMean = sum / area;
+      const value = gray[y * width + x] > localMean - 8 ? 255 : 0;
+      data[dataIndex] = value;
+      data[dataIndex + 1] = value;
+      data[dataIndex + 2] = value;
+      data[dataIndex + 3] = 255;
+    }
+  }
+}
+
+function trackSupportsTorch(track?: MediaStreamTrack | null) {
+  if (!track?.getCapabilities) {
+    return false;
+  }
+
+  const capabilities = track.getCapabilities() as MediaTrackCapabilities & {
+    torch?: boolean;
+  };
+  return Boolean(capabilities.torch);
+}
+
 export function WebScannerApp() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -190,6 +267,9 @@ export function WebScannerApp() {
   const [busy, setBusy] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [scanPaused, setScanPaused] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [torchMessage, setTorchMessage] = useState("");
 
   const roomStats = useMemo(
     () => ({
@@ -447,6 +527,13 @@ export function WebScannerApp() {
         audio: false
       });
       streamRef.current = stream;
+      const videoTrack = stream.getVideoTracks()[0] as TorchMediaTrack | undefined;
+      const supportsTorch = trackSupportsTorch(videoTrack);
+      setTorchSupported(supportsTorch);
+      setTorchEnabled(false);
+      setTorchMessage(
+        supportsTorch ? "" : "Torch is not available in this browser."
+      );
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -499,10 +586,38 @@ export function WebScannerApp() {
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
+    setTorchSupported(false);
+    setTorchEnabled(false);
+    setTorchMessage("");
     scanPausedRef.current = false;
     setScanPaused(false);
     selectedRoomRef.current = null;
     setSelectedRoom(null);
+  }
+
+  async function toggleTorch() {
+    const track = streamRef.current?.getVideoTracks()[0] as TorchMediaTrack | undefined;
+    if (!track || !trackSupportsTorch(track)) {
+      setTorchSupported(false);
+      setTorchMessage("Torch is not available in this browser.");
+      return;
+    }
+
+    const nextTorchState = !torchEnabled;
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: nextTorchState }]
+      });
+      setTorchEnabled(nextTorchState);
+      setTorchSupported(true);
+      setTorchMessage(nextTorchState ? "Torch on." : "Torch off.");
+    } catch (error) {
+      setTorchMessage(
+        error instanceof Error
+          ? `Torch failed: ${error.message}`
+          : "Torch failed in this browser."
+      );
+    }
   }
 
   async function runOcrScan() {
@@ -576,15 +691,7 @@ export function WebScannerApp() {
     );
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = imageData.data;
-    for (let index = 0; index < pixels.length; index += 4) {
-      const gray = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
-      const contrast = gray > 150 ? 255 : 0;
-      pixels[index] = contrast;
-      pixels[index + 1] = contrast;
-      pixels[index + 2] = contrast;
-    }
-
+    preprocessLowLightImageData(imageData);
     context.putImageData(imageData, 0, 0);
 
     setOcrStatus("Reading red box with ONNX OCR...");
@@ -706,6 +813,14 @@ export function WebScannerApp() {
             <h1>{selectedRoom.code}</h1>
             <p>{selectedRoom.session?.name || "Exam"} | {selectedRoom.session?.startTime}</p>
           </div>
+          <button
+            className="secondary web-torch-button"
+            type="button"
+            onClick={toggleTorch}
+            disabled={!torchSupported}
+          >
+            {torchEnabled ? "Torch Off" : "Torch On"}
+          </button>
         </div>
 
         <div className="web-scan-guide">
@@ -751,6 +866,7 @@ export function WebScannerApp() {
           <div className="web-ocr-status">
             {cameraActive ? ocrStatus || "Camera active" : "Camera stopped"}
           </div>
+          {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
           {cameraActive && !ocrWorkerRef.current && statusMessage ? (
             <button
               className="secondary"
