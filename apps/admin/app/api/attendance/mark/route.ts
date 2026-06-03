@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { markAttendanceRequestSchema } from "@algo-attendance/shared";
-import { requireApiUser } from "@/lib/auth";
+import { requireApiUserWithStore } from "@/lib/auth";
 import { applyAttendanceMark } from "@/lib/repository";
 
 export async function POST(request: Request) {
   try {
     const body = markAttendanceRequestSchema.parse(await request.json());
-    const user = await requireApiUser(request, {
+    const { user, store } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId: body.roomId
     });
     const response = await applyAttendanceMark({
       ...body,
       userId: user.id
-    });
+    }, store);
     return NextResponse.json(response);
   } catch (error) {
     return NextResponse.json(

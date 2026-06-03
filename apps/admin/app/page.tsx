@@ -1,32 +1,18 @@
 import Link from "next/link";
-import {
-  buildExamSessionReport,
-  isActiveExamSession,
-  isClosedExamSession,
-  isDraftExamSession
-} from "@algo-attendance/shared";
+import { getDashboardData } from "@/lib/admin-queries";
 import { requireAdminPageUser } from "@/lib/auth";
-import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   await requireAdminPageUser();
-  const store = await readStore();
-  const activeSessions = store.examSessions.filter(isActiveExamSession);
-  const draftSessions = store.examSessions.filter(isDraftExamSession);
-  const closedSessions = store.examSessions.filter(isClosedExamSession);
-
-  const overall = activeSessions.reduce(
-    (acc, session) => {
-      const report = buildExamSessionReport(store, session.id);
-      acc.present += report.attendance.length;
-      acc.mismatch += report.attendance.filter((item) => item.roomMismatch).length;
-      acc.incidents += report.incidents.length;
-      return acc;
-    },
-    { present: 0, mismatch: 0, incidents: 0 }
-  );
+  const {
+    activeSessions,
+    draftSessions,
+    closedSessions,
+    overall,
+    roomCountBySessionId
+  } = await getDashboardData();
 
   return (
     <div className="stack">
@@ -76,9 +62,7 @@ export default async function DashboardPage() {
             <tbody>
               {activeSessions.length ? (
                 activeSessions.map((session) => {
-                  const roomCount = store.rooms.filter(
-                    (room) => room.examSessionId === session.id
-                  ).length;
+                  const roomCount = roomCountBySessionId.get(session.id) || 0;
                   return (
                     <tr key={session.id}>
                       <td>
@@ -170,9 +154,7 @@ export default async function DashboardPage() {
           <tbody>
             {closedSessions.length ? (
               closedSessions.slice(0, 5).map((session) => {
-                const roomCount = store.rooms.filter(
-                  (room) => room.examSessionId === session.id
-                ).length;
+                const roomCount = roomCountBySessionId.get(session.id) || 0;
                 return (
                   <tr key={session.id}>
                     <td>

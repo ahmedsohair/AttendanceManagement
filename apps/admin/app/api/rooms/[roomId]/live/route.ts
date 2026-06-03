@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireApiUser } from "@/lib/auth";
+import { requireApiUserWithStore } from "@/lib/auth";
 import { getRoomLiveState } from "@/lib/selectors";
 import { readStore } from "@/lib/store";
 
@@ -9,11 +9,11 @@ export async function GET(
 ) {
   try {
     const { roomId } = await params;
-    await requireApiUser(request, {
+    const { store: authorizedStore } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId
     });
-    const store = await readStore();
+    const store = authorizedStore || (await readStore());
     const liveState = getRoomLiveState(store, roomId);
     return NextResponse.json(liveState);
   } catch (error) {

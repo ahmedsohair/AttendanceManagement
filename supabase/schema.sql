@@ -98,10 +98,16 @@ create index if not exists idx_rooms_exam_session_id on rooms(exam_session_id);
 create index if not exists idx_room_assignments_user_id on room_assignments(user_id);
 create index if not exists idx_student_allocations_exam_session_id on student_allocations(exam_session_id);
 create index if not exists idx_student_allocations_room_id on student_allocations(room_id);
+create index if not exists idx_student_allocations_session_student on student_allocations(exam_session_id, student_id);
 create index if not exists idx_attendance_events_exam_session_id on attendance_events(exam_session_id);
 create index if not exists idx_attendance_events_marked_in_room_id on attendance_events(marked_in_room_id);
+create index if not exists idx_attendance_events_session_student on attendance_events(exam_session_id, student_id);
+create index if not exists idx_attendance_events_room_created_at on attendance_events(marked_in_room_id, created_at desc);
+create index if not exists idx_attendance_events_room_mismatch on attendance_events(marked_in_room_id, room_mismatch);
 create index if not exists idx_incidents_exam_session_id on incidents(exam_session_id);
 create index if not exists idx_incidents_room_id on incidents(room_id);
+create index if not exists idx_incidents_room_created_at on incidents(room_id, created_at desc);
+create index if not exists idx_incidents_session_room_type on incidents(exam_session_id, room_id, incident_type);
 
 alter table exam_sessions enable row level security;
 alter table rooms enable row level security;

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
-import type { User, UserRole } from "@algo-attendance/shared";
+import type { DataStore, User, UserRole } from "@algo-attendance/shared";
 import { listPublishedRoomsForUser } from "./selectors";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { getSupabaseServerClient } from "./supabase-server";
@@ -159,6 +159,17 @@ export async function requireApiUser(
     roomId?: string;
   }
 ) {
+  const { user } = await requireApiUserWithStore(request, options);
+  return user;
+}
+
+export async function requireApiUserWithStore(
+  request: Request,
+  options?: {
+    allowedRoles?: UserRole[];
+    roomId?: string;
+  }
+): Promise<{ user: User; store?: DataStore }> {
   let user: User | null;
 
   if (!isSupabaseConfigured()) {
@@ -181,8 +192,10 @@ export async function requireApiUser(
     throw new Error("You do not have permission to access this resource.");
   }
 
+  let store: DataStore | undefined;
+
   if (options?.roomId) {
-    const store = await readStore();
+    store = await readStore();
     const accessibleRooms = listPublishedRoomsForUser(store, user.id);
     const canAccessRoom =
       user.role === "admin" ||
@@ -193,5 +206,5 @@ export async function requireApiUser(
     }
   }
 
-  return user;
+  return { user, store };
 }

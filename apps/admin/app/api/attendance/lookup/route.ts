@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { lookupRequestSchema, lookupStudent } from "@algo-attendance/shared";
-import { requireApiUser } from "@/lib/auth";
+import { requireApiUserWithStore } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
 export async function POST(request: Request) {
   try {
     const body = lookupRequestSchema.parse(await request.json());
-    await requireApiUser(request, {
+    const { store: authorizedStore } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId: body.roomId
     });
-    const store = await readStore();
+    const store = authorizedStore || (await readStore());
     const result = lookupStudent(store, body);
     return NextResponse.json({ result });
   } catch (error) {

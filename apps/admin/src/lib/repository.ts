@@ -1,6 +1,7 @@
 import {
   markAttendance,
   normalizeImportPayload,
+  type DataStore,
   type MarkAttendanceRequest,
   type SessionImportPayload,
   type User
@@ -928,8 +929,11 @@ export async function deleteExamSession(sessionId: string) {
   }
 }
 
-export async function applyAttendanceMark(request: MarkAttendanceRequest) {
-  const store = await readStore();
+export async function applyAttendanceMark(
+  request: MarkAttendanceRequest,
+  existingStore?: DataStore
+) {
+  const store = existingStore || (await readStore());
   const response = markAttendance(store, request, {
     now: nowIso,
     nextId
