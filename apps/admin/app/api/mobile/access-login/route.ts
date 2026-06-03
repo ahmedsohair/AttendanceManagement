@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { hashAccessCode, normalizeAccessCode } from "@/lib/access-code";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
+import { logServerTiming } from "@/lib/timing";
 
 export async function POST(request: Request) {
+  const startedAt = performance.now();
+  let status = 200;
+
   try {
     const body = (await request.json()) as { accessCode?: string };
     const accessCode = normalizeAccessCode(body.accessCode || "");
@@ -47,9 +51,12 @@ export async function POST(request: Request) {
       email: userResponse.data.email
     });
   } catch (error) {
+    status = 401;
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to verify access code." },
       { status: 401 }
     );
+  } finally {
+    logServerTiming("api.mobile.access-login", startedAt, { status });
   }
 }

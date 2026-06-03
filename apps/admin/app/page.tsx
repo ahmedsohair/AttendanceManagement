@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { getDashboardData } from "@/lib/admin-queries";
 import { requireAdminPageUser } from "@/lib/auth";
+import { logServerTiming } from "@/lib/timing";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const startedAt = performance.now();
   await requireAdminPageUser();
   const {
     activeSessions,
@@ -13,6 +15,13 @@ export default async function DashboardPage() {
     overall,
     roomCountBySessionId
   } = await getDashboardData();
+  logServerTiming("page.dashboard", startedAt, {
+    activeSessions: activeSessions.length,
+    draftSessions: draftSessions.length,
+    closedSessions: closedSessions.length,
+    present: overall.present,
+    incidents: overall.incidents
+  });
 
   return (
     <div className="stack">
