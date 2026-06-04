@@ -7,6 +7,7 @@ import type {
   Room,
   User
 } from "@algo-attendance/shared";
+import { ExamPulseLogo } from "@/components/exam-pulse-logo";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type RoomWithSession = Room & {
@@ -771,11 +772,7 @@ export function WebScannerApp() {
     return (
       <div className="web-scan-shell">
         <section className="web-scan-card">
-          <img
-            className="web-brand-logo"
-            src="/exampulse_logo.svg"
-            alt="ExamPulse"
-          />
+          <ExamPulseLogo className="web-brand-logo" />
           <h1>Invigilator Web Login</h1>
           <p className="subtle">
             Use the same access code as the Android app. This scanner works from
@@ -801,11 +798,7 @@ export function WebScannerApp() {
     return (
       <div className="web-scan-shell">
         <section className="web-scan-card">
-          <img
-            className="web-brand-logo"
-            src="/exampulse_logo.svg"
-            alt="ExamPulse"
-          />
+          <ExamPulseLogo className="web-brand-logo" />
           <div className="inline-actions" style={{ justifyContent: "space-between" }}>
             <div>
               <div className="kicker">Assigned rooms</div>

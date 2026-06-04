@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getOptionalSessionUser } from "@/lib/auth";
+import { ExamPulseLogo } from "@/components/exam-pulse-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import "./globals.css";
 
@@ -22,11 +23,7 @@ export default async function RootLayout({
         <div className="shell">
           <div className="header">
             <div className="brand-logo-wrap">
-              <img
-                className="brand-logo"
-                src="/exampulse_logo.svg"
-                alt="ExamPulse"
-              />
+              <ExamPulseLogo />
             </div>
             {sessionUser?.role === "admin" ? (
               <div className="actions">
