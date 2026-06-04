@@ -265,6 +265,8 @@ export function WebScannerApp() {
   const [statusMessage, setStatusMessage] = useState("");
   const [ocrStatus, setOcrStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [lookupPending, setLookupPending] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [scanPaused, setScanPaused] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
@@ -286,6 +288,7 @@ export function WebScannerApp() {
     setComment("");
     setLastLookup(null);
     setStatusMessage("");
+    setLookupPending(false);
     scanPausedRef.current = false;
     setScanPaused(false);
     lastCandidateRef.current = null;
@@ -299,11 +302,16 @@ export function WebScannerApp() {
   }, []);
 
   const loadRooms = useCallback(async () => {
-    const payload = await readJson<{ rooms: RoomWithSession[] }>(
-      await fetch("/api/mobile/my-rooms")
-    );
-    setRooms(payload.rooms);
-    return payload.rooms;
+    setRoomsLoading(true);
+    try {
+      const payload = await readJson<{ rooms: RoomWithSession[] }>(
+        await fetch("/api/mobile/my-rooms")
+      );
+      setRooms(payload.rooms);
+      return payload.rooms;
+    } finally {
+      setRoomsLoading(false);
+    }
   }, []);
 
   const loadLiveState = useCallback(async (roomId: string) => {
@@ -402,6 +410,7 @@ export function WebScannerApp() {
       setUser(null);
       setRooms([]);
       setSelectedRoom(null);
+      setRoomsLoading(false);
       setBusy(false);
     }
   }
@@ -420,6 +429,9 @@ export function WebScannerApp() {
     setBusy(true);
     setLastSource(source);
     setStudentId(normalizedId);
+    setLookupPending(true);
+    setLastLookup(null);
+    setStatusMessage("Checking student...");
     scanPausedRef.current = true;
     setScanPaused(true);
     try {
@@ -450,6 +462,7 @@ export function WebScannerApp() {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Lookup failed.");
     } finally {
+      setLookupPending(false);
       setBusy(false);
     }
   }
@@ -776,23 +789,49 @@ export function WebScannerApp() {
             </button>
           </div>
           {statusMessage ? <p className="pill warn">{statusMessage}</p> : null}
-          <div className="web-room-grid">
-            {rooms.map((room) => (
+          {roomsLoading ? (
+            <div className="web-loading-card">
+              <strong>Loading your assigned rooms...</strong>
+              <span>Please wait while we check active exam room assignments.</span>
+            </div>
+          ) : (
+            <div className="web-room-grid">
+              {rooms.map((room) => (
+                <button
+                  key={room.id}
+                  className="web-room-card"
+                  type="button"
+                  onClick={() => startCamera(room)}
+                >
+                  <strong>{room.code}</strong>
+                  <span>
+                    {room.session?.name || "Exam"} | {room.session?.startTime || ""}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!roomsLoading && !rooms.length ? (
+            <div className="web-empty-state">
+              <strong>No active rooms assigned</strong>
+              <span>
+                Ask the administrator to assign this invigilator to an active exam room.
+              </span>
               <button
-                key={room.id}
-                className="web-room-card"
+                className="secondary"
                 type="button"
-                onClick={() => startCamera(room)}
+                onClick={() =>
+                  loadRooms().catch((error) =>
+                    setStatusMessage(
+                      error instanceof Error ? error.message : "Unable to load rooms."
+                    )
+                  )
+                }
+                disabled={busy || roomsLoading}
               >
-                <strong>{room.code}</strong>
-                <span>
-                  {room.session?.name || "Exam"} | {room.session?.startTime || ""}
-                </span>
+                Refresh Rooms
               </button>
-            ))}
-          </div>
-          {!rooms.length ? (
-            <p className="subtle">No active exam rooms are assigned to this code.</p>
+            </div>
           ) : null}
         </section>
       </div>
@@ -884,7 +923,9 @@ export function WebScannerApp() {
         <div className="web-review-sheet">
           <div className="web-review-card">
             <h2>
-              {lastLookup?.status === "wrong_room"
+              {lookupPending
+                ? "Checking student..."
+                : lastLookup?.status === "wrong_room"
                 ? "Wrong room detected"
                 : lastLookup?.status === "ready_to_mark"
                   ? "Ready to mark"
@@ -899,23 +940,40 @@ export function WebScannerApp() {
               onChange={(event) => setStudentId(event.target.value)}
               inputMode="numeric"
               placeholder="Student number"
+              readOnly={lookupPending}
             />
             <textarea
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               placeholder="Comments (optional)"
               rows={3}
+              disabled={lookupPending}
             />
             {statusMessage ? <p className="subtle">{statusMessage}</p> : null}
             <div className="inline-actions">
-              <button
-                className="secondary"
-                type="button"
-                onClick={() => lookupStudent(studentId, lastSource)}
-                disabled={busy}
-              >
-                Lookup Edited ID
-              </button>
+              {lookupPending ? (
+                <>
+                  <button className="secondary" type="button" disabled>
+                    Checking...
+                  </button>
+                  <button
+                    className="secondary"
+                    type="button"
+                    onClick={resetForNextScan}
+                  >
+                    Cancel Scan
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="secondary"
+                  type="button"
+                  onClick={() => lookupStudent(studentId, lastSource)}
+                  disabled={busy}
+                >
+                  Lookup Edited ID
+                </button>
+              )}
               {lastLookup?.status === "ready_to_mark" ? (
                 <button type="button" onClick={() => markStudent()} disabled={busy}>
                   Mark Present

@@ -545,6 +545,27 @@ textarea:focus {
   font-weight: 500;
 }
 
+.web-loading-card,
+.web-empty-state {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(230, 0, 40, 0.18);
+  border-radius: 22px;
+  background: #fff5f6;
+  padding: 18px;
+}
+
+.web-loading-card strong,
+.web-empty-state strong {
+  font-size: 20px;
+}
+
+.web-loading-card span,
+.web-empty-state span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .web-camera-page {
   position: fixed;
   inset: 0;
