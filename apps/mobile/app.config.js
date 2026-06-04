@@ -15,7 +15,7 @@ const supabasePublishableKey =
 
 module.exports = {
   expo: {
-    name: "Attendance Management System",
+    name: "ExamPulse",
     slug: "attendance-management-system",
     owner: "ahmedsohair",
     scheme: "attendancemanagement",
@@ -29,7 +29,7 @@ module.exports = {
         "react-native-vision-camera",
         {
           cameraPermissionText:
-            "Allow Algo Attendance to access the camera for live student ID scanning.",
+            "Allow ExamPulse to access the camera for live student ID scanning.",
           enableFrameProcessors: true
         }
       ]

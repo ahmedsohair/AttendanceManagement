@@ -37,7 +37,7 @@ function WelcomeScreen({
   return (
     <View style={styles.welcomeShell}>
       <View style={styles.welcomePanel}>
-        <Text style={styles.eyebrow}>Attendance Management System</Text>
+        <Text style={styles.eyebrow}>ExamPulse</Text>
         <Text style={styles.welcomeTitle}>Exam attendance, without the paper chase.</Text>
         <Text style={styles.welcomeCopy}>
           Scan student IDs, confirm the correct room, flag mismatches, and keep
@@ -99,7 +99,7 @@ function LoginScreen({
 
   return (
     <View style={styles.panel}>
-      <Text style={styles.eyebrow}>Attendance Management System</Text>
+      <Text style={styles.eyebrow}>ExamPulse</Text>
       <Text style={styles.hero}>Invigilator Login</Text>
       <Text style={styles.copy}>
         Enter the access code provided by your exam administrator to load your

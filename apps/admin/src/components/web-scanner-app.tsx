@@ -753,6 +753,11 @@ export function WebScannerApp() {
     return (
       <div className="web-scan-shell">
         <section className="web-scan-card">
+          <img
+            className="web-brand-logo"
+            src="/exampulse_logo.svg"
+            alt="ExamPulse"
+          />
           <h1>Invigilator Web Login</h1>
           <p className="subtle">
             Use the same access code as the Android app. This scanner works from
@@ -778,6 +783,11 @@ export function WebScannerApp() {
     return (
       <div className="web-scan-shell">
         <section className="web-scan-card">
+          <img
+            className="web-brand-logo"
+            src="/exampulse_logo.svg"
+            alt="ExamPulse"
+          />
           <div className="inline-actions" style={{ justifyContent: "space-between" }}>
             <div>
               <div className="kicker">Assigned rooms</div>

@@ -1,9 +1,9 @@
 export function buildAccessCodeMailto(email: string, accessCode: string) {
-  const subject = "Attendance Management System access code";
+  const subject = "ExamPulse access code";
   const body = [
     "Hello,",
     "",
-    "Your Attendance Management System invigilator access code is:",
+    "Your ExamPulse invigilator access code is:",
     "",
     accessCode,
     "",

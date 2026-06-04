@@ -5,8 +5,8 @@ import { SignOutButton } from "@/components/sign-out-button";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Attendance Management System",
-  description: "Attendance made easy!"
+  title: "ExamPulse",
+  description: "Attendance made smart"
 };
 
 export default async function RootLayout({
@@ -21,9 +21,12 @@ export default async function RootLayout({
       <body>
         <div className="shell">
           <div className="header">
-            <div>
-              <div className="brand">Attendance Management System</div>
-              <div className="subtle">Attendance made easy!</div>
+            <div className="brand-logo-wrap">
+              <img
+                className="brand-logo"
+                src="/exampulse_logo.svg"
+                alt="ExamPulse"
+              />
             </div>
             {sessionUser?.role === "admin" ? (
               <div className="actions">

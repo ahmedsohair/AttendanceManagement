@@ -64,6 +64,19 @@ a {
   letter-spacing: 0.02em;
 }
 
+.brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+}
+
+.brand-logo {
+  display: block;
+  width: min(320px, 54vw);
+  height: auto;
+  margin: -76px 0 -74px -96px;
+}
+
 .subtle {
   color: var(--muted);
 }
@@ -517,6 +530,13 @@ textarea:focus {
   margin: 4px 0;
   font-size: clamp(28px, 8vw, 46px);
   line-height: 1;
+}
+
+.web-brand-logo {
+  display: block;
+  width: min(260px, 74vw);
+  height: auto;
+  margin: -62px 0 -64px -84px;
 }
 
 .web-room-grid {
