@@ -190,7 +190,7 @@ export default async function SessionDetailPage({
               {session.examDate} | {session.startTime}
             </div>
           </div>
-          <div className="inline-actions">
+          <div className="inline-actions session-actions">
             {sessionStatus === "draft" ? (
               <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
                 <button type="submit">Publish</button>

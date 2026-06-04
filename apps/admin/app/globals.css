@@ -45,7 +45,7 @@ a {
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 24px;
@@ -72,9 +72,8 @@ a {
 
 .brand-logo {
   display: block;
-  width: min(320px, 54vw);
+  width: min(260px, 48vw);
   height: auto;
-  margin: -76px 0 -74px -96px;
 }
 
 .subtle {
@@ -364,7 +363,26 @@ textarea:focus {
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+}
+
+.session-actions {
+  align-items: center;
+}
+
+.session-actions form {
+  display: flex;
+  margin: 0;
+}
+
+.session-actions .button,
+.session-actions button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .access-code-box {
@@ -534,9 +552,8 @@ textarea:focus {
 
 .web-brand-logo {
   display: block;
-  width: min(260px, 74vw);
+  width: min(240px, 70vw);
   height: auto;
-  margin: -62px 0 -64px -84px;
 }
 
 .web-room-grid {
