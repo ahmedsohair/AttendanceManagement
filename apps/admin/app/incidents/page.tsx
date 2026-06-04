@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdminPageUser } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
@@ -13,12 +14,40 @@ export default async function IncidentsPage() {
   const incidents = [...store.incidents].sort((left, right) =>
     right.createdAt.localeCompare(left.createdAt)
   );
+  const incidentGroups = incidents.reduce<Record<string, number>>((acc, incident) => {
+    acc[incident.incidentType] = (acc[incident.incidentType] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
-    <div className="card">
-      <div className="kicker">Incident Log</div>
-      <h2 className="section-title">Total Incidents</h2>
-      <table className="table">
+    <div className="stack">
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link href="/">Dashboard</Link>
+        <span>/</span>
+        <span>Incidents</span>
+      </nav>
+
+      <div className="grid compact-grid">
+        {Object.entries(incidentGroups).length ? (
+          Object.entries(incidentGroups).map(([type, count]) => (
+            <div key={type} className="card compact-card">
+              <div className="subtle">{type.replaceAll("_", " ")}</div>
+              <div className="metric">{count}</div>
+            </div>
+          ))
+        ) : (
+          <div className="card compact-card">
+            <div className="subtle">Incident groups</div>
+            <div className="metric">0</div>
+          </div>
+        )}
+      </div>
+
+      <div className="card wide-card">
+        <div className="kicker">Incident Log</div>
+        <h2 className="section-title">Total Incidents</h2>
+        <div className="table-scroll">
+      <table className="table compact-table">
         <thead>
           <tr>
             <th>Type</th>
@@ -35,7 +64,7 @@ export default async function IncidentsPage() {
           {incidents.length ? (
             incidents.map((incident) => (
               <tr key={incident.id}>
-                <td>{incident.incidentType}</td>
+                <td><span className="pill warn">{incident.incidentType}</span></td>
                 <td>{incident.studentId || "-"}</td>
                 <td>{sessionMap.get(incident.examSessionId)?.name || incident.examSessionId}</td>
                 <td>
@@ -64,6 +93,8 @@ export default async function IncidentsPage() {
           )}
         </tbody>
       </table>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { getSessionsOverview } from "@/lib/admin-queries";
 import { requireAdminPageUser } from "@/lib/auth";
 import { logServerTiming } from "@/lib/timing";
@@ -54,7 +55,12 @@ export default async function SessionsPage() {
                   <td>{roomCountBySessionId.get(session.id) || 0}</td>
                   <td>
                     <form action={`/api/exam-sessions/${session.id}/close`} method="post">
-                      <button className="secondary" type="submit">Close</button>
+                      <ConfirmSubmitButton
+                        className="secondary"
+                        message={`Close ${session.name}? Invigilators will no longer see it as active.`}
+                      >
+                        Close
+                      </ConfirmSubmitButton>
                     </form>
                   </td>
                 </tr>
@@ -92,7 +98,12 @@ export default async function SessionsPage() {
                         <button type="submit">Publish</button>
                       </form>
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
-                        <button className="danger" type="submit">Delete</button>
+                        <ConfirmSubmitButton
+                          className="danger"
+                          message={`Delete ${session.name}? This cannot be undone.`}
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </div>
@@ -125,7 +136,12 @@ export default async function SessionsPage() {
                         Export
                       </a>
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
-                        <button className="danger" type="submit">Delete</button>
+                        <ConfirmSubmitButton
+                          className="danger"
+                          message={`Delete ${session.name}? This cannot be undone.`}
+                        >
+                          Delete
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </div>

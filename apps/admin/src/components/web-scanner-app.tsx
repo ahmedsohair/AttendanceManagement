@@ -242,6 +242,7 @@ export function WebScannerApp() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scanRegionRef = useRef<HTMLDivElement | null>(null);
+  const manualInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const scanTimerRef = useRef<number | null>(null);
@@ -272,6 +273,8 @@ export function WebScannerApp() {
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [torchMessage, setTorchMessage] = useState("");
+  const [lastSyncAt, setLastSyncAt] = useState("");
+  const [scanHold, setScanHold] = useState(false);
 
   const roomStats = useMemo(
     () => ({
@@ -319,6 +322,11 @@ export function WebScannerApp() {
       await fetch(`/api/rooms/${roomId}/live`)
     );
     setLiveState(payload);
+    setLastSyncAt(new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }));
   }, []);
 
   useEffect(() => {
@@ -336,6 +344,14 @@ export function WebScannerApp() {
   useEffect(() => {
     scanPausedRef.current = scanPaused;
   }, [scanPaused]);
+
+  useEffect(() => {
+    if (scanPaused) {
+      return;
+    }
+
+    scanPausedRef.current = scanHold;
+  }, [scanHold, scanPaused]);
 
   useEffect(() => {
     if (!selectedRoom) {
@@ -528,6 +544,7 @@ export function WebScannerApp() {
     setStatusMessage("");
     setOcrStatus("Starting camera...");
     setCameraActive(true);
+    setScanHold(false);
     resetForNextScan();
 
     try {
@@ -602,6 +619,7 @@ export function WebScannerApp() {
     setTorchSupported(false);
     setTorchEnabled(false);
     setTorchMessage("");
+    setScanHold(false);
     scanPausedRef.current = false;
     setScanPaused(false);
     selectedRoomRef.current = null;
@@ -848,6 +866,32 @@ export function WebScannerApp() {
     );
   }
 
+  const reviewTone = lookupPending
+    ? "pending"
+    : lastLookup?.status === "ready_to_mark"
+      ? "ready"
+      : lastLookup?.status === "wrong_room"
+        ? "wrong"
+        : lastLookup?.status === "already_marked"
+          ? "done"
+          : lastLookup?.status === "student_not_found"
+            ? "not-found"
+            : "neutral";
+  const recentScanChips = [
+    ...(liveState?.recentAttendance || []).map((item) => ({
+      key: `attendance-${item.createdAt}-${item.studentId}`,
+      label: item.studentId,
+      detail: item.roomMismatch ? "Mismatch" : "Present",
+      tone: item.roomMismatch ? "warn" : "ok"
+    })),
+    ...(liveState?.recentIncidents || []).map((item) => ({
+      key: `incident-${item.createdAt}-${item.studentId || item.incidentType}`,
+      label: item.studentId || "Unknown",
+      detail: item.incidentType.replaceAll("_", " "),
+      tone: "warn"
+    }))
+  ].slice(0, 3);
+
   return (
     <div className="web-camera-page">
       <video ref={videoRef} className="web-camera-video" playsInline muted />
@@ -872,6 +916,12 @@ export function WebScannerApp() {
           </button>
         </div>
 
+        <div className="web-status-strip">
+          <span>Connected</span>
+          <span>Room {selectedRoom.code}</span>
+          <span>Last sync {lastSyncAt || "pending"}</span>
+        </div>
+
         <div className="web-scan-guide">
           <div ref={scanRegionRef} className="web-scan-region" />
           <span>Place student number here</span>
@@ -880,6 +930,7 @@ export function WebScannerApp() {
         <div className="web-camera-bottom">
           <div className="web-manual-row">
             <input
+              ref={manualInputRef}
               value={studentId}
               onChange={(event) => setStudentId(event.target.value)}
               inputMode="numeric"
@@ -892,6 +943,23 @@ export function WebScannerApp() {
               disabled={busy}
             >
               Lookup
+            </button>
+          </div>
+          <div className="web-camera-actions">
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => setScanHold((value) => !value)}
+              disabled={scanPaused}
+            >
+              {scanHold ? "Resume Scanning" : "Pause Scanning"}
+            </button>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => manualInputRef.current?.focus()}
+            >
+              Manual Mode
             </button>
           </div>
           <div className="web-stat-row">
@@ -913,8 +981,22 @@ export function WebScannerApp() {
             </div>
           </div>
           <div className="web-ocr-status">
-            {cameraActive ? ocrStatus || "Camera active" : "Camera stopped"}
+            {scanHold && !scanPaused
+              ? "Scanning paused. Use manual mode or resume scanning."
+              : cameraActive
+                ? ocrStatus || "Camera active"
+                : "Camera stopped"}
           </div>
+          {recentScanChips.length ? (
+            <div className="recent-chip-row">
+              {recentScanChips.map((chip) => (
+                <span key={chip.key} className={`recent-chip ${chip.tone}`}>
+                  <strong>{chip.label}</strong>
+                  <span>{chip.detail}</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
           {cameraActive && !ocrWorkerRef.current && statusMessage ? (
             <button
@@ -931,7 +1013,7 @@ export function WebScannerApp() {
 
       {scanPaused ? (
         <div className="web-review-sheet">
-          <div className="web-review-card">
+          <div className={`web-review-card state-${reviewTone}`}>
             <h2>
               {lookupPending
                 ? "Checking student..."

@@ -178,8 +178,8 @@ export default async function NewSessionPage({
         </div>
       </div>
 
-      {params.message ? <p className="pill ok">{params.message}</p> : null}
-      {params.error ? <p className="pill warn">{params.error}</p> : null}
+      {params.message ? <p className="pill ok toast-message">{params.message}</p> : null}
+      {params.error ? <p className="pill warn toast-message">{params.error}</p> : null}
       {params.accessCode ? (
         <div className="access-code-box">
           <div>

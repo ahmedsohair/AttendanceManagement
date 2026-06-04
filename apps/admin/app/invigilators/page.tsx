@@ -1,5 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { CopyButton } from "@/components/copy-button";
 import { requireAdminPageUser } from "@/lib/auth";
 import {
   createInvigilator as createInvigilatorRecord,
@@ -120,13 +122,25 @@ export default async function InvigilatorsPage({
     accessCode?: string;
     codeUserId?: string;
     codeEmail?: string;
+    q?: string;
   }>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
+  const staffSearch = (params.q || "").trim().toLowerCase();
   const store = await readStore();
   const invigilators = store.users
     .filter((user) => user.role === "invigilator")
+    .filter((user) => {
+      if (!staffSearch) {
+        return true;
+      }
+
+      return (
+        user.fullName.toLowerCase().includes(staffSearch) ||
+        user.email.toLowerCase().includes(staffSearch)
+      );
+    })
     .sort((left, right) => left.fullName.localeCompare(right.fullName));
 
   return (
@@ -134,8 +148,8 @@ export default async function InvigilatorsPage({
       <div className="card">
         <div className="kicker">Access Management</div>
         <h2 className="section-title">Add Invigilator</h2>
-        {params.message ? <p className="pill ok">{params.message}</p> : null}
-        {params.error ? <p className="pill warn">{params.error}</p> : null}
+        {params.message ? <p className="pill ok toast-message">{params.message}</p> : null}
+        {params.error ? <p className="pill warn toast-message">{params.error}</p> : null}
         {params.accessCode && !params.codeUserId ? (
           <div className="access-code-box">
             <div>
@@ -147,12 +161,15 @@ export default async function InvigilatorsPage({
               invigilator card.
             </div>
             {params.codeEmail ? (
-              <a
-                className="button"
-                href={buildAccessCodeMailto(params.codeEmail, params.accessCode)}
-              >
-                Email Code
-              </a>
+              <div className="inline-actions">
+                <CopyButton value={params.accessCode} />
+                <a
+                  className="button"
+                  href={buildAccessCodeMailto(params.codeEmail, params.accessCode)}
+                >
+                  Email Code
+                </a>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -169,8 +186,22 @@ export default async function InvigilatorsPage({
       </div>
 
       <div className="card tint">
-        <div className="kicker">Current Staff</div>
-        <h2 className="section-title">Invigilators</h2>
+        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+          <div>
+            <div className="kicker">Current Staff</div>
+            <h2 className="section-title">Invigilators</h2>
+          </div>
+          <form className="search-form" action="/invigilators" method="get">
+            <input
+              name="q"
+              placeholder="Search staff"
+              defaultValue={params.q || ""}
+            />
+            <button className="secondary" type="submit">
+              Search
+            </button>
+          </form>
+        </div>
         <div className="detail-list">
           {invigilators.length ? (
             invigilators.map((invigilator) => (
@@ -193,15 +224,18 @@ export default async function InvigilatorsPage({
                             <div className="subtle">
                               Share this now. Existing codes cannot be viewed later.
                             </div>
-                            <a
-                              className="button"
-                              href={buildAccessCodeMailto(
-                                params.codeEmail || invigilator.email,
-                                params.accessCode
-                              )}
-                            >
-                              Email Code
-                            </a>
+                            <div className="inline-actions">
+                              <CopyButton value={params.accessCode} />
+                              <a
+                                className="button"
+                                href={buildAccessCodeMailto(
+                                  params.codeEmail || invigilator.email,
+                                  params.accessCode
+                                )}
+                              >
+                                Email Code
+                              </a>
+                            </div>
                           </div>
                         ) : (
                           <div className="subtle">
@@ -246,9 +280,12 @@ export default async function InvigilatorsPage({
                             Deletion is blocked if this invigilator has attendance or
                             incident audit history.
                           </div>
-                          <button className="danger" type="submit">
+                          <ConfirmSubmitButton
+                            className="danger"
+                            message={`Delete ${invigilator.fullName}? This is blocked if they have audit history.`}
+                          >
                             Delete
-                          </button>
+                          </ConfirmSubmitButton>
                         </form>
                       </div>
                     </details>
@@ -266,15 +303,18 @@ export default async function InvigilatorsPage({
                       <div className="subtle">
                         Share this now. Existing codes cannot be viewed later.
                       </div>
-                      <a
-                        className="button"
-                        href={buildAccessCodeMailto(
-                          params.codeEmail || invigilator.email,
-                          params.accessCode
-                        )}
-                      >
-                        Email Code
-                      </a>
+                      <div className="inline-actions">
+                        <CopyButton value={params.accessCode} />
+                        <a
+                          className="button"
+                          href={buildAccessCodeMailto(
+                            params.codeEmail || invigilator.email,
+                            params.accessCode
+                          )}
+                        >
+                          Email Code
+                        </a>
+                      </div>
                     </div>
                   ) : (
                     <div className="subtle">
@@ -317,15 +357,25 @@ export default async function InvigilatorsPage({
                       attendance or created incidents. If they have audit history,
                       clear their room assignments instead.
                     </div>
-                    <button className="danger" type="submit">
+                    <ConfirmSubmitButton
+                      className="danger"
+                      message={`Delete ${invigilator.fullName}? This is blocked if they have audit history.`}
+                    >
                       Delete Invigilator
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </details>
               </div>
             ))
           ) : (
-            <div className="subtle">No invigilators have been added yet.</div>
+            <div className="empty-action">
+              <strong>No invigilators found</strong>
+              <span>
+                {staffSearch
+                  ? "Try a different staff search."
+                  : "Create an invigilator to start assigning exam rooms."}
+              </span>
+            </div>
           )}
         </div>
       </div>

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/shared";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { CopyButton } from "@/components/copy-button";
 import { requireAdminPageUser } from "@/lib/auth";
 import {
   createInvigilator as createInvigilatorRecord,
@@ -173,6 +175,14 @@ export default async function SessionDetailPage({
 
   return (
     <div className="stack">
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link href="/">Dashboard</Link>
+        <span>/</span>
+        <Link href="/sessions">Exams</Link>
+        <span>/</span>
+        <span>{session.name}</span>
+      </nav>
+
       <div className="card">
         <div className="inline-actions" style={{ justifyContent: "space-between" }}>
           <div>
@@ -198,14 +208,24 @@ export default async function SessionDetailPage({
             ) : null}
             {sessionStatus === "active" ? (
               <form action={`/api/exam-sessions/${session.id}/close`} method="post">
-                <button className="secondary" type="submit">Close Exam</button>
+                <ConfirmSubmitButton
+                  className="secondary"
+                  message="Close this exam? Invigilators will no longer see it as active."
+                >
+                  Close Exam
+                </ConfirmSubmitButton>
               </form>
             ) : null}
             <a className="button secondary" href={`/api/reports/${session.id}/export`}>
               Export XLSX
             </a>
             <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
-              <button className="danger" type="submit">Delete</button>
+              <ConfirmSubmitButton
+                className="danger"
+                message="Delete this exam and all related rooms, allocations, attendance, and incidents? This cannot be undone."
+              >
+                Delete
+              </ConfirmSubmitButton>
             </form>
           </div>
         </div>
@@ -244,8 +264,8 @@ export default async function SessionDetailPage({
             ).length} assigned
           </span>
         </summary>
-        {notices.message ? <p className="pill ok">{notices.message}</p> : null}
-        {notices.error ? <p className="pill warn">{notices.error}</p> : null}
+        {notices.message ? <p className="pill ok toast-message">{notices.message}</p> : null}
+        {notices.error ? <p className="pill warn toast-message">{notices.error}</p> : null}
         {notices.accessCode ? (
           <div className="access-code-box">
             <div>
@@ -257,12 +277,15 @@ export default async function SessionDetailPage({
               Invigilators page.
             </div>
             {notices.codeEmail ? (
-              <a
-                className="button"
-                href={buildAccessCodeMailto(notices.codeEmail, notices.accessCode)}
-              >
-                Email Code
-              </a>
+              <div className="inline-actions">
+                <CopyButton value={notices.accessCode} />
+                <a
+                  className="button"
+                  href={buildAccessCodeMailto(notices.codeEmail, notices.accessCode)}
+                >
+                  Email Code
+                </a>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -365,7 +388,24 @@ export default async function SessionDetailPage({
               <tr key={summary.roomId}>
                 <td>{summary.roomCode}</td>
                 <td>{summary.allocatedCount}</td>
-                <td>{summary.presentCount}</td>
+                <td>
+                  <div className="progress-cell">
+                    <strong>{summary.presentCount}</strong>
+                    <div className="progress-track" aria-label={`${summary.roomCode} attendance progress`}>
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            summary.allocatedCount
+                              ? Math.round((summary.presentCount / summary.allocatedCount) * 100)
+                              : 0
+                          )}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+                </td>
                 <td>{summary.mismatchPresentCount}</td>
                 <td>{summary.redirectedCount}</td>
               </tr>

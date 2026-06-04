@@ -13,6 +13,7 @@ export default async function DashboardPage() {
     draftSessions,
     closedSessions,
     overall,
+    needsAttention,
     roomCountBySessionId
   } = await getDashboardData();
   logServerTiming("page.dashboard", startedAt, {
@@ -25,84 +26,75 @@ export default async function DashboardPage() {
 
   return (
     <div className="stack">
-      <div className="grid">
-        <Link className="card metric-card" href="/sessions">
-          <div className="subtle">Active Exams</div>
-          <div className="metric">{activeSessions.length}</div>
-          <div className="metric-hint">Open active exam details</div>
-        </Link>
-        <Link className="card metric-card" href="/attendance">
-          <div className="subtle">Attendance Marked</div>
-          <div className="metric">{overall.present}</div>
-          <div className="metric-hint">Review marked student entries</div>
-        </Link>
-        <Link className="card metric-card" href="/mismatches">
-          <div className="subtle">Mismatch Present</div>
-          <div className="metric">{overall.mismatch}</div>
-          <div className="metric-hint">See wrong-room overrides</div>
-        </Link>
-        <Link className="card metric-card" href="/incidents">
-          <div className="subtle">Total Incidents</div>
-          <div className="metric">{overall.incidents}</div>
-          <div className="metric-hint">Open incident audit trail</div>
-        </Link>
-      </div>
-
-      <div className="layout-two">
+      <div className="dashboard-hero">
         <div className="card">
           <div className="inline-actions" style={{ justifyContent: "space-between" }}>
             <div>
-              <div className="kicker">Live Overview</div>
+              <div className="kicker">Live Operations</div>
               <h2 className="section-title">Active Exams</h2>
             </div>
             <Link className="button secondary" href="/sessions">
               View all sessions
             </Link>
           </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Date</th>
-                <th>Rooms</th>
-                <th>Export</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeSessions.length ? (
-                activeSessions.map((session) => {
-                  const roomCount = roomCountBySessionId.get(session.id) || 0;
-                  return (
-                    <tr key={session.id}>
-                      <td>
-                        <Link href={`/sessions/${session.id}`}>{session.name}</Link>
-                      </td>
-                      <td>
-                        {session.examDate} | {session.startTime}
-                      </td>
-                      <td>{roomCount}</td>
-                      <td>
-                        <a
-                          className="pill"
-                          href={`/api/reports/${session.id}/export`}
-                        >
-                          Download XLSX
-                        </a>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={4} className="subtle">
-                    No active exams yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="grid compact-grid">
+            <Link className="card metric-card compact-card" href="/sessions">
+              <div className="subtle">Active Exams</div>
+              <div className="metric">{activeSessions.length}</div>
+            </Link>
+            <Link className="card metric-card compact-card" href="/attendance">
+              <div className="subtle">Attendance Marked</div>
+              <div className="metric">{overall.present}</div>
+            </Link>
+            <Link className="card metric-card compact-card" href="/mismatches">
+              <div className="subtle">Mismatch Present</div>
+              <div className="metric">{overall.mismatch}</div>
+            </Link>
+            <Link className="card metric-card compact-card" href="/incidents">
+              <div className="subtle">Total Incidents</div>
+              <div className="metric">{overall.incidents}</div>
+            </Link>
+          </div>
+          <div className="exam-card-list">
+            {activeSessions.length ? (
+              activeSessions.map((session) => (
+                <Link key={session.id} className="exam-row-card" href={`/sessions/${session.id}`}>
+                  <span>
+                    <strong>{session.name}</strong>
+                    <span className="subtle">
+                      {session.examDate} | {session.startTime}
+                    </span>
+                  </span>
+                  <span className="pill">{roomCountBySessionId.get(session.id) || 0} room(s)</span>
+                </Link>
+              ))
+            ) : (
+              <div className="empty-action">
+                <strong>No active exams yet</strong>
+                <span>Create or publish an exam when operations are ready.</span>
+                <Link className="button" href="/sessions/new">
+                  Add New Exam
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
+        <div className="card attention-card">
+          <div className="kicker">Needs Attention</div>
+          <h2 className="section-title">Admin Actions</h2>
+          <div className="attention-list">
+            {needsAttention.map((item) => (
+              <Link key={item.label} className={`attention-item ${item.tone}`} href={item.href}>
+                <strong>{item.label}</strong>
+                <span>{item.detail}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="layout-two">
         <div className="card tint">
           <div className="inline-actions" style={{ justifyContent: "space-between" }}>
             <div>
@@ -135,61 +127,41 @@ export default async function DashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="subtle">No draft exams waiting for publish.</div>
+              <div className="empty-action">
+                <strong>No draft exams waiting</strong>
+                <span>Import a roster to prepare the next exam.</span>
+                <Link className="button secondary" href="/sessions/new">
+                  Add New Exam
+                </Link>
+              </div>
             )}
           </div>
         </div>
-      </div>
 
-      <div className="card">
-        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
-          <div>
-            <div className="kicker">History</div>
-            <h2 className="section-title">Closed Exams</h2>
-          </div>
-          <Link className="button secondary" href="/sessions">
-            View all exams
-          </Link>
-        </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Date</th>
-              <th>Rooms</th>
-              <th>Report</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="card">
+          <div className="kicker">History</div>
+          <h2 className="section-title">Closed Exams</h2>
+          <div className="exam-card-list">
             {closedSessions.length ? (
-              closedSessions.slice(0, 5).map((session) => {
-                const roomCount = roomCountBySessionId.get(session.id) || 0;
-                return (
-                  <tr key={session.id}>
-                    <td>
-                      <Link href={`/sessions/${session.id}`}>{session.name}</Link>
-                    </td>
-                    <td>
+              closedSessions.slice(0, 5).map((session) => (
+                <Link key={session.id} className="exam-row-card" href={`/sessions/${session.id}`}>
+                  <span>
+                    <strong>{session.name}</strong>
+                    <span className="subtle">
                       {session.examDate} | {session.startTime}
-                    </td>
-                    <td>{roomCount}</td>
-                    <td>
-                      <a className="pill" href={`/api/reports/${session.id}/export`}>
-                        Download XLSX
-                      </a>
-                    </td>
-                  </tr>
-                );
-              })
+                    </span>
+                  </span>
+                  <span className="pill">{roomCountBySessionId.get(session.id) || 0} room(s)</span>
+                </Link>
+              ))
             ) : (
-              <tr>
-                <td colSpan={4} className="subtle">
-                  No closed exams yet.
-                </td>
-              </tr>
+              <div className="empty-action">
+                <strong>No closed exams yet</strong>
+                <span>Closed exams will appear here for reporting.</span>
+              </div>
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </div>
     </div>
   );

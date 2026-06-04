@@ -32,6 +32,12 @@ export type DashboardData = SessionsOverview & {
     mismatch: number;
     incidents: number;
   };
+  needsAttention: Array<{
+    label: string;
+    detail: string;
+    href: string;
+    tone: "warn" | "ok" | "neutral";
+  }>;
 };
 
 function toExamSession(row: SessionRow): ExamSession {
@@ -95,7 +101,7 @@ export async function getSessionsOverview(): Promise<SessionsOverview> {
       .select("id, name, exam_date, start_time, published, created_at");
   }
 
-  const roomsResponse = await supabase.from("rooms").select("exam_session_id");
+  const roomsResponse = await supabase.from("rooms").select("id, exam_session_id");
 
   if (sessionsResponse.error) {
     throw new Error(sessionsResponse.error.message);
@@ -118,22 +124,42 @@ export async function getDashboardData(): Promise<DashboardData> {
       store.examSessions.filter(isActiveExamSession).map((session) => session.id)
     );
 
+    const split = splitSessions(store.examSessions);
+    const activeRoomIds = new Set(
+      store.rooms
+        .filter((room) => activeSessionIds.has(room.examSessionId))
+        .map((room) => room.id)
+    );
+    const assignedRoomIds = new Set(
+      store.users.flatMap((user) => user.assignedRoomIds).filter((roomId) => activeRoomIds.has(roomId))
+    );
+    const unassignedActiveRooms = activeRoomIds.size - assignedRoomIds.size;
+    const present = store.attendanceEvents.filter((event) =>
+      activeSessionIds.has(event.examSessionId)
+    ).length;
+    const mismatch = store.attendanceEvents.filter(
+      (event) => activeSessionIds.has(event.examSessionId) && event.roomMismatch
+    ).length;
+    const incidents = store.incidents.filter((incident) =>
+      activeSessionIds.has(incident.examSessionId)
+    ).length;
+
     return {
-      ...splitSessions(store.examSessions),
+      ...split,
       roomCountBySessionId: countRooms(
         store.rooms.map((room) => ({ exam_session_id: room.examSessionId }))
       ),
       overall: {
-        present: store.attendanceEvents.filter((event) =>
-          activeSessionIds.has(event.examSessionId)
-        ).length,
-        mismatch: store.attendanceEvents.filter(
-          (event) => activeSessionIds.has(event.examSessionId) && event.roomMismatch
-        ).length,
-        incidents: store.incidents.filter((incident) =>
-          activeSessionIds.has(incident.examSessionId)
-        ).length
-      }
+        present,
+        mismatch,
+        incidents
+      },
+      needsAttention: buildNeedsAttention({
+        draftCount: split.draftSessions.length,
+        incidentCount: incidents,
+        mismatchCount: mismatch,
+        unassignedActiveRooms
+      })
     };
   }
 
@@ -147,12 +173,24 @@ export async function getDashboardData(): Promise<DashboardData> {
         present: 0,
         mismatch: 0,
         incidents: 0
-      }
+      },
+      needsAttention: buildNeedsAttention({
+        draftCount: overview.draftSessions.length,
+        incidentCount: 0,
+        mismatchCount: 0,
+        unassignedActiveRooms: 0
+      })
     };
   }
 
   const supabase = getSupabaseAdmin();
-  const [attendanceResponse, incidentsResponse] = await Promise.all([
+  const activeSessionIdSet = new Set(activeSessionIds);
+  const [roomsResponse, assignmentsResponse, attendanceResponse, incidentsResponse] = await Promise.all([
+    supabase
+      .from("rooms")
+      .select("id, exam_session_id")
+      .in("exam_session_id", activeSessionIds),
+    supabase.from("room_assignments").select("room_id"),
     supabase
       .from("attendance_events")
       .select("exam_session_id, room_mismatch")
@@ -163,6 +201,14 @@ export async function getDashboardData(): Promise<DashboardData> {
       .in("exam_session_id", activeSessionIds)
   ]);
 
+  if (roomsResponse.error) {
+    throw new Error(roomsResponse.error.message);
+  }
+
+  if (assignmentsResponse.error) {
+    throw new Error(assignmentsResponse.error.message);
+  }
+
   if (attendanceResponse.error) {
     throw new Error(attendanceResponse.error.message);
   }
@@ -171,13 +217,89 @@ export async function getDashboardData(): Promise<DashboardData> {
     throw new Error(incidentsResponse.error.message);
   }
 
+  const activeRoomIds = new Set(
+    (roomsResponse.data || [])
+      .filter((room) => activeSessionIdSet.has(room.exam_session_id))
+      .map((room) => room.id)
+  );
+  const assignedRoomIds = new Set(
+    (assignmentsResponse.data || [])
+      .map((assignment) => assignment.room_id)
+      .filter((roomId) => activeRoomIds.has(roomId))
+  );
+  const present = (attendanceResponse.data || []).length;
+  const mismatch = (attendanceResponse.data || []).filter((event) => event.room_mismatch)
+    .length;
+  const incidents = (incidentsResponse.data || []).length;
+
   return {
     ...overview,
     overall: {
-      present: (attendanceResponse.data || []).length,
-      mismatch: (attendanceResponse.data || []).filter((event) => event.room_mismatch)
-        .length,
-      incidents: (incidentsResponse.data || []).length
-    }
+      present,
+      mismatch,
+      incidents
+    },
+    needsAttention: buildNeedsAttention({
+      draftCount: overview.draftSessions.length,
+      incidentCount: incidents,
+      mismatchCount: mismatch,
+      unassignedActiveRooms: activeRoomIds.size - assignedRoomIds.size
+    })
   };
+}
+
+function buildNeedsAttention(input: {
+  draftCount: number;
+  incidentCount: number;
+  mismatchCount: number;
+  unassignedActiveRooms: number;
+}): DashboardData["needsAttention"] {
+  const items: DashboardData["needsAttention"] = [];
+
+  if (input.incidentCount) {
+    items.push({
+      label: "Incidents need review",
+      detail: `${input.incidentCount} incident${input.incidentCount === 1 ? "" : "s"} recorded`,
+      href: "/incidents",
+      tone: "warn"
+    });
+  }
+
+  if (input.mismatchCount) {
+    items.push({
+      label: "Wrong-room overrides",
+      detail: `${input.mismatchCount} mismatch-present mark${input.mismatchCount === 1 ? "" : "s"}`,
+      href: "/mismatches",
+      tone: "warn"
+    });
+  }
+
+  if (input.unassignedActiveRooms > 0) {
+    items.push({
+      label: "Rooms without invigilators",
+      detail: `${input.unassignedActiveRooms} active room${input.unassignedActiveRooms === 1 ? "" : "s"} unassigned`,
+      href: "/sessions",
+      tone: "warn"
+    });
+  }
+
+  if (input.draftCount) {
+    items.push({
+      label: "Draft exams waiting",
+      detail: `${input.draftCount} draft exam${input.draftCount === 1 ? "" : "s"} ready to manage`,
+      href: "/sessions",
+      tone: "neutral"
+    });
+  }
+
+  if (!items.length) {
+    items.push({
+      label: "No urgent admin actions",
+      detail: "Active exams have no open mismatch, incident, or assignment warnings.",
+      href: "/sessions",
+      tone: "ok"
+    });
+  }
+
+  return items;
 }

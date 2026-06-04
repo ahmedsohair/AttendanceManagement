@@ -39,9 +39,6 @@ export default async function RootLayout({
                 <Link className="button secondary" href="/invigilators">
                   Invigilators
                 </Link>
-                <Link className="button secondary" href="/scan">
-                  Web Scanner
-                </Link>
                 <Link className="button" href="/sessions/new">
                   Add New Exam
                 </Link>

@@ -135,10 +135,21 @@ button.secondary:hover {
   gap: 16px;
 }
 
+.compact-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.7fr);
+  gap: 18px;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 26px;
+  border-radius: 22px;
   padding: 20px;
   box-shadow: var(--shadow);
 }
@@ -172,6 +183,15 @@ button.secondary:hover {
   margin: 10px 0 4px;
 }
 
+.compact-card {
+  padding: 14px;
+}
+
+.compact-card .metric {
+  font-size: 30px;
+  margin: 6px 0 0;
+}
+
 .metric-hint {
   color: var(--accent-dark);
   font-size: 13px;
@@ -188,9 +208,26 @@ button.secondary:hover {
   font-size: 20px;
 }
 
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.breadcrumbs a {
+  color: var(--accent-dark);
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 .table th,
@@ -210,6 +247,16 @@ button.secondary:hover {
 
 .table tr:last-child td {
   border-bottom: 0;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 9px 8px;
+  font-size: 14px;
+}
+
+.clickable-row:hover {
+  background: rgba(230, 0, 40, 0.035);
 }
 
 .pill {
@@ -232,6 +279,11 @@ button.secondary:hover {
 .pill.warn {
   background: rgba(183, 107, 0, 0.12);
   color: var(--warn);
+}
+
+.toast-message {
+  justify-self: start;
+  box-shadow: 0 10px 24px rgba(18, 18, 18, 0.08);
 }
 
 .form-grid {
@@ -266,6 +318,70 @@ textarea:focus {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 18px;
+}
+
+.wide-card {
+  width: 100%;
+}
+
+.exam-card-list,
+.attention-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.exam-row-card,
+.attention-item,
+.empty-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: white;
+}
+
+.exam-row-card strong,
+.attention-item strong,
+.empty-action strong {
+  display: block;
+}
+
+.exam-row-card .subtle,
+.attention-item span,
+.empty-action span {
+  display: block;
+  margin-top: 4px;
+}
+
+.attention-card {
+  background:
+    linear-gradient(135deg, rgba(230, 0, 40, 0.05), transparent 70%),
+    white;
+}
+
+.attention-item {
+  display: grid;
+  justify-content: stretch;
+}
+
+.attention-item.warn {
+  border-color: rgba(183, 107, 0, 0.28);
+  background: rgba(183, 107, 0, 0.07);
+}
+
+.attention-item.ok {
+  border-color: rgba(12, 122, 67, 0.2);
+  background: rgba(12, 122, 67, 0.07);
+}
+
+.empty-action {
+  display: grid;
+  justify-content: stretch;
+  color: var(--muted);
 }
 
 .kicker {
@@ -463,6 +579,13 @@ textarea:focus {
   gap: 12px;
 }
 
+.assignment-form > button[type="submit"] {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  justify-self: start;
+}
+
 .assignment-details.mobile-details {
   display: none;
 }
@@ -515,6 +638,38 @@ textarea:focus {
 
 .search-form input {
   width: min(320px, 100%);
+}
+
+.table-filter-form {
+  justify-content: flex-start;
+}
+
+.table-filter-form input {
+  width: min(260px, 100%);
+}
+
+.table-filter-form select {
+  width: auto;
+  min-width: 150px;
+}
+
+.progress-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 120px;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(18, 18, 18, 0.1);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
 }
 
 .inline-link {
@@ -643,6 +798,22 @@ textarea:focus {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.web-status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-self: start;
+}
+
+.web-status-strip span {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .web-torch-button {
   flex: 0 0 auto;
 }
@@ -678,6 +849,12 @@ textarea:focus {
 .web-camera-bottom {
   display: grid;
   gap: 12px;
+}
+
+.web-camera-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .web-manual-row {
@@ -738,6 +915,36 @@ textarea:focus {
   text-align: center;
 }
 
+.recent-chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.recent-chip {
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 94px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  padding: 9px 11px;
+}
+
+.recent-chip span {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+}
+
+.recent-chip.ok {
+  background: rgba(12, 122, 67, 0.82);
+}
+
+.recent-chip.warn {
+  background: rgba(183, 107, 0, 0.86);
+}
+
 .web-review-sheet {
   position: absolute;
   inset: 0;
@@ -753,9 +960,27 @@ textarea:focus {
   gap: 12px;
   border-radius: 28px;
   border: 1px solid var(--line);
+  border-top: 8px solid var(--line);
   background: white;
   padding: 18px;
   box-shadow: var(--shadow);
+}
+
+.web-review-card.state-ready {
+  border-top-color: var(--ok);
+}
+
+.web-review-card.state-wrong,
+.web-review-card.state-not-found {
+  border-top-color: var(--accent);
+}
+
+.web-review-card.state-done {
+  border-top-color: var(--muted);
+}
+
+.web-review-card.state-pending {
+  border-top-color: var(--warn);
 }
 
 .web-review-card h2 {
@@ -764,6 +989,10 @@ textarea:focus {
 
 @media (max-width: 900px) {
   .layout-two {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-hero {
     grid-template-columns: 1fr;
   }
 
