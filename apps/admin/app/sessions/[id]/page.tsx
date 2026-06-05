@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/shared";
+import { CloseIcon, DownloadIcon, PublishIcon, TrashIcon } from "@/components/action-icons";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyButton } from "@/components/copy-button";
 import { requireAdminPageUser } from "@/lib/auth";
@@ -203,28 +204,38 @@ export default async function SessionDetailPage({
           <div className="inline-actions session-actions">
             {sessionStatus === "draft" ? (
               <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
-                <button type="submit">Publish</button>
+                <button className="icon-button" title="Publish exam" type="submit">
+                  <PublishIcon />
+                  <span className="sr-only">Publish exam</span>
+                </button>
               </form>
             ) : null}
             {sessionStatus === "active" ? (
               <form action={`/api/exam-sessions/${session.id}/close`} method="post">
                 <ConfirmSubmitButton
-                  className="secondary"
+                  className="icon-button"
                   message="Close this exam? Invigilators will no longer see it as active."
                 >
-                  Close Exam
+                  <CloseIcon />
+                  <span className="sr-only">Close exam</span>
                 </ConfirmSubmitButton>
               </form>
             ) : null}
-            <a className="button secondary" href={`/api/reports/${session.id}/export`}>
-              Export XLSX
+            <a
+              className="icon-button"
+              href={`/api/reports/${session.id}/export`}
+              title="Export XLSX"
+            >
+              <DownloadIcon />
+              <span className="sr-only">Export XLSX</span>
             </a>
             <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
               <ConfirmSubmitButton
-                className="danger"
+                className="icon-button danger"
                 message="Delete this exam and all related rooms, allocations, attendance, and incidents? This cannot be undone."
               >
-                Delete
+                <TrashIcon />
+                <span className="sr-only">Delete exam</span>
               </ConfirmSubmitButton>
             </form>
           </div>
@@ -453,7 +464,7 @@ export default async function SessionDetailPage({
             {attendanceRows.length ? (
               attendanceRows.map((row) => (
                 <tr key={row.event.id}>
-                  <td>{row.event.studentId}</td>
+                  <td className="data-mono">{row.event.studentId}</td>
                   <td>{row.allocation?.studentName || "-"}</td>
                   <td>{row.markedInRoom?.code || row.event.markedInRoomId}</td>
                   <td>{row.expectedRoom?.code || row.event.expectedRoomId}</td>
@@ -476,7 +487,7 @@ export default async function SessionDetailPage({
                     )}
                   </td>
                   <td>{row.event.comment || "-"}</td>
-                  <td>{row.event.createdAt}</td>
+                  <td className="data-mono">{row.event.createdAt}</td>
                 </tr>
               ))
             ) : (

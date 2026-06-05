@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { CloseIcon, DownloadIcon, PublishIcon, TrashIcon } from "@/components/action-icons";
 import { getSessionsOverview } from "@/lib/admin-queries";
 import { requireAdminPageUser } from "@/lib/auth";
 import { logServerTiming } from "@/lib/timing";
@@ -56,10 +57,11 @@ export default async function SessionsPage() {
                   <td>
                     <form action={`/api/exam-sessions/${session.id}/close`} method="post">
                       <ConfirmSubmitButton
-                        className="secondary"
+                        className="icon-button"
                         message={`Close ${session.name}? Invigilators will no longer see it as active.`}
                       >
-                        Close
+                        <CloseIcon />
+                        <span className="sr-only">Close exam</span>
                       </ConfirmSubmitButton>
                     </form>
                   </td>
@@ -95,14 +97,18 @@ export default async function SessionsPage() {
                     </div>
                     <div className="inline-actions">
                       <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
-                        <button type="submit">Publish</button>
+                        <button className="icon-button" title="Publish exam" type="submit">
+                          <PublishIcon />
+                          <span className="sr-only">Publish exam</span>
+                        </button>
                       </form>
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
                         <ConfirmSubmitButton
-                          className="danger"
+                          className="icon-button danger"
                           message={`Delete ${session.name}? This cannot be undone.`}
                         >
-                          Delete
+                          <TrashIcon />
+                          <span className="sr-only">Delete exam</span>
                         </ConfirmSubmitButton>
                       </form>
                     </div>
@@ -132,15 +138,21 @@ export default async function SessionsPage() {
                       </div>
                     </div>
                     <div className="inline-actions">
-                      <a className="pill" href={`/api/reports/${session.id}/export`}>
-                        Export
+                      <a
+                        className="icon-button"
+                        href={`/api/reports/${session.id}/export`}
+                        title="Export XLSX"
+                      >
+                        <DownloadIcon />
+                        <span className="sr-only">Export XLSX</span>
                       </a>
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
                         <ConfirmSubmitButton
-                          className="danger"
+                          className="icon-button danger"
                           message={`Delete ${session.name}? This cannot be undone.`}
                         >
-                          Delete
+                          <TrashIcon />
+                          <span className="sr-only">Delete exam</span>
                         </ConfirmSubmitButton>
                       </form>
                     </div>

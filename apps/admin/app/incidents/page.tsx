@@ -64,8 +64,8 @@ export default async function IncidentsPage() {
           {incidents.length ? (
             incidents.map((incident) => (
               <tr key={incident.id}>
-                <td><span className="pill warn">{incident.incidentType}</span></td>
-                <td>{incident.studentId || "-"}</td>
+                <td><span className="pill danger">{incident.incidentType}</span></td>
+                <td className="data-mono">{incident.studentId || "-"}</td>
                 <td>{sessionMap.get(incident.examSessionId)?.name || incident.examSessionId}</td>
                 <td>
                   {incident.roomId ? roomMap.get(incident.roomId)?.code || incident.roomId : "-"}
@@ -81,7 +81,7 @@ export default async function IncidentsPage() {
                     ? incident.details.comment
                     : "-"}
                 </td>
-                <td>{incident.createdAt}</td>
+                <td className="data-mono">{incident.createdAt}</td>
               </tr>
             ))
           ) : (

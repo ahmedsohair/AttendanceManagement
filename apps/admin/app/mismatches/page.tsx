@@ -35,7 +35,7 @@ export default async function MismatchesPage() {
           {mismatches.length ? (
             mismatches.map((event) => (
               <tr key={event.id}>
-                <td>{event.studentId}</td>
+                <td className="data-mono">{event.studentId}</td>
                 <td>{sessionMap.get(event.examSessionId)?.name || event.examSessionId}</td>
                 <td>{roomMap.get(event.markedInRoomId)?.code || event.markedInRoomId}</td>
                 <td>{roomMap.get(event.expectedRoomId)?.code || event.expectedRoomId}</td>
@@ -56,7 +56,7 @@ export default async function MismatchesPage() {
                   <span className="pill warn">{event.overrideType}</span>
                 </td>
                 <td>{event.comment || "-"}</td>
-                <td>{event.createdAt}</td>
+                <td className="data-mono">{event.createdAt}</td>
               </tr>
             ))
           ) : (

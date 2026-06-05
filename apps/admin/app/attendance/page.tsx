@@ -134,7 +134,7 @@ export default async function AttendancePage({
 
               return (
               <tr key={event.id} className="clickable-row">
-                <td>
+                <td className="data-mono">
                   <Link className="inline-link" href={`/sessions/${event.examSessionId}?q=${event.studentId}`}>
                     {event.studentId}
                   </Link>
@@ -168,7 +168,7 @@ export default async function AttendancePage({
                   )}
                 </td>
                 <td>{event.comment || "-"}</td>
-                <td>{event.createdAt}</td>
+                <td className="data-mono">{event.createdAt}</td>
               </tr>
               );
             })

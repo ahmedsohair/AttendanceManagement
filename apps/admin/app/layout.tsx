@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getOptionalSessionUser } from "@/lib/auth";
+import { AdminNav } from "@/components/admin-nav";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
 import { SignOutButton } from "@/components/sign-out-button";
 import "./globals.css";
@@ -16,34 +17,57 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const sessionUser = await getOptionalSessionUser();
+  const isAdmin = sessionUser?.role === "admin";
 
   return (
     <html lang="en">
       <body>
-        <div className="shell">
-          <div className="header">
-            <div className="brand-logo-wrap">
-              <ExamPulseLogo />
-            </div>
-            {sessionUser?.role === "admin" ? (
-              <div className="actions">
-                <div className="subtle" style={{ alignSelf: "center", fontWeight: 600 }}>
-                  {sessionUser.fullName}
+        <div className={isAdmin ? "shell admin-shell" : "shell"}>
+          <div className={isAdmin ? "header admin-header" : "header"}>
+            {isAdmin ? (
+              <>
+                <div className="brand-logo-wrap">
+                  <ExamPulseLogo />
+                  <span className="admin-portal-label">Admin Portal</span>
                 </div>
-                <Link className="button secondary" href="/">
-                  Dashboard
-                </Link>
-                <Link className="button secondary" href="/invigilators">
-                  Invigilators
-                </Link>
-                <Link className="button" href="/sessions/new">
+                <div className="admin-topbar">
+                  <form className="admin-search-form" action="/attendance" method="get">
+                    <input
+                      className="admin-search"
+                      name="q"
+                      placeholder="Search students, exams, rooms"
+                      type="search"
+                    />
+                  </form>
+                  <div className="admin-user">
+                    <span>{sessionUser.fullName}</span>
+                    <SignOutButton />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="brand-logo-wrap">
+                <ExamPulseLogo />
+              </div>
+            )}
+          </div>
+          {isAdmin ? (
+            <div className="admin-frame">
+              <aside className="admin-sidebar" aria-label="Admin navigation">
+                <div className="admin-sidebar-brand">
+                  <ExamPulseLogo />
+                  <span>Admin Portal</span>
+                </div>
+                <AdminNav />
+                <Link className="button sidebar-primary" href="/sessions/new">
                   Add New Exam
                 </Link>
-                <SignOutButton />
-              </div>
-            ) : null}
-          </div>
-          {children}
+              </aside>
+              <main className="admin-content">{children}</main>
+            </div>
+          ) : (
+            children
+          )}
         </div>
       </body>
     </html>

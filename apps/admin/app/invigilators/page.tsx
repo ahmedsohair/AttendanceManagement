@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyButton } from "@/components/copy-button";
+import { EditIcon, KeyIcon, TrashIcon } from "@/components/action-icons";
 import { requireAdminPageUser } from "@/lib/auth";
 import {
   createInvigilator as createInvigilatorRecord,
@@ -213,7 +214,10 @@ export default async function InvigilatorsPage({
                   </div>
                   <div className="staff-actions">
                     <details className="inline-details">
-                      <summary className="compact-button">Code</summary>
+                      <summary className="icon-button" title="Access code">
+                        <KeyIcon />
+                        <span className="sr-only">Access code</span>
+                      </summary>
                       <div className="inline-popover">
                         {params.accessCode && params.codeUserId === invigilator.id ? (
                           <div className="access-code-box compact-code-box">
@@ -225,7 +229,11 @@ export default async function InvigilatorsPage({
                               Share this now. Existing codes cannot be viewed later.
                             </div>
                             <div className="inline-actions">
-                              <CopyButton value={params.accessCode} />
+                              <CopyButton
+                                className="secondary compact-button"
+                                label="Copy"
+                                value={params.accessCode}
+                              />
                               <a
                                 className="button"
                                 href={buildAccessCodeMailto(
@@ -251,7 +259,10 @@ export default async function InvigilatorsPage({
                       </div>
                     </details>
                     <details className="inline-details">
-                      <summary className="compact-button">Edit</summary>
+                      <summary className="icon-button" title="Edit invigilator">
+                        <EditIcon />
+                        <span className="sr-only">Edit invigilator</span>
+                      </summary>
                       <div className="inline-popover">
                         <form className="assignment-form" action={submitInvigilatorDetails}>
                           <input name="userId" type="hidden" value={invigilator.id} />
@@ -272,7 +283,10 @@ export default async function InvigilatorsPage({
                       </div>
                     </details>
                     <details className="inline-details">
-                      <summary className="compact-button danger-compact">Delete</summary>
+                      <summary className="icon-button danger" title="Delete invigilator">
+                        <TrashIcon />
+                        <span className="sr-only">Delete invigilator</span>
+                      </summary>
                       <div className="inline-popover">
                         <form className="assignment-form" action={submitInvigilatorDelete}>
                           <input name="userId" type="hidden" value={invigilator.id} />
@@ -304,7 +318,11 @@ export default async function InvigilatorsPage({
                         Share this now. Existing codes cannot be viewed later.
                       </div>
                       <div className="inline-actions">
-                        <CopyButton value={params.accessCode} />
+                        <CopyButton
+                          className="secondary compact-button"
+                          label="Copy"
+                          value={params.accessCode}
+                        />
                         <a
                           className="button"
                           href={buildAccessCodeMailto(

@@ -155,6 +155,21 @@ export default async function NewSessionPage({
 
   return (
     <div className="stack">
+      <div className="setup-stepper" aria-label="Exam setup progress">
+        <div className="setup-step active">
+          <span>1</span>
+          <strong>Import Roster</strong>
+        </div>
+        <div className={session ? "setup-step active" : "setup-step"}>
+          <span>2</span>
+          <strong>Assign Rooms</strong>
+        </div>
+        <div className={session ? "setup-step" : "setup-step disabled"}>
+          <span>3</span>
+          <strong>Publish Exam</strong>
+        </div>
+      </div>
+
       <div className="layout-two">
         <div className="card">
           <div className="kicker">Session Setup</div>
