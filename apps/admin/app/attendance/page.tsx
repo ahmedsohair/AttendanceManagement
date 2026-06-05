@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getExamSessionStatus } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
@@ -10,6 +11,7 @@ export default async function AttendancePage({
   searchParams?: Promise<{
     q?: string;
     room?: string;
+    examSessionId?: string;
     status?: string;
     sort?: string;
   }>;
@@ -18,6 +20,7 @@ export default async function AttendancePage({
   const params = (await searchParams) || {};
   const query = (params.q || "").trim().toLowerCase();
   const roomFilter = (params.room || "").trim();
+  const examSessionFilter = (params.examSessionId || "active").trim();
   const statusFilter = (params.status || "").trim();
   const sort = params.sort === "oldest" ? "oldest" : "newest";
   const store = await readStore();
@@ -30,10 +33,36 @@ export default async function AttendancePage({
       allocation
     ])
   );
+  const activeSessionIds = new Set(
+    store.examSessions
+      .filter((session) => getExamSessionStatus(session) === "active")
+      .map((session) => session.id)
+  );
+  const selectedSessionIds =
+    examSessionFilter === "all"
+      ? new Set(store.examSessions.map((session) => session.id))
+      : examSessionFilter === "active"
+        ? activeSessionIds
+        : new Set([examSessionFilter]);
+  const roomOptions = store.rooms
+    .filter((room) =>
+      examSessionFilter === "all" ? true : selectedSessionIds.has(room.examSessionId)
+    )
+    .sort((left, right) => left.code.localeCompare(right.code));
+  const selectedSessionLabel =
+    examSessionFilter === "all"
+      ? "All exams"
+      : examSessionFilter === "active"
+        ? "Active exams"
+        : sessionMap.get(examSessionFilter)?.name || "Selected exam";
 
   const attendance = [...store.attendanceEvents]
     .filter((event) => {
       const allocation = allocationMap.get(`${event.examSessionId}:${event.studentId}`);
+      if (!selectedSessionIds.has(event.examSessionId)) {
+        return false;
+      }
+
       if (query) {
         const markedBy = userMap.get(event.markedByUserId);
         const searchable = [
@@ -87,12 +116,28 @@ export default async function AttendancePage({
         <div>
           <div className="kicker">Attendance Audit</div>
           <h2 className="section-title">Attendance Marked</h2>
+          <div className="subtle">
+            Showing: <strong>{selectedSessionLabel}</strong>
+          </div>
         </div>
         <form className="search-form table-filter-form" action="/attendance" method="get">
+          <select name="examSessionId" defaultValue={examSessionFilter}>
+            <option value="active">Active exams only</option>
+            <option value="all">All exams</option>
+            {store.examSessions.map((session) => {
+              const status = getExamSessionStatus(session);
+
+              return (
+                <option key={session.id} value={session.id}>
+                  {session.name} ({status})
+                </option>
+              );
+            })}
+          </select>
           <input name="q" placeholder="Search student/name/comment" defaultValue={params.q || ""} />
           <select name="room" defaultValue={roomFilter}>
             <option value="">All rooms</option>
-            {store.rooms.map((room) => (
+            {roomOptions.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.code}
               </option>
