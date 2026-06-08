@@ -914,6 +914,200 @@ button.icon-button.danger:hover {
   opacity: 0.58;
 }
 
+.assignment-workflow {
+  display: grid;
+  gap: 18px;
+}
+
+.assignment-workflow-header,
+.assignment-panel-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.assignment-board {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.room-list-panel,
+.room-editor-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.room-list-panel {
+  position: sticky;
+  top: 92px;
+}
+
+.room-card-list {
+  display: grid;
+  gap: 8px;
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.room-assignment-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ink);
+  padding: 12px;
+  text-align: left;
+  box-shadow: none;
+}
+
+.room-assignment-card:hover,
+.room-assignment-card.selected {
+  border-color: var(--accent);
+  background: #eef5ff;
+  box-shadow: none;
+}
+
+.room-assignment-card span:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.room-assignment-card span:first-child span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.room-editor-panel {
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 16px;
+}
+
+.inline-create-panel {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(0, 112, 234, 0.24);
+  border-radius: var(--radius);
+  background: #eef5ff;
+}
+
+.selected-staff-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 42px;
+  align-items: center;
+  padding: 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: #f9fafb;
+}
+
+.staff-chip {
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  padding: 7px 9px;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.staff-chip:hover {
+  box-shadow: none;
+}
+
+.staff-picker-list {
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.staff-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: white;
+  padding: 10px;
+}
+
+.staff-picker-row.selected {
+  border-color: rgba(40, 167, 69, 0.35);
+  background: rgba(40, 167, 69, 0.08);
+}
+
+.staff-picker-row input {
+  width: auto;
+}
+
+.staff-picker-row span {
+  display: grid;
+  gap: 2px;
+}
+
+.review-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.review-room-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.4fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f9fafb;
+}
+
+.review-room-row > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.review-room-row > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.assignment-sticky-bar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+}
+
+.assignment-sticky-bar > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
 .disclosure-card > summary {
   display: flex;
   align-items: center;
@@ -1387,6 +1581,30 @@ button.icon-button.danger:hover {
   }
 
   .setup-stepper {
+    grid-template-columns: 1fr;
+  }
+
+  .assignment-workflow-header,
+  .assignment-panel-title,
+  .assignment-sticky-bar {
+    display: grid;
+  }
+
+  .assignment-board,
+  .review-room-row {
+    grid-template-columns: 1fr;
+  }
+
+  .room-list-panel {
+    position: static;
+  }
+
+  .room-card-list,
+  .staff-picker-list {
+    max-height: none;
+  }
+
+  .inline-create-panel {
     grid-template-columns: 1fr;
   }
 

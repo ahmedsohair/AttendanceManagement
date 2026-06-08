@@ -721,6 +721,100 @@ export async function updateInvigilatorRoomAssignments(input: {
   }
 }
 
+export async function updateExamRoomAssignments(input: {
+  examSessionId: string;
+  roomAssignments: Array<{
+    roomId: string;
+    invigilatorIds: string[];
+  }>;
+}) {
+  const examSessionId = input.examSessionId.trim();
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const sessionRooms = store.rooms.filter((room) => room.examSessionId === examSessionId);
+    const sessionRoomIds = new Set(sessionRooms.map((room) => room.id));
+    const validRoomIds = new Set(sessionRoomIds);
+    const assignmentsByUserId = new Map<string, Set<string>>();
+
+    for (const assignment of input.roomAssignments) {
+      if (!validRoomIds.has(assignment.roomId)) {
+        continue;
+      }
+
+      for (const invigilatorId of assignment.invigilatorIds) {
+        const current = assignmentsByUserId.get(invigilatorId) || new Set<string>();
+        current.add(assignment.roomId);
+        assignmentsByUserId.set(invigilatorId, current);
+      }
+    }
+
+    for (const user of store.users.filter((candidate) => candidate.role === "invigilator")) {
+      const otherExamRoomIds = user.assignedRoomIds.filter(
+        (roomId) => !sessionRoomIds.has(roomId)
+      );
+      const selectedSessionRoomIds = Array.from(assignmentsByUserId.get(user.id) || []);
+      user.assignedRoomIds = Array.from(
+        new Set([...otherExamRoomIds, ...selectedSessionRoomIds])
+      );
+    }
+
+    await writeStore(store);
+    return;
+  }
+
+  const sessionId = assertUuid(examSessionId, "Exam session ID");
+  const supabase = getSupabaseAdmin();
+  const roomsResponse = await supabase
+    .from("rooms")
+    .select("id")
+    .eq("exam_session_id", sessionId);
+
+  if (roomsResponse.error) {
+    throw new Error(roomsResponse.error.message);
+  }
+
+  const sessionRoomIds = (roomsResponse.data || []).map((room) => room.id);
+  const sessionRoomIdSet = new Set(sessionRoomIds);
+
+  if (!sessionRoomIds.length) {
+    throw new Error("No rooms found for this exam.");
+  }
+
+  const rows = input.roomAssignments.flatMap((assignment) => {
+    if (!sessionRoomIdSet.has(assignment.roomId)) {
+      return [];
+    }
+
+    return Array.from(new Set(assignment.invigilatorIds))
+      .filter((userId) => uuidPattern.test(userId))
+      .map((userId) => ({
+        id: nextId(),
+        room_id: assignment.roomId,
+        user_id: userId
+      }));
+  });
+
+  const deleteResponse = await supabase
+    .from("room_assignments")
+    .delete()
+    .in("room_id", sessionRoomIds);
+
+  if (deleteResponse.error) {
+    throw new Error(deleteResponse.error.message);
+  }
+
+  if (!rows.length) {
+    return;
+  }
+
+  const insertResponse = await supabase.from("room_assignments").insert(rows);
+
+  if (insertResponse.error) {
+    throw new Error(insertResponse.error.message);
+  }
+}
+
 export async function importExamSession(payload: SessionImportPayload) {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
