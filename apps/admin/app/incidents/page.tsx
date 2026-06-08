@@ -5,6 +5,13 @@ import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
+function formatAuditTime(value: string) {
+  return new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
 export default async function IncidentsPage({
   searchParams
 }: {
@@ -129,13 +136,25 @@ export default async function IncidentsPage({
                     ? roomMap.get(incident.expectedRoomId)?.code || incident.expectedRoomId
                     : "-"}
                 </td>
-                <td>{incident.userId ? userMap.get(incident.userId)?.fullName || incident.userId : "-"}</td>
+                <td>
+                  {incident.userId && userMap.get(incident.userId) ? (
+                    <>
+                      <strong>{userMap.get(incident.userId)?.fullName}</strong>
+                      <br />
+                      <span className="subtle">{userMap.get(incident.userId)?.email}</span>
+                    </>
+                  ) : (
+                    incident.userId || "-"
+                  )}
+                </td>
                 <td>
                   {typeof incident.details.comment === "string" && incident.details.comment
                     ? incident.details.comment
                     : "-"}
                 </td>
-                <td className="data-mono">{incident.createdAt}</td>
+                <td className="data-mono" title={incident.createdAt}>
+                  {formatAuditTime(incident.createdAt)}
+                </td>
               </tr>
             ))
           ) : (

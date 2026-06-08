@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/shared";
-import { CloseIcon, DownloadIcon, PublishIcon, TrashIcon } from "@/components/action-icons";
+import { CloseIcon, DownloadIcon, TrashIcon } from "@/components/action-icons";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ExamAssignmentWizard } from "@/components/exam-assignment-wizard";
 import { requireAdminPageUser } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+function formatAuditTime(value: string) {
+  return new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
 
 export default async function SessionDetailPage({
   params,
@@ -93,40 +100,32 @@ export default async function SessionDetailPage({
             </div>
           </div>
           <div className="inline-actions session-actions">
-            {sessionStatus === "draft" ? (
-              <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
-                <button className="icon-button" title="Publish exam" type="submit">
-                  <PublishIcon />
-                  <span className="sr-only">Publish exam</span>
-                </button>
-              </form>
-            ) : null}
             {sessionStatus === "active" ? (
               <form action={`/api/exam-sessions/${session.id}/close`} method="post">
                 <ConfirmSubmitButton
-                  className="icon-button"
+                  className="button secondary"
                   message="Close this exam? Invigilators will no longer see it as active."
                 >
                   <CloseIcon />
-                  <span className="sr-only">Close exam</span>
+                  <span>Close Exam</span>
                 </ConfirmSubmitButton>
               </form>
             ) : null}
             <a
-              className="icon-button"
+              className="button secondary"
               href={`/api/reports/${session.id}/export`}
               title="Export XLSX"
             >
               <DownloadIcon />
-              <span className="sr-only">Export XLSX</span>
+              <span>Export XLSX</span>
             </a>
             <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
               <ConfirmSubmitButton
-                className="icon-button danger"
+                className="button danger"
                 message="Delete this exam and all related rooms, allocations, attendance, and incidents? This cannot be undone."
               >
                 <TrashIcon />
-                <span className="sr-only">Delete exam</span>
+                <span>Delete</span>
               </ConfirmSubmitButton>
             </form>
           </div>
@@ -134,17 +133,17 @@ export default async function SessionDetailPage({
       </div>
 
       <div className="grid">
-        <Link className="card metric-card" href="/attendance">
+        <Link className="card metric-card" href={`/attendance?examSessionId=${session.id}`}>
           <div className="subtle">Attendance Marked</div>
           <div className="metric">{report.attendance.length}</div>
         </Link>
-        <Link className="card metric-card" href="/mismatches">
+        <Link className="card metric-card" href={`/mismatches?examSessionId=${session.id}`}>
           <div className="subtle">Mismatch Present</div>
           <div className="metric">
             {report.attendance.filter((item) => item.roomMismatch).length}
           </div>
         </Link>
-        <Link className="card metric-card" href="/incidents">
+        <Link className="card metric-card" href={`/incidents?examSessionId=${session.id}`}>
           <div className="subtle">Incidents</div>
           <div className="metric">{report.incidents.length}</div>
         </Link>
@@ -168,10 +167,14 @@ export default async function SessionDetailPage({
             <span>
               <span className="kicker">Room Access</span>
               <span className="section-title summary-title">
-                Invigilator Assignments
+                {sessionStatus === "closed"
+                  ? "Historical Invigilator Assignments"
+                  : "Invigilator Assignments"}
               </span>
               <span className="subtle">
-                Manage staff-room access for this {sessionStatus} exam.
+                {sessionStatus === "closed"
+                  ? "View staff-room access for this closed exam."
+                  : "Manage staff-room access for this active exam. Changes apply immediately after saving."}
               </span>
             </span>
             <span className="pill">
@@ -298,7 +301,9 @@ export default async function SessionDetailPage({
                     )}
                   </td>
                   <td>{row.event.comment || "-"}</td>
-                  <td className="data-mono">{row.event.createdAt}</td>
+                  <td className="data-mono" title={row.event.createdAt}>
+                    {formatAuditTime(row.event.createdAt)}
+                  </td>
                 </tr>
               ))
             ) : (

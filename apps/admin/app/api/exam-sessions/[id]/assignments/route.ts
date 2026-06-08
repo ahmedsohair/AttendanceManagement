@@ -4,6 +4,10 @@ import { requireApiUser } from "@/lib/auth";
 import { updateExamRoomAssignments } from "@/lib/repository";
 
 type AssignmentPayload = {
+  expectedRoomAssignments?: Array<{
+    roomId?: string;
+    invigilatorIds?: string[];
+  }>;
   roomAssignments?: Array<{
     roomId?: string;
     invigilatorIds?: string[];
@@ -25,9 +29,18 @@ export async function POST(
         .map((invigilatorId) => String(invigilatorId).trim())
         .filter(Boolean)
     }));
+    const expectedRoomAssignments = payload.expectedRoomAssignments
+      ? payload.expectedRoomAssignments.map((assignment) => ({
+          roomId: String(assignment.roomId || "").trim(),
+          invigilatorIds: (assignment.invigilatorIds || [])
+            .map((invigilatorId) => String(invigilatorId).trim())
+            .filter(Boolean)
+        }))
+      : undefined;
 
     await updateExamRoomAssignments({
       examSessionId: id,
+      expectedRoomAssignments,
       roomAssignments
     });
 

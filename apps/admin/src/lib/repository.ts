@@ -161,6 +161,27 @@ function assertUuid(value: string | null | undefined, label: string) {
   return normalized;
 }
 
+function normalizeAssignmentSnapshot(
+  roomAssignments: Array<{ roomId: string; invigilatorIds: string[] }>
+) {
+  return roomAssignments
+    .map((assignment) => ({
+      roomId: assignment.roomId,
+      invigilatorIds: Array.from(new Set(assignment.invigilatorIds)).sort()
+    }))
+    .sort((left, right) => left.roomId.localeCompare(right.roomId));
+}
+
+function sameAssignmentSnapshot(
+  left: Array<{ roomId: string; invigilatorIds: string[] }>,
+  right: Array<{ roomId: string; invigilatorIds: string[] }>
+) {
+  return (
+    JSON.stringify(normalizeAssignmentSnapshot(left)) ===
+    JSON.stringify(normalizeAssignmentSnapshot(right))
+  );
+}
+
 export async function ensureUser(email: string, fullName?: string) {
   const normalizedEmail = email.trim().toLowerCase();
 
@@ -723,6 +744,10 @@ export async function updateInvigilatorRoomAssignments(input: {
 
 export async function updateExamRoomAssignments(input: {
   examSessionId: string;
+  expectedRoomAssignments?: Array<{
+    roomId: string;
+    invigilatorIds: string[];
+  }>;
   roomAssignments: Array<{
     roomId: string;
     invigilatorIds: string[];
@@ -732,17 +757,61 @@ export async function updateExamRoomAssignments(input: {
 
   if (!isSupabaseConfigured()) {
     const store = await readStore();
+    const session = store.examSessions.find((item) => item.id === examSessionId);
+
+    if (!session) {
+      throw new Error("Session not found.");
+    }
+
+    if ((session.status || (session.published ? "active" : "draft")) === "closed") {
+      throw new Error("Closed exams are read-only. Room assignments cannot be changed.");
+    }
+
     const sessionRooms = store.rooms.filter((room) => room.examSessionId === examSessionId);
     const sessionRoomIds = new Set(sessionRooms.map((room) => room.id));
+    const submittedRoomIds = new Set(input.roomAssignments.map((assignment) => assignment.roomId));
+
+    if (submittedRoomIds.size !== sessionRoomIds.size) {
+      throw new Error("Assignment payload must include every room in this exam.");
+    }
+
+    for (const roomId of submittedRoomIds) {
+      if (!sessionRoomIds.has(roomId)) {
+        throw new Error("Assignment payload includes a room outside this exam.");
+      }
+    }
+
+    const validInvigilatorIds = new Set(
+      store.users.filter((user) => user.role === "invigilator").map((user) => user.id)
+    );
     const validRoomIds = new Set(sessionRoomIds);
     const assignmentsByUserId = new Map<string, Set<string>>();
+    const currentRoomAssignments = sessionRooms.map((room) => ({
+      roomId: room.id,
+      invigilatorIds: store.users
+        .filter((user) => user.assignedRoomIds.includes(room.id))
+        .map((user) => user.id)
+    }));
+
+    if (
+      input.expectedRoomAssignments &&
+      !sameAssignmentSnapshot(input.expectedRoomAssignments, currentRoomAssignments)
+    ) {
+      throw new Error(
+        "Room assignments changed since this page loaded. Refresh before saving."
+      );
+    }
 
     for (const assignment of input.roomAssignments) {
       if (!validRoomIds.has(assignment.roomId)) {
-        continue;
+        throw new Error("Assignment payload includes a room outside this exam.");
       }
 
       for (const invigilatorId of assignment.invigilatorIds) {
+        if (!validInvigilatorIds.has(invigilatorId)) {
+          throw new Error("Assignment payload includes an unknown invigilator.");
+        }
+
         const current = assignmentsByUserId.get(invigilatorId) || new Set<string>();
         current.add(assignment.roomId);
         assignmentsByUserId.set(invigilatorId, current);
@@ -765,6 +834,27 @@ export async function updateExamRoomAssignments(input: {
 
   const sessionId = assertUuid(examSessionId, "Exam session ID");
   const supabase = getSupabaseAdmin();
+  const sessionResponse = await supabase
+    .from("exam_sessions")
+    .select("id, published, status")
+    .eq("id", sessionId)
+    .maybeSingle();
+
+  if (sessionResponse.error) {
+    throw new Error(sessionResponse.error.message);
+  }
+
+  if (!sessionResponse.data) {
+    throw new Error("Session not found.");
+  }
+
+  const sessionStatus =
+    sessionResponse.data.status ?? (sessionResponse.data.published ? "active" : "draft");
+
+  if (sessionStatus === "closed") {
+    throw new Error("Closed exams are read-only. Room assignments cannot be changed.");
+  }
+
   const roomsResponse = await supabase
     .from("rooms")
     .select("id")
@@ -776,18 +866,85 @@ export async function updateExamRoomAssignments(input: {
 
   const sessionRoomIds = (roomsResponse.data || []).map((room) => room.id);
   const sessionRoomIdSet = new Set(sessionRoomIds);
+  const submittedRoomIdSet = new Set(input.roomAssignments.map((assignment) => assignment.roomId));
 
   if (!sessionRoomIds.length) {
     throw new Error("No rooms found for this exam.");
   }
 
-  const rows = input.roomAssignments.flatMap((assignment) => {
-    if (!sessionRoomIdSet.has(assignment.roomId)) {
-      return [];
+  if (submittedRoomIdSet.size !== sessionRoomIdSet.size) {
+    throw new Error("Assignment payload must include every room in this exam.");
+  }
+
+  for (const roomId of submittedRoomIdSet) {
+    if (!sessionRoomIdSet.has(roomId)) {
+      throw new Error("Assignment payload includes a room outside this exam.");
+    }
+  }
+
+  const submittedInvigilatorIds = Array.from(
+    new Set(input.roomAssignments.flatMap((assignment) => assignment.invigilatorIds))
+  );
+  const invalidFormattedInvigilatorId = submittedInvigilatorIds.find(
+    (userId) => !uuidPattern.test(userId)
+  );
+
+  if (invalidFormattedInvigilatorId) {
+    throw new Error("Assignment payload includes an invalid invigilator ID.");
+  }
+
+  if (submittedInvigilatorIds.length) {
+    const usersResponse = await supabase
+      .from("users")
+      .select("id")
+      .eq("role", "invigilator")
+      .in("id", submittedInvigilatorIds);
+
+    if (usersResponse.error) {
+      throw new Error(usersResponse.error.message);
     }
 
+    const validInvigilatorIds = new Set((usersResponse.data || []).map((user) => user.id));
+    const unknownInvigilatorId = submittedInvigilatorIds.find(
+      (userId) => !validInvigilatorIds.has(userId)
+    );
+
+    if (unknownInvigilatorId) {
+      throw new Error("Assignment payload includes an unknown invigilator.");
+    }
+  }
+
+  if (input.expectedRoomAssignments) {
+    const currentAssignmentsResponse = await supabase
+      .from("room_assignments")
+      .select("room_id, user_id")
+      .in("room_id", sessionRoomIds);
+
+    if (currentAssignmentsResponse.error) {
+      throw new Error(currentAssignmentsResponse.error.message);
+    }
+
+    const currentInvigilatorsByRoomId = new Map<string, string[]>();
+    for (const assignment of currentAssignmentsResponse.data || []) {
+      const current = currentInvigilatorsByRoomId.get(assignment.room_id) || [];
+      current.push(assignment.user_id);
+      currentInvigilatorsByRoomId.set(assignment.room_id, current);
+    }
+
+    const currentRoomAssignments = sessionRoomIds.map((roomId) => ({
+      roomId,
+      invigilatorIds: currentInvigilatorsByRoomId.get(roomId) || []
+    }));
+
+    if (!sameAssignmentSnapshot(input.expectedRoomAssignments, currentRoomAssignments)) {
+      throw new Error(
+        "Room assignments changed since this page loaded. Refresh before saving."
+      );
+    }
+  }
+
+  const rows = input.roomAssignments.flatMap((assignment) => {
     return Array.from(new Set(assignment.invigilatorIds))
-      .filter((userId) => uuidPattern.test(userId))
       .map((userId) => ({
         id: nextId(),
         room_id: assignment.roomId,
@@ -917,6 +1074,22 @@ export async function publishExamSession(sessionId: string) {
       throw new Error("Session not found.");
     }
 
+    const sessionRooms = store.rooms.filter((room) => room.examSessionId === sessionId);
+    const assignedRoomIds = new Set(store.users.flatMap((user) => user.assignedRoomIds));
+    const unassignedRooms = sessionRooms.filter((room) => !assignedRoomIds.has(room.id));
+
+    if (!sessionRooms.length) {
+      throw new Error("This exam has no rooms to publish.");
+    }
+
+    if (unassignedRooms.length) {
+      throw new Error(
+        `Assign invigilators before publishing. Unassigned room(s): ${unassignedRooms
+          .map((room) => room.code)
+          .join(", ")}.`
+      );
+    }
+
     session.published = true;
     session.status = "active";
 
@@ -925,10 +1098,49 @@ export async function publishExamSession(sessionId: string) {
   }
 
   const supabase = getSupabaseAdmin();
+  const sessionUuid = assertUuid(sessionId, "Exam session ID");
+  const roomsResponse = await supabase
+    .from("rooms")
+    .select("id, code")
+    .eq("exam_session_id", sessionUuid);
+
+  if (roomsResponse.error) {
+    throw new Error(roomsResponse.error.message);
+  }
+
+  const rooms = roomsResponse.data || [];
+
+  if (!rooms.length) {
+    throw new Error("This exam has no rooms to publish.");
+  }
+
+  const assignmentsResponse = await supabase
+    .from("room_assignments")
+    .select("room_id")
+    .in(
+      "room_id",
+      rooms.map((room) => room.id)
+    );
+
+  if (assignmentsResponse.error) {
+    throw new Error(assignmentsResponse.error.message);
+  }
+
+  const assignedRoomIds = new Set((assignmentsResponse.data || []).map((row) => row.room_id));
+  const unassignedRooms = rooms.filter((room) => !assignedRoomIds.has(room.id));
+
+  if (unassignedRooms.length) {
+    throw new Error(
+      `Assign invigilators before publishing. Unassigned room(s): ${unassignedRooms
+        .map((room) => room.code)
+        .join(", ")}.`
+    );
+  }
+
   const publishResponse = await supabase
     .from("exam_sessions")
     .update({ published: true, status: "active" })
-    .eq("id", sessionId)
+    .eq("id", sessionUuid)
     .select("id")
     .maybeSingle();
 

@@ -38,11 +38,11 @@ export default async function NewSessionPage({
         </div>
         <div className={session ? "setup-step active" : "setup-step"}>
           <span>2</span>
-          <strong>Assign Rooms</strong>
+          <strong>Assign Invigilators</strong>
         </div>
         <div className={session ? "setup-step" : "setup-step disabled"}>
           <span>3</span>
-          <strong>Publish Exam</strong>
+          <strong>Review & Publish</strong>
         </div>
       </div>
 
@@ -78,7 +78,7 @@ export default async function NewSessionPage({
               <div className="kicker">Imported Draft</div>
               <h2 className="section-title">{session.name}</h2>
               <div className="subtle">
-                Assign rooms below, save the draft, then continue to review and publish.
+                Assign invigilators to imported rooms, save the draft, then review and publish.
               </div>
             </div>
             <a className="button secondary" href={`/sessions/${session.id}`}>

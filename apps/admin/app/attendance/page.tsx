@@ -5,6 +5,13 @@ import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
+function formatAuditTime(value: string) {
+  return new Intl.DateTimeFormat("en-AU", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
+}
+
 export default async function AttendancePage({
   searchParams
 }: {
@@ -213,7 +220,9 @@ export default async function AttendancePage({
                   )}
                 </td>
                 <td>{event.comment || "-"}</td>
-                <td className="data-mono">{event.createdAt}</td>
+                <td className="data-mono" title={event.createdAt}>
+                  {formatAuditTime(event.createdAt)}
+                </td>
               </tr>
               );
             })

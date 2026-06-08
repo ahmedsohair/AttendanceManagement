@@ -35,7 +35,7 @@ export default async function RootLayout({
                     <input
                       className="admin-search"
                       name="q"
-                      placeholder="Search students, exams, rooms"
+                      placeholder="Search attendance records"
                       type="search"
                     />
                   </form>

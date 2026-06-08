@@ -52,6 +52,9 @@ export function ExamAssignmentWizard({
   const [assignments, setAssignments] = useState(() =>
     buildInitialAssignments(rooms, initialInvigilators)
   );
+  const [savedAssignments, setSavedAssignments] = useState(() =>
+    buildInitialAssignments(rooms, initialInvigilators)
+  );
   const [invigilators, setInvigilators] = useState(initialInvigilators);
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || "");
   const [query, setQuery] = useState("");
@@ -71,6 +74,7 @@ export function ExamAssignmentWizard({
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
   const isSetupMode = mode === "setup";
+  const isReadOnly = sessionStatus === "closed";
   const canPublish = isSetupMode && sessionStatus === "draft";
   const filteredInvigilators = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -93,6 +97,10 @@ export function ExamAssignmentWizard({
   const unassignedRooms = rooms.filter((room) => !(assignments[room.id] || []).length);
 
   function toggleRoomInvigilator(roomId: string, invigilatorId: string) {
+    if (isReadOnly) {
+      return;
+    }
+
     setAssignments((current) => {
       const currentRoomAssignments = current[roomId] || [];
       const nextRoomAssignments = currentRoomAssignments.includes(invigilatorId)
@@ -113,6 +121,8 @@ export function ExamAssignmentWizard({
     void (async () => {
       try {
         await saveAssignmentsRequest();
+      } catch {
+        // saveAssignmentsRequest already exposes the error in the notice area.
       } finally {
         setIsSaving(false);
       }
@@ -124,6 +134,10 @@ export function ExamAssignmentWizard({
       await readJsonResponse(
         await fetch(`/api/exam-sessions/${sessionId}/assignments`, {
           body: JSON.stringify({
+            expectedRoomAssignments: rooms.map((room) => ({
+              roomId: room.id,
+              invigilatorIds: savedAssignments[room.id] || []
+            })),
             roomAssignments: rooms.map((room) => ({
               roomId: room.id,
               invigilatorIds: assignments[room.id] || []
@@ -135,6 +149,7 @@ export function ExamAssignmentWizard({
           method: "POST"
         })
       );
+      setSavedAssignments(assignments);
       setDirty(false);
       setNotice({ tone: "ok", text: "Room assignments saved." });
     } catch (error) {
@@ -147,7 +162,7 @@ export function ExamAssignmentWizard({
   }
 
   function createInvigilator() {
-    if (!selectedRoom) {
+    if (!selectedRoom || isReadOnly) {
       return;
     }
 
@@ -157,7 +172,7 @@ export function ExamAssignmentWizard({
         const payload = (await readJsonResponse(
           await fetch("/api/invigilators", {
             body: JSON.stringify({
-              assignedRoomIds: [selectedRoom.id],
+              assignedRoomIds: [],
               email: newEmail,
               fullName: newName
             }),
@@ -196,7 +211,7 @@ export function ExamAssignmentWizard({
         setDirty(true);
         setNotice({
           tone: "ok",
-          text: "Invigilator created and added to this room. Save assignments when ready."
+          text: `Invigilator created and staged for ${selectedRoom.code}. Save assignments to apply access.`
         });
       } catch (error) {
         setNotice({
@@ -247,7 +262,9 @@ export function ExamAssignmentWizard({
           <div className="subtle">
             {isSetupMode
               ? `${assignedCount} of ${rooms.length} room(s) have staff assigned.`
-              : `${assignedCount} of ${rooms.length} room(s) currently have assigned staff.`}
+              : isReadOnly
+                ? `${assignedCount} of ${rooms.length} room(s) had assigned staff when reviewed.`
+                : `${assignedCount} of ${rooms.length} room(s) currently have assigned staff.`}
           </div>
         </div>
         <div className={unassignedRooms.length ? "pill warn" : "pill ok"}>
@@ -320,8 +337,16 @@ export function ExamAssignmentWizard({
         <div className="room-editor-panel">
           {reviewMode ? (
             <div className="review-panel">
-              <div className="kicker">Step 3</div>
-              <h3 className="section-title">Review & Publish</h3>
+              <div className="kicker">{isSetupMode ? "Step 3" : "Assignment Summary"}</div>
+              <h3 className="section-title">
+                {isSetupMode ? "Review & Publish" : "Room Access Summary"}
+              </h3>
+              {isReadOnly ? (
+                <p className="subtle">
+                  This exam is closed. Assignments are shown for audit context and cannot
+                  be edited.
+                </p>
+              ) : null}
               <div className="stack">
                 {rooms.map((room) => {
                   const roomAssignments = assignments[room.id] || [];
@@ -360,6 +385,7 @@ export function ExamAssignmentWizard({
                 </div>
                 <button
                   className="secondary"
+                  disabled={isReadOnly}
                   type="button"
                   onClick={() => setShowCreatePanel((current) => !current)}
                 >
@@ -425,6 +451,7 @@ export function ExamAssignmentWizard({
                     >
                       <input
                         type="checkbox"
+                        disabled={isReadOnly}
                         checked={checked}
                         onChange={() =>
                           toggleRoomInvigilator(selectedRoom.id, invigilator.id)
@@ -447,12 +474,21 @@ export function ExamAssignmentWizard({
 
       <div className="assignment-sticky-bar">
         <div>
-          <strong>{dirty ? "Unsaved assignment changes" : "Assignments up to date"}</strong>
+          <strong>
+            {isReadOnly
+              ? "Closed exam assignments"
+              : dirty
+                ? "Unsaved assignment changes"
+                : "Assignments up to date"}
+          </strong>
           <span className="subtle">
-            {sessionName} is currently {sessionStatus}.
+            {isReadOnly
+              ? `${sessionName} is read-only.`
+              : `${sessionName} is currently ${sessionStatus}.`}
           </span>
         </div>
-        <div className="inline-actions">
+        {!isReadOnly ? (
+          <div className="inline-actions">
           <button
             className="secondary"
             disabled={isSaving || !dirty}
@@ -473,15 +509,16 @@ export function ExamAssignmentWizard({
           ) : null}
           {canPublish ? (
             <button
-              disabled={dirty || isPublishing}
-              title={dirty ? "Save assignments before publishing" : "Publish exam"}
+              disabled={isSaving || isPublishing}
+              title={dirty ? "Save assignments and publish exam" : "Publish exam"}
               type="button"
               onClick={publishExam}
             >
-              {isPublishing ? "Publishing..." : "Publish Exam"}
+              {isPublishing ? "Publishing..." : dirty ? "Save & Publish Exam" : "Publish Exam"}
             </button>
           ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </section>
   );
