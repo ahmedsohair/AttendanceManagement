@@ -919,6 +919,16 @@ button.icon-button.danger:hover {
   gap: 18px;
 }
 
+.room-access-panel .assignment-workflow {
+  border: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.room-access-panel .assignment-workflow-header {
+  display: none;
+}
+
 .assignment-workflow-header,
 .assignment-panel-title {
   display: flex;

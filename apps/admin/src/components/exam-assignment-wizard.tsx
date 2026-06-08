@@ -8,6 +8,7 @@ import { CopyButton } from "./copy-button";
 type ExamAssignmentWizardProps = {
   initialInvigilators: User[];
   rooms: Room[];
+  mode?: "setup" | "manage";
   sessionId: string;
   sessionName: string;
   sessionStatus: ExamSessionStatus;
@@ -42,6 +43,7 @@ async function readJsonResponse(response: Response) {
 
 export function ExamAssignmentWizard({
   initialInvigilators,
+  mode = "manage",
   rooms,
   sessionId,
   sessionName,
@@ -62,12 +64,14 @@ export function ExamAssignmentWizard({
   } | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(mode === "setup" ? false : true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
+  const isSetupMode = mode === "setup";
+  const canPublish = isSetupMode && sessionStatus === "draft";
   const filteredInvigilators = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
@@ -236,10 +240,14 @@ export function ExamAssignmentWizard({
     <section className="assignment-workflow card">
       <div className="assignment-workflow-header">
         <div>
-          <div className="kicker">Step 2</div>
-          <h2 className="section-title">Assign Invigilators</h2>
+          <div className="kicker">{isSetupMode ? "Step 2" : "Room Access"}</div>
+          <h2 className="section-title">
+            {isSetupMode ? "Assign Invigilators" : "Invigilator Assignments"}
+          </h2>
           <div className="subtle">
-            {assignedCount} of {rooms.length} room(s) have staff assigned.
+            {isSetupMode
+              ? `${assignedCount} of ${rooms.length} room(s) have staff assigned.`
+              : `${assignedCount} of ${rooms.length} room(s) currently have assigned staff.`}
           </div>
         </div>
         <div className={unassignedRooms.length ? "pill warn" : "pill ok"}>
@@ -451,17 +459,19 @@ export function ExamAssignmentWizard({
             type="button"
             onClick={saveAssignments}
           >
-            {isSaving ? "Saving..." : "Save Draft"}
+            {isSaving ? "Saving..." : isSetupMode ? "Save Draft" : "Save Changes"}
           </button>
-          <button
-            className="secondary"
-            disabled={isSaving}
-            type="button"
-            onClick={() => setReviewMode(true)}
-          >
-            Continue To Review
-          </button>
-          {sessionStatus === "draft" ? (
+          {isSetupMode ? (
+            <button
+              className="secondary"
+              disabled={isSaving}
+              type="button"
+              onClick={() => setReviewMode(true)}
+            >
+              Continue To Review
+            </button>
+          ) : null}
+          {canPublish ? (
             <button
               disabled={dirty || isPublishing}
               title={dirty ? "Save assignments before publishing" : "Publish exam"}

@@ -87,6 +87,7 @@ export default async function NewSessionPage({
           </div>
           <ExamAssignmentWizard
             initialInvigilators={invigilators}
+            mode="setup"
             rooms={sessionRooms}
             sessionId={session.id}
             sessionName={session.name}

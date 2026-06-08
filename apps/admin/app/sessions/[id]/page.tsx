@@ -153,13 +153,45 @@ export default async function SessionDetailPage({
       {notices.message ? <p className="pill ok toast-message">{notices.message}</p> : null}
       {notices.error ? <p className="pill warn toast-message">{notices.error}</p> : null}
 
-      <ExamAssignmentWizard
-        initialInvigilators={invigilators}
-        rooms={sessionRooms}
-        sessionId={session.id}
-        sessionName={session.name}
-        sessionStatus={sessionStatus}
-      />
+      {sessionStatus === "draft" ? (
+        <ExamAssignmentWizard
+          initialInvigilators={invigilators}
+          mode="setup"
+          rooms={sessionRooms}
+          sessionId={session.id}
+          sessionName={session.name}
+          sessionStatus={sessionStatus}
+        />
+      ) : (
+        <details className="card disclosure-card room-access-panel">
+          <summary>
+            <span>
+              <span className="kicker">Room Access</span>
+              <span className="section-title summary-title">
+                Invigilator Assignments
+              </span>
+              <span className="subtle">
+                Manage staff-room access for this {sessionStatus} exam.
+              </span>
+            </span>
+            <span className="pill">
+              {invigilators.filter((invigilator) =>
+                invigilator.assignedRoomIds.some((roomId) =>
+                  sessionRooms.some((room) => room.id === roomId)
+                )
+              ).length} assigned
+            </span>
+          </summary>
+          <ExamAssignmentWizard
+            initialInvigilators={invigilators}
+            mode="manage"
+            rooms={sessionRooms}
+            sessionId={session.id}
+            sessionName={session.name}
+            sessionStatus={sessionStatus}
+          />
+        </details>
+      )}
 
       <div className="card">
         <h2 className="section-title">Room Summary</h2>
