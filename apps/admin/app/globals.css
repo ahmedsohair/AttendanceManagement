@@ -177,32 +177,11 @@ a {
 }
 
 .admin-topbar {
-  display: grid;
-  flex: 1;
-  grid-template-columns: minmax(220px, 560px) auto;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.admin-search {
-  min-height: 44px;
   display: flex;
+  flex: 1;
   align-items: center;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: #ffffff;
-  color: #667085;
-  padding: 0 14px;
-  font-size: 14px;
-}
-
-.admin-search-form {
-  margin: 0;
-}
-
-.admin-search-form .admin-search {
-  width: 100%;
+  justify-content: flex-end;
+  gap: 20px;
 }
 
 .admin-user {
@@ -1553,17 +1532,8 @@ button.icon-button.danger:hover {
     padding: 14px 16px;
   }
 
-  .admin-header .brand-logo-wrap {
-    display: none;
-  }
-
   .admin-topbar {
-    grid-template-columns: 1fr;
     width: 100%;
-  }
-
-  .admin-search {
-    display: none;
   }
 
   .admin-user {

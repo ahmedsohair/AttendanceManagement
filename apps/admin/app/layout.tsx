@@ -25,26 +25,12 @@ export default async function RootLayout({
         <div className={isAdmin ? "shell admin-shell" : "shell"}>
           <div className={isAdmin ? "header admin-header" : "header"}>
             {isAdmin ? (
-              <>
-                <div className="brand-logo-wrap">
-                  <ExamPulseLogo />
-                  <span className="admin-portal-label">Admin Portal</span>
+              <div className="admin-topbar">
+                <div className="admin-user">
+                  <span>{sessionUser.fullName}</span>
+                  <SignOutButton />
                 </div>
-                <div className="admin-topbar">
-                  <form className="admin-search-form" action="/attendance" method="get">
-                    <input
-                      className="admin-search"
-                      name="q"
-                      placeholder="Search attendance records"
-                      type="search"
-                    />
-                  </form>
-                  <div className="admin-user">
-                    <span>{sessionUser.fullName}</span>
-                    <SignOutButton />
-                  </div>
-                </div>
-              </>
+              </div>
             ) : (
               <div className="brand-logo-wrap">
                 <ExamPulseLogo />
