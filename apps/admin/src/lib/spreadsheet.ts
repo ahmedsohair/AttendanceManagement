@@ -5,6 +5,7 @@ import type { SessionImportRow } from "@algo-attendance/shared";
 const requiredColumns = ["student_id", "student_name", "room", "zone"] as const;
 const maxImportRows = 2500;
 const maxCellLength = 200;
+const oleCompoundDocumentSignature = "d0cf11e0a1b11ae1";
 
 function cellToString(cell: ExcelJS.Cell) {
   if (cell.text) {
@@ -24,6 +25,12 @@ function cellToString(cell: ExcelJS.Cell) {
 }
 
 async function readWorkbook(buffer: Buffer) {
+  if (buffer.subarray(0, 8).toString("hex") === oleCompoundDocumentSignature) {
+    throw new Error(
+      "This file is encrypted, protected, or saved in legacy Excel format. Open it in Excel and save/export it as a standard unprotected .xlsx file, then upload again."
+    );
+  }
+
   const workbook = new ExcelJS.Workbook();
   try {
     const arrayBuffer = buffer.buffer.slice(

@@ -40,9 +40,9 @@ export function NewExamImportForm() {
         <input name="name" placeholder="Exam name" required />
         <input name="examDate" type="date" required />
         <input name="startTime" type="time" required />
-        <input name="file" type="file" accept=".xlsx,.xls,.csv" required />
+        <input name="files" type="file" accept=".xlsx,.csv" multiple required />
         <button type="submit" disabled={busy}>
-          {busy ? "Importing..." : "Upload Exam Spreadsheet"}
+          {busy ? "Importing..." : "Upload Exam Spreadsheet(s)"}
         </button>
       </form>
       {message ? <p className="pill warn">{message}</p> : null}
