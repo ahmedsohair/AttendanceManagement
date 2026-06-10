@@ -119,9 +119,7 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
 }
 
 export async function buildWorkbookSheets(data: {
-  summary: Record<string, string | number>[];
-  attendance: Record<string, string | number | boolean>[];
-  incidents: Record<string, string | number | boolean | null | undefined>[];
+  [sheetName: string]: Record<string, string | number | boolean | null | undefined>[];
 }): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
 
