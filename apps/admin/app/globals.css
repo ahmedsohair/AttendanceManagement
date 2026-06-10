@@ -1469,21 +1469,6 @@ button.icon-button.danger:hover {
   padding-bottom: 2px;
 }
 
-.recent-activity-preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.recent-activity-preview .recent-chip-row {
-  flex: 1;
-}
-
-.compact-button {
-  padding: 10px 14px;
-  font-size: 14px;
-}
-
 .recent-chip {
   display: grid;
   flex: 0 0 auto;
@@ -1547,96 +1532,6 @@ button.icon-button.danger:hover {
 
 .web-review-card h2 {
   margin: 0;
-}
-
-.web-activity-sheet {
-  position: absolute;
-  inset: 0;
-  z-index: 38;
-  display: grid;
-  align-items: end;
-  padding: 18px;
-  background: rgba(0, 0, 0, 0.34);
-}
-
-.web-activity-panel {
-  display: grid;
-  gap: 12px;
-  max-height: min(72vh, 680px);
-  overflow: hidden;
-  border-radius: 28px 28px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(255, 255, 255, 0.96);
-  padding: 18px;
-  box-shadow: var(--shadow);
-}
-
-.web-activity-header {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.web-activity-header h2 {
-  margin: 0;
-}
-
-.activity-filter-row {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-}
-
-.activity-filter-row button {
-  flex: 0 0 auto;
-}
-
-.active-filter {
-  border-color: var(--brand);
-  background: #fff1f3;
-  color: var(--brand-dark);
-}
-
-.activity-list {
-  display: grid;
-  gap: 8px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.activity-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px solid var(--line);
-  border-left: 6px solid var(--line);
-  border-radius: 18px;
-  padding: 12px;
-  background: white;
-}
-
-.activity-row > div {
-  display: grid;
-  gap: 2px;
-}
-
-.activity-row span,
-.activity-row small,
-.activity-row time {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.activity-row.present {
-  border-left-color: var(--ok);
-}
-
-.activity-row.mismatch,
-.activity-row.incident {
-  border-left-color: var(--warn);
 }
 
 @media (max-width: 900px) {
@@ -1757,11 +1652,6 @@ button.icon-button.danger:hover {
 
   .web-manual-row {
     grid-template-columns: 1fr;
-  }
-
-  .recent-activity-preview {
-    align-items: stretch;
-    flex-direction: column;
   }
 
   .web-camera-top {

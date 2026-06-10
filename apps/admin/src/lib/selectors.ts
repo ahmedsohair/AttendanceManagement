@@ -43,44 +43,13 @@ export function getRoomLiveState(store: DataStore, roomId: string) {
 
   const report = buildExamSessionReport(store, room.examSessionId);
   const summary = report.summaries.find((item) => item.roomId === roomId);
-  const roomAttendance = report.attendance
-    .filter((item) => item.markedInRoomId === roomId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const mismatchStudentIds = new Set(
-    roomAttendance.filter((item) => item.roomMismatch).map((item) => item.studentId)
-  );
-  const roomIncidents = report.incidents
-    .filter((item) => item.roomId === roomId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const activity = [
-    ...roomAttendance.map((item) => ({
-      type: item.roomMismatch ? "mismatch" : "present",
-      studentId: item.studentId,
-      createdAt: item.createdAt,
-      label: item.roomMismatch ? "Mismatch present" : "Present",
-      comment: item.comment
-    })),
-    ...roomIncidents
-      .filter(
-        (item) =>
-          item.incidentType !== "wrong_room_present_override" ||
-          !item.studentId ||
-          !mismatchStudentIds.has(item.studentId)
-      )
-      .map((item) => ({
-        type: "incident",
-        studentId: item.studentId,
-        createdAt: item.createdAt,
-        label: item.incidentType.replaceAll("_", " "),
-        comment: typeof item.details.comment === "string" ? item.details.comment : undefined
-      }))
-  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return {
     room,
     summary,
-    activity,
-    recentAttendance: roomAttendance
+    recentAttendance: report.attendance
+      .filter((item) => item.markedInRoomId === roomId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 10)
       .map((item) => ({
         studentId: item.studentId,
@@ -88,7 +57,9 @@ export function getRoomLiveState(store: DataStore, roomId: string) {
         roomMismatch: item.roomMismatch,
         comment: item.comment
       })),
-    recentIncidents: roomIncidents
+    recentIncidents: report.incidents
+      .filter((item) => item.roomId === roomId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, 10)
       .map((item) => ({
         incidentType: item.incidentType,

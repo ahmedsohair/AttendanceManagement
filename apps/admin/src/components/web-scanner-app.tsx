@@ -38,13 +38,6 @@ type LiveRoomState = {
     createdAt: string;
     comment?: string;
   }>;
-  activity?: Array<{
-    type: "present" | "mismatch" | "incident";
-    studentId?: string;
-    createdAt: string;
-    label: string;
-    comment?: string;
-  }>;
 };
 
 type OcrWorker = {
@@ -283,11 +276,6 @@ export function WebScannerApp() {
   const [torchMessage, setTorchMessage] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [scanHold, setScanHold] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
-  const [activityQuery, setActivityQuery] = useState("");
-  const [activityFilter, setActivityFilter] = useState<
-    "all" | "present" | "mismatch" | "incident"
-  >("all");
 
   const roomStats = useMemo(
     () => ({
@@ -909,22 +897,6 @@ export function WebScannerApp() {
         tone: "warn"
       }))
   ].slice(0, 3);
-  const activityRows = useMemo(() => {
-    const query = activityQuery.trim().toLowerCase();
-    return (liveState?.activity || []).filter((item) => {
-      if (activityFilter !== "all" && item.type !== activityFilter) {
-        return false;
-      }
-
-      if (!query) {
-        return true;
-      }
-
-      return `${item.studentId || ""} ${item.label} ${item.comment || ""}`
-        .toLowerCase()
-        .includes(query);
-    });
-  }, [activityFilter, activityQuery, liveState?.activity]);
 
   return (
     <div className="web-camera-page">
@@ -1023,22 +995,13 @@ export function WebScannerApp() {
             </div>
           </div>
           {recentScanChips.length ? (
-            <div className="recent-activity-preview">
-              <div className="recent-chip-row">
-                {recentScanChips.map((chip) => (
-                  <span key={chip.key} className={`recent-chip ${chip.tone}`}>
-                    <strong>{chip.label}</strong>
-                    <span>{chip.detail}</span>
-                  </span>
-                ))}
-              </div>
-              <button
-                className="secondary compact-button"
-                type="button"
-                onClick={() => setActivityOpen(true)}
-              >
-                View Activity
-              </button>
+            <div className="recent-chip-row">
+              {recentScanChips.map((chip) => (
+                <span key={chip.key} className={`recent-chip ${chip.tone}`}>
+                  <strong>{chip.label}</strong>
+                  <span>{chip.detail}</span>
+                </span>
+              ))}
             </div>
           ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
@@ -1151,73 +1114,6 @@ export function WebScannerApp() {
                   Continue Scan
                 </button>
               ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {activityOpen ? (
-        <div className="web-activity-sheet" role="dialog" aria-modal="true">
-          <div className="web-activity-panel">
-            <div className="web-activity-header">
-              <div>
-                <div className="kicker">Room activity</div>
-                <h2>{selectedRoom.code}</h2>
-              </div>
-              <button
-                className="secondary compact-button"
-                type="button"
-                onClick={() => setActivityOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-            <input
-              value={activityQuery}
-              onChange={(event) => setActivityQuery(event.target.value)}
-              placeholder="Search student ID or note"
-              inputMode="search"
-            />
-            <div className="activity-filter-row">
-              {(["all", "present", "mismatch", "incident"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  className={activityFilter === filter ? "secondary active-filter" : "secondary"}
-                  type="button"
-                  onClick={() => setActivityFilter(filter)}
-                >
-                  {filter === "all"
-                    ? "All"
-                    : filter === "mismatch"
-                      ? "Mismatch"
-                      : filter === "incident"
-                        ? "Incidents"
-                        : "Present"}
-                </button>
-              ))}
-            </div>
-            <div className="activity-list">
-              {activityRows.length ? (
-                activityRows.map((item) => (
-                  <div
-                    key={`${item.type}-${item.createdAt}-${item.studentId || item.label}`}
-                    className={`activity-row ${item.type}`}
-                  >
-                    <div>
-                      <strong>{item.studentId || "Unknown"}</strong>
-                      <span>{item.label}</span>
-                      {item.comment ? <small>{item.comment}</small> : null}
-                    </div>
-                    <time>
-                      {new Date(item.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </time>
-                  </div>
-                ))
-              ) : (
-                <p className="subtle">No matching room activity.</p>
-              )}
             </div>
           </div>
         </div>
