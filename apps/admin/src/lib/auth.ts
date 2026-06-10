@@ -157,6 +157,7 @@ export async function requireApiUser(
   options?: {
     allowedRoles?: UserRole[];
     roomId?: string;
+    examSessionId?: string;
   }
 ) {
   const { user } = await requireApiUserWithStore(request, options);
@@ -168,6 +169,7 @@ export async function requireApiUserWithStore(
   options?: {
     allowedRoles?: UserRole[];
     roomId?: string;
+    examSessionId?: string;
   }
 ): Promise<{ user: User; store?: DataStore }> {
   let user: User | null;
@@ -196,6 +198,15 @@ export async function requireApiUserWithStore(
 
   if (options?.roomId) {
     store = await readStore();
+    const requestedRoom = store.rooms.find((room) => room.id === options.roomId);
+    if (!requestedRoom) {
+      throw new Error("Room not found.");
+    }
+
+    if (options.examSessionId && requestedRoom.examSessionId !== options.examSessionId) {
+      throw new Error("Room does not belong to this exam session.");
+    }
+
     const accessibleRooms = listPublishedRoomsForUser(store, user.id);
     const canAccessRoom =
       user.role === "admin" ||

@@ -117,6 +117,7 @@ function LoginScreen({
         onChangeText={setAccessCode}
         placeholder="Invigilator access code"
         placeholderTextColor="#8f8f8f"
+        secureTextEntry
       />
       <Pressable style={styles.primaryButton} onPress={submit} disabled={busy}>
         <Text style={styles.primaryLabel}>{busy ? "Signing in..." : "Sign In"}</Text>

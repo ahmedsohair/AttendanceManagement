@@ -25,6 +25,7 @@ module.exports = {
     userInterfaceStyle: "light",
     assetBundlePatterns: ["**/*"],
     plugins: [
+      "expo-secure-store",
       [
         "react-native-vision-camera",
         {

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -14,6 +15,39 @@ import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+
+const accessCodeFlashCookie = "ams_invigilator_access_code_flash";
+
+type AccessCodeFlash = {
+  accessCode: string;
+  codeEmail: string;
+  codeUserId?: string;
+};
+
+async function setAccessCodeFlash(flash: AccessCodeFlash) {
+  const cookieStore = await cookies();
+  cookieStore.set(accessCodeFlashCookie, Buffer.from(JSON.stringify(flash)).toString("base64url"), {
+    httpOnly: true,
+    maxAge: 120,
+    path: "/invigilators",
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production"
+  });
+}
+
+async function getAccessCodeFlash(): Promise<AccessCodeFlash | null> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(accessCodeFlashCookie)?.value;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as AccessCodeFlash;
+  } catch {
+    return null;
+  }
+}
 
 async function submitInvigilator(formData: FormData) {
   "use server";
@@ -42,10 +76,11 @@ async function submitInvigilator(formData: FormData) {
   }
 
   revalidatePath("/invigilators");
+  await setAccessCodeFlash({ accessCode, codeEmail: email });
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "Invigilator created. Share this access code with them."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeEmail=${encodeURIComponent(email)}`
+    )}`
   );
 }
 
@@ -87,12 +122,11 @@ async function submitAccessCodeReset(formData: FormData) {
   }
 
   revalidatePath("/invigilators");
+  await setAccessCodeFlash({ accessCode, codeEmail: email, codeUserId: userId });
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "New invigilator access code generated."
-    )}&accessCode=${encodeURIComponent(accessCode)}&codeUserId=${encodeURIComponent(
-      userId
-    )}&codeEmail=${encodeURIComponent(email)}`
+    )}`
   );
 }
 
@@ -120,14 +154,12 @@ export default async function InvigilatorsPage({
   searchParams?: Promise<{
     message?: string;
     error?: string;
-    accessCode?: string;
-    codeUserId?: string;
-    codeEmail?: string;
     q?: string;
   }>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
+  const accessCodeFlash = await getAccessCodeFlash();
   const staffSearch = (params.q || "").trim().toLowerCase();
   const store = await readStore();
   const invigilators = store.users
@@ -151,22 +183,25 @@ export default async function InvigilatorsPage({
         <h2 className="section-title">Add Invigilator</h2>
         {params.message ? <p className="pill ok toast-message">{params.message}</p> : null}
         {params.error ? <p className="pill warn toast-message">{params.error}</p> : null}
-        {params.accessCode && !params.codeUserId ? (
+        {accessCodeFlash?.accessCode && !accessCodeFlash.codeUserId ? (
           <div className="access-code-box">
             <div>
               <div className="kicker">Share This Code</div>
-              <div className="access-code-value">{params.accessCode}</div>
+              <div className="access-code-value">{accessCodeFlash.accessCode}</div>
             </div>
             <div className="subtle">
               This is shown once. If it is lost, generate a new code from the
               invigilator card.
             </div>
-            {params.codeEmail ? (
+            {accessCodeFlash.codeEmail ? (
               <div className="inline-actions">
-                <CopyButton value={params.accessCode} />
+                <CopyButton value={accessCodeFlash.accessCode} />
                 <a
                   className="button"
-                  href={buildAccessCodeMailto(params.codeEmail, params.accessCode)}
+                  href={buildAccessCodeMailto(
+                    accessCodeFlash.codeEmail,
+                    accessCodeFlash.accessCode
+                  )}
                 >
                   Email Code
                 </a>
@@ -219,11 +254,14 @@ export default async function InvigilatorsPage({
                         <span className="sr-only">Access code</span>
                       </summary>
                       <div className="inline-popover">
-                        {params.accessCode && params.codeUserId === invigilator.id ? (
+                        {accessCodeFlash?.accessCode &&
+                        accessCodeFlash.codeUserId === invigilator.id ? (
                           <div className="access-code-box compact-code-box">
                             <div>
                               <div className="kicker">New Code</div>
-                              <div className="access-code-value">{params.accessCode}</div>
+                              <div className="access-code-value">
+                                {accessCodeFlash.accessCode}
+                              </div>
                             </div>
                             <div className="subtle">
                               Share this now. Existing codes cannot be viewed later.
@@ -232,13 +270,13 @@ export default async function InvigilatorsPage({
                               <CopyButton
                                 className="secondary compact-button"
                                 label="Copy"
-                                value={params.accessCode}
+                                value={accessCodeFlash.accessCode}
                               />
                               <a
                                 className="button"
                                 href={buildAccessCodeMailto(
-                                  params.codeEmail || invigilator.email,
-                                  params.accessCode
+                                  accessCodeFlash.codeEmail || invigilator.email,
+                                  accessCodeFlash.accessCode
                                 )}
                               >
                                 Email Code
@@ -308,11 +346,14 @@ export default async function InvigilatorsPage({
 
                 <details className="assignment-details mobile-details">
                   <summary>Code</summary>
-                  {params.accessCode && params.codeUserId === invigilator.id ? (
+                  {accessCodeFlash?.accessCode &&
+                  accessCodeFlash.codeUserId === invigilator.id ? (
                     <div className="access-code-box compact-code-box">
                       <div>
                         <div className="kicker">New Code</div>
-                        <div className="access-code-value">{params.accessCode}</div>
+                        <div className="access-code-value">
+                          {accessCodeFlash.accessCode}
+                        </div>
                       </div>
                       <div className="subtle">
                         Share this now. Existing codes cannot be viewed later.
@@ -321,13 +362,13 @@ export default async function InvigilatorsPage({
                         <CopyButton
                           className="secondary compact-button"
                           label="Copy"
-                          value={params.accessCode}
+                          value={accessCodeFlash.accessCode}
                         />
                         <a
                           className="button"
                           href={buildAccessCodeMailto(
-                            params.codeEmail || invigilator.email,
-                            params.accessCode
+                            accessCodeFlash.codeEmail || invigilator.email,
+                            accessCodeFlash.accessCode
                           )}
                         >
                           Email Code

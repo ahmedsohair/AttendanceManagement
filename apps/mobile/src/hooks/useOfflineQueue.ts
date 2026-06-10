@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
+import * as SecureStore from "expo-secure-store";
 import type { MarkAttendanceRequest } from "@algo-attendance/shared";
 import { markAttendance } from "../api/client";
 
@@ -16,14 +16,16 @@ export function useOfflineQueue() {
   const [queuedCount, setQueuedCount] = useState(0);
 
   const loadQueue = useCallback(async () => {
-    const raw = await AsyncStorage.getItem(queueKey);
+    const raw = await SecureStore.getItemAsync(queueKey);
     const queue = raw ? (JSON.parse(raw) as QueuedMark[]) : [];
     setQueuedCount(queue.length);
     return queue;
   }, []);
 
   const persistQueue = useCallback(async (queue: QueuedMark[]) => {
-    await AsyncStorage.setItem(queueKey, JSON.stringify(queue));
+    await SecureStore.setItemAsync(queueKey, JSON.stringify(queue), {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+    });
     setQueuedCount(queue.length);
   }, []);
 

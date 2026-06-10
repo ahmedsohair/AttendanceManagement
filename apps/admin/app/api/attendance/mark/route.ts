@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     const body = markAttendanceRequestSchema.parse(await request.json());
     const { user, store } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
-      roomId: body.roomId
+      roomId: body.roomId,
+      examSessionId: body.examSessionId
     });
     const response = await applyAttendanceMark({
       ...body,

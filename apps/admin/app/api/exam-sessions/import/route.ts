@@ -4,6 +4,8 @@ import { requireApiUser } from "@/lib/auth";
 import { parseSpreadsheet } from "@/lib/spreadsheet";
 import { importExamSession } from "@/lib/repository";
 
+const maxSpreadsheetBytes = 2 * 1024 * 1024;
+
 export async function POST(request: Request) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
@@ -14,11 +16,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "file is required" }, { status: 400 });
     }
 
+    if (file.size > maxSpreadsheetBytes) {
+      return NextResponse.json(
+        { message: "Spreadsheet must be 2 MB or smaller." },
+        { status: 400 }
+      );
+    }
+
     const payload = sessionImportPayloadSchema.parse({
       name: form.get("name"),
       examDate: form.get("examDate"),
       startTime: form.get("startTime"),
-      rows: parseSpreadsheet(Buffer.from(await file.arrayBuffer()))
+      rows: await parseSpreadsheet(Buffer.from(await file.arrayBuffer()))
     });
     const { sessionId } = await importExamSession(payload);
     return NextResponse.json({ sessionId, message: "Import successful." });

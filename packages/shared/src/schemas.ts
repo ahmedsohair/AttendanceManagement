@@ -13,7 +13,7 @@ export const sessionImportPayloadSchema = z.object({
   name: z.string().min(1),
   examDate: z.string().min(1),
   startTime: z.string().min(1),
-  rows: z.array(sessionImportRowSchema).min(1)
+  rows: z.array(sessionImportRowSchema).min(1).max(2500)
 });
 
 export const lookupRequestSchema = z.object({

@@ -109,6 +109,7 @@ create index if not exists idx_incidents_room_id on incidents(room_id);
 create index if not exists idx_incidents_room_created_at on incidents(room_id, created_at desc);
 create index if not exists idx_incidents_session_room_type on incidents(exam_session_id, room_id, incident_type);
 
+alter table users enable row level security;
 alter table exam_sessions enable row level security;
 alter table rooms enable row level security;
 alter table room_assignments enable row level security;
@@ -116,10 +117,17 @@ alter table student_allocations enable row level security;
 alter table attendance_events enable row level security;
 alter table incidents enable row level security;
 
+drop policy if exists "users can read own profile" on users;
+create policy "users can read own profile"
+on users for select
+using (id = auth.uid());
+
+drop policy if exists "invigilators can read published sessions" on exam_sessions;
 create policy "invigilators can read published sessions"
 on exam_sessions for select
 using (status = 'active');
 
+drop policy if exists "invigilators can read assigned rooms" on rooms;
 create policy "invigilators can read assigned rooms"
 on rooms for select
 using (
@@ -131,6 +139,7 @@ using (
   )
 );
 
+drop policy if exists "invigilators can read their allocations" on student_allocations;
 create policy "invigilators can read their allocations"
 on student_allocations for select
 using (
@@ -142,13 +151,38 @@ using (
   )
 );
 
-create policy "invigilators can insert attendance for their rooms"
+drop policy if exists "invigilators can insert attendance for their rooms" on attendance_events;
+drop policy if exists "invigilators can insert attendance for their assigned active rooms" on attendance_events;
+create policy "invigilators can insert attendance for their assigned active rooms"
 on attendance_events for insert
 with check (
-  exists (
+  marked_by_user_id = auth.uid()
+  and exists (
     select 1
     from room_assignments ra
-    where ra.room_id = attendance_events.marked_in_room_id
+    join rooms marked_room
+      on marked_room.id = attendance_events.marked_in_room_id
+    join exam_sessions session
+      on session.id = attendance_events.exam_session_id
+    join student_allocations allocation
+      on allocation.exam_session_id = attendance_events.exam_session_id
+     and allocation.student_id = attendance_events.student_id
+    where ra.room_id = marked_room.id
       and ra.user_id = auth.uid()
+      and marked_room.exam_session_id = attendance_events.exam_session_id
+      and session.status = 'active'
+      and allocation.room_id = attendance_events.expected_room_id
+      and (
+        (
+          room_mismatch = false
+          and override_type = 'none'
+          and attendance_events.expected_room_id = attendance_events.marked_in_room_id
+        )
+        or (
+          room_mismatch = true
+          and override_type = 'wrong_room_present'
+          and attendance_events.expected_room_id <> attendance_events.marked_in_room_id
+        )
+      )
   )
 );

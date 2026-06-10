@@ -16,7 +16,7 @@ export async function GET(
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
   const userMap = new Map(store.users.map((user) => [user.id, user]));
 
-  const buffer = buildWorkbookSheets({
+  const buffer = await buildWorkbookSheets({
     summary: report.summaries.map((item) => ({
       room_code: item.roomCode,
       room_name: item.roomName,
@@ -56,7 +56,7 @@ export async function GET(
     }))
   });
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

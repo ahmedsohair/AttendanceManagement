@@ -1,4 +1,5 @@
 import { AdminLoginForm } from "@/components/admin-login-form";
+import { getSafeNextPath } from "@/lib/safe-next-path";
 
 export default async function LoginPage({
   searchParams
@@ -9,7 +10,7 @@ export default async function LoginPage({
 
   return (
     <AdminLoginForm
-      initialNextPath={params.next || "/"}
+      initialNextPath={getSafeNextPath(params.next)}
       unauthorized={params.error === "unauthorized"}
       reset={params.reset}
     />

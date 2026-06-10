@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getSafeNextPath } from "@/lib/safe-next-path";
 
 function getSupabaseSessionConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -16,21 +17,16 @@ function getSupabaseSessionConfig() {
   return { url, publishableKey };
 }
 
-function getSafeNextPath(nextPath: string | null) {
-  if (!nextPath || !nextPath.startsWith("/")) {
-    return "/update-password";
-  }
-
-  return nextPath;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const { url, publishableKey } = getSupabaseSessionConfig();
     const code = request.nextUrl.searchParams.get("code");
     const tokenHash = request.nextUrl.searchParams.get("token_hash");
     const type = request.nextUrl.searchParams.get("type") as EmailOtpType | null;
-    const nextPath = getSafeNextPath(request.nextUrl.searchParams.get("next"));
+    const nextPath = getSafeNextPath(
+      request.nextUrl.searchParams.get("next"),
+      "/update-password"
+    );
     const response = NextResponse.redirect(new URL(nextPath, request.url));
 
     const supabase = createServerClient(url, publishableKey, {

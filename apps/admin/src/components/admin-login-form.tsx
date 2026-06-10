@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getSafeNextPath } from "@/lib/safe-next-path";
 
 export function AdminLoginForm({
   initialNextPath,
@@ -41,7 +42,7 @@ export function AdminLoginForm({
         throw new Error(payload?.message || "Unable to sign in.");
       }
 
-      router.replace(initialNextPath);
+      router.replace(getSafeNextPath(initialNextPath));
       router.refresh();
     } catch (submitError) {
       setError(

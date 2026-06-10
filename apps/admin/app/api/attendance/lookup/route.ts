@@ -12,7 +12,8 @@ export async function POST(request: Request) {
     const body = lookupRequestSchema.parse(await request.json());
     const { store: authorizedStore } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
-      roomId: body.roomId
+      roomId: body.roomId,
+      examSessionId: body.examSessionId
     });
     const store = authorizedStore || (await readStore());
     const result = lookupStudent(store, body);

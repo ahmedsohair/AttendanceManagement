@@ -106,15 +106,25 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            def uploadStoreFile = findProperty('AMS_UPLOAD_STORE_FILE') ?: System.getenv('AMS_UPLOAD_STORE_FILE')
+            if (uploadStoreFile) {
+                storeFile file(uploadStoreFile)
+                storePassword findProperty('AMS_UPLOAD_STORE_PASSWORD') ?: System.getenv('AMS_UPLOAD_STORE_PASSWORD')
+                keyAlias findProperty('AMS_UPLOAD_KEY_ALIAS') ?: System.getenv('AMS_UPLOAD_KEY_ALIAS')
+                keyPassword findProperty('AMS_UPLOAD_KEY_PASSWORD') ?: System.getenv('AMS_UPLOAD_KEY_PASSWORD')
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (signingConfigs.release.storeFile == null) {
+                throw new GradleException("Release builds require AMS_UPLOAD_STORE_FILE, AMS_UPLOAD_STORE_PASSWORD, AMS_UPLOAD_KEY_ALIAS, and AMS_UPLOAD_KEY_PASSWORD. Do not sign production APKs with the debug keystore.")
+            }
+            signingConfig signingConfigs.release
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds

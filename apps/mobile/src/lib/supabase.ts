@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 type ExpoExtra = {
@@ -29,6 +29,15 @@ const supabasePublishableKey =
 
 let cachedClient: SupabaseClient | null = null;
 
+const secureStoreAdapter = {
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) =>
+    SecureStore.setItemAsync(key, value, {
+      keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY
+    }),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key)
+};
+
 export function isSupabaseAuthConfigured() {
   return Boolean(supabaseUrl && supabasePublishableKey);
 }
@@ -43,7 +52,7 @@ export function getMobileSupabaseClient() {
   if (!cachedClient) {
     cachedClient = createClient(supabaseUrl, supabasePublishableKey, {
       auth: {
-        storage: AsyncStorage,
+        storage: secureStoreAdapter,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false

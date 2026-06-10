@@ -14,11 +14,11 @@
     "@paddleocr/paddleocr-js": "^0.3.2",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.56.1",
-    "next": "^15.2.4",
+    "exceljs": "^4.4.0",
+    "next": "^15.5.18",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "tesseract.js": "^6.0.1",
-    "xlsx": "^0.18.5"
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
