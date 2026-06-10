@@ -1,16 +1,10 @@
 import Link from "next/link";
 import { getExamSessionStatus } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
+import { formatAuditTime } from "@/lib/audit-time";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
-
-function formatAuditTime(value: string) {
-  return new Intl.DateTimeFormat("en-AU", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
 
 export default async function MismatchesPage({
   searchParams

@@ -915,6 +915,14 @@ export function WebScannerApp() {
           <span>Last sync {lastSyncAt || "pending"}</span>
         </div>
 
+        <div className="web-ocr-status web-ocr-status-top">
+          {scanHold && !scanPaused
+            ? "Scanning paused. Use manual mode or resume scanning."
+            : cameraActive
+              ? ocrStatus || "Camera active"
+              : "Camera stopped"}
+        </div>
+
         <div className="web-scan-guide">
           <div ref={scanRegionRef} className="web-scan-region" />
           <span>Place student number here</span>
@@ -972,13 +980,6 @@ export function WebScannerApp() {
               <strong>{roomStats.redirected}</strong>
               <span>Redirected</span>
             </div>
-          </div>
-          <div className="web-ocr-status">
-            {scanHold && !scanPaused
-              ? "Scanning paused. Use manual mode or resume scanning."
-              : cameraActive
-                ? ocrStatus || "Camera active"
-                : "Camera stopped"}
           </div>
           {recentScanChips.length ? (
             <div className="recent-chip-row">

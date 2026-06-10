@@ -3,17 +3,11 @@ import { buildExamSessionReport, getExamSessionStatus } from "@algo-attendance/s
 import { CloseIcon, DownloadIcon, TrashIcon } from "@/components/action-icons";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ExamAssignmentWizard } from "@/components/exam-assignment-wizard";
+import { formatAuditTime } from "@/lib/audit-time";
 import { requireAdminPageUser } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
-
-function formatAuditTime(value: string) {
-  return new Intl.DateTimeFormat("en-AU", {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
 
 export default async function SessionDetailPage({
   params,

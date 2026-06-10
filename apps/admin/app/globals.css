@@ -1309,8 +1309,13 @@ button.icon-button.danger:hover {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  grid-template-rows: auto auto auto minmax(160px, 1fr) auto;
+  gap: 12px;
+  overflow-y: auto;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    18px
+    calc(96px + env(safe-area-inset-bottom));
   color: white;
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.66), transparent 30%),
@@ -1380,6 +1385,7 @@ button.icon-button.danger:hover {
 .web-camera-bottom {
   display: grid;
   gap: 12px;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .web-camera-actions {
@@ -1434,6 +1440,13 @@ button.icon-button.danger:hover {
   color: rgba(255, 255, 255, 0.88);
   font-weight: 800;
   text-align: center;
+}
+
+.web-ocr-status-top {
+  position: relative;
+  z-index: 2;
+  justify-self: stretch;
+  background: rgba(17, 17, 17, 0.82);
 }
 
 .web-camera-note {
