@@ -1360,6 +1360,7 @@ button.icon-button.danger:hover {
   justify-self: center;
   width: min(86vw, 680px);
   height: min(30vh, 230px);
+  margin-bottom: 22px;
   display: grid;
   place-items: center;
   border: 3px solid rgba(255, 255, 255, 0.78);
@@ -1385,6 +1386,8 @@ button.icon-button.danger:hover {
 .web-camera-bottom {
   display: grid;
   gap: 12px;
+  position: relative;
+  z-index: 2;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -1656,9 +1659,24 @@ button.icon-button.danger:hover {
     grid-template-columns: auto 1fr;
   }
 
+  .web-camera-overlay {
+    gap: 10px;
+    grid-template-rows: auto auto auto auto auto;
+  }
+
   .web-torch-button {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .web-scan-guide {
+    width: min(90vw, 680px);
+    height: min(26vh, 210px);
+    margin-bottom: 28px;
+  }
+
+  .web-scan-guide span {
+    margin-top: calc(min(26vh, 210px) - 46px);
   }
 
   .web-scan-card {
