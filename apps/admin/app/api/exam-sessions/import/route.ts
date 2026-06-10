@@ -57,7 +57,15 @@ export async function POST(request: Request) {
       rows
     });
     const { sessionId } = await importExamSession(payload);
-    return NextResponse.json({ sessionId, message: "Import successful." });
+    return NextResponse.json({
+      sessionId,
+      message: "Import successful.",
+      stats: {
+        files: files.length,
+        students: payload.rows.length,
+        rooms: new Set(payload.rows.map((row) => row.room.trim())).size
+      }
+    });
   } catch (error) {
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Import failed." },

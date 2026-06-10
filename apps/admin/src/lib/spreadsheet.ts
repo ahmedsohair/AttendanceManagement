@@ -1,8 +1,8 @@
 import { Readable } from "node:stream";
 import ExcelJS from "exceljs";
-import type { SessionImportRow } from "@algo-attendance/shared";
+import { normalizeStudentId, type SessionImportRow } from "@algo-attendance/shared";
 
-const requiredColumns = ["student_id", "student_name", "room", "zone"] as const;
+const requiredColumns = ["student_id", "room", "zone"] as const;
 const maxImportRows = 2500;
 const maxCellLength = 200;
 const oleCompoundDocumentSignature = "d0cf11e0a1b11ae1";
@@ -52,6 +52,27 @@ function safeExportValue(value: string | number | boolean | null | undefined) {
   return /^[=+\-@]/.test(value) ? `'${value}` : value;
 }
 
+function normalizeHeader(value: string) {
+  const compact = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const aliases: Record<string, keyof SessionImportRow> = {
+    studentid: "student_id",
+    studentnumber: "student_id",
+    studentno: "student_id",
+    studentname: "student_name",
+    name: "student_name",
+    room: "room",
+    roomcode: "room",
+    location: "room",
+    venue: "room",
+    zone: "zone",
+    coursecode: "course_code",
+    course: "course_code",
+    program: "program"
+  };
+
+  return aliases[compact] || value.trim().toLowerCase();
+}
+
 export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow[]> {
   const workbook = await readWorkbook(buffer);
   const worksheet = workbook.worksheets[0];
@@ -63,7 +84,7 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
   const headerRow = worksheet.getRow(1);
   const headers: string[] = [];
   headerRow.eachCell((cell, columnNumber) => {
-    headers[columnNumber - 1] = cellToString(cell).toLowerCase();
+    headers[columnNumber - 1] = normalizeHeader(cellToString(cell));
   });
 
   const rows: Record<string, unknown>[] = [];
@@ -115,8 +136,8 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
     }
 
     return {
-      student_id: row.student_id,
-      student_name: row.student_name,
+      student_id: normalizeStudentId(row.student_id),
+      student_name: row.student_name || normalizeStudentId(row.student_id),
       room: row.room,
       zone: row.zone,
       course_code: row.course_code || undefined,

@@ -1,4 +1,5 @@
 import type { Room, SessionImportPayload, StudentAllocation } from "./types";
+import { normalizeStudentId } from "./student-id";
 
 export interface NormalizedImport {
   rooms: Room[];
@@ -18,7 +19,7 @@ export function normalizeImportPayload(
   const allocations: StudentAllocation[] = [];
 
   for (const row of payload.rows) {
-    const studentId = normalizeText(row.student_id);
+    const studentId = normalizeStudentId(row.student_id);
     if (seenStudentIds.has(studentId)) {
       throw new Error(`Duplicate student_id in import: ${studentId}`);
     }

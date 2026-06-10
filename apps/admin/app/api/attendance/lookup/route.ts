@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { lookupRequestSchema, lookupStudent } from "@algo-attendance/shared";
+import { lookupRequestSchema, lookupStudent, normalizeStudentId } from "@algo-attendance/shared";
 import { requireApiUserWithStore } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 import { logServerTiming } from "@/lib/timing";
@@ -9,7 +9,11 @@ export async function POST(request: Request) {
   let status = 200;
 
   try {
-    const body = lookupRequestSchema.parse(await request.json());
+    const parsedBody = lookupRequestSchema.parse(await request.json());
+    const body = {
+      ...parsedBody,
+      studentId: normalizeStudentId(parsedBody.studentId)
+    };
     const { store: authorizedStore } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId: body.roomId,

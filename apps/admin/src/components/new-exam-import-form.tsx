@@ -17,7 +17,15 @@ export function NewExamImportForm() {
       method: "POST",
       body: form
     });
-    const payload = (await response.json()) as { message?: string; sessionId?: string };
+    const payload = (await response.json()) as {
+      message?: string;
+      sessionId?: string;
+      stats?: {
+        files: number;
+        students: number;
+        rooms: number;
+      };
+    };
 
     setBusy(false);
 
@@ -27,10 +35,13 @@ export function NewExamImportForm() {
     }
 
     formElement.reset();
+    const statsMessage = payload.stats
+      ? `Imported ${payload.stats.students} student(s) across ${payload.stats.rooms} room(s) from ${payload.stats.files} file(s).`
+      : "Exam imported.";
     window.location.href = `/sessions/new?sessionId=${encodeURIComponent(
       payload.sessionId
     )}&message=${encodeURIComponent(
-      "Exam imported. Assign invigilators below without leaving this page."
+      `${statsMessage} Assign invigilators below without leaving this page.`
     )}`;
   }
 

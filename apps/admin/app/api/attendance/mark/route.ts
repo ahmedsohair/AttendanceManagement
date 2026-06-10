@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { markAttendanceRequestSchema } from "@algo-attendance/shared";
+import { markAttendanceRequestSchema, normalizeStudentId } from "@algo-attendance/shared";
 import { requireApiUserWithStore } from "@/lib/auth";
 import { applyAttendanceMark } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
@@ -9,7 +9,11 @@ export async function POST(request: Request) {
   let status = 200;
 
   try {
-    const body = markAttendanceRequestSchema.parse(await request.json());
+    const parsedBody = markAttendanceRequestSchema.parse(await request.json());
+    const body = {
+      ...parsedBody,
+      studentId: normalizeStudentId(parsedBody.studentId)
+    };
     const { user, store } = await requireApiUserWithStore(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId: body.roomId,
