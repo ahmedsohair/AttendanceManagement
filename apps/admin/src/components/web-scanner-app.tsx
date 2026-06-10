@@ -870,19 +870,32 @@ export function WebScannerApp() {
           : lastLookup?.status === "student_not_found"
             ? "not-found"
             : "neutral";
+  const recentAttendance = liveState?.recentAttendance || [];
+  const recentMismatchStudentIds = new Set(
+    recentAttendance
+      .filter((item) => item.roomMismatch)
+      .map((item) => item.studentId)
+  );
   const recentScanChips = [
-    ...(liveState?.recentAttendance || []).map((item) => ({
+    ...recentAttendance.map((item) => ({
       key: `attendance-${item.createdAt}-${item.studentId}`,
       label: item.studentId,
       detail: item.roomMismatch ? "Mismatch" : "Present",
       tone: item.roomMismatch ? "warn" : "ok"
     })),
-    ...(liveState?.recentIncidents || []).map((item) => ({
-      key: `incident-${item.createdAt}-${item.studentId || item.incidentType}`,
-      label: item.studentId || "Unknown",
-      detail: item.incidentType.replaceAll("_", " "),
-      tone: "warn"
-    }))
+    ...(liveState?.recentIncidents || [])
+      .filter(
+        (item) =>
+          item.incidentType !== "wrong_room_present_override" ||
+          !item.studentId ||
+          !recentMismatchStudentIds.has(item.studentId)
+      )
+      .map((item) => ({
+        key: `incident-${item.createdAt}-${item.studentId || item.incidentType}`,
+        label: item.studentId || "Unknown",
+        detail: item.incidentType.replaceAll("_", " "),
+        tone: "warn"
+      }))
   ].slice(0, 3);
 
   return (
