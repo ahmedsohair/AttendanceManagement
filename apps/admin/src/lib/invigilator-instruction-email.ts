@@ -19,12 +19,15 @@ type AccessCodeEmailInput = {
 const scannerPath = "/scan";
 
 export function isEmailConfigured() {
+  return Boolean(process.env.EMAIL_FROM && (process.env.RESEND_API_KEY || isSmtpConfigured()));
+}
+
+function isSmtpConfigured() {
   return Boolean(
     process.env.SMTP_HOST &&
       process.env.SMTP_PORT &&
       process.env.SMTP_USER &&
-      process.env.SMTP_PASS &&
-      process.env.EMAIL_FROM
+      process.env.SMTP_PASS
   );
 }
 
@@ -72,9 +75,9 @@ function buildInstructionHtml(input: InstructionEmailInput) {
 }
 
 function createSmtpTransporter() {
-  if (!isEmailConfigured()) {
+  if (!isSmtpConfigured() || !process.env.EMAIL_FROM) {
     throw new Error(
-      "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."
+      "Email is not configured. Set RESEND_API_KEY and EMAIL_FROM, or SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."
     );
   }
 
@@ -89,12 +92,60 @@ function createSmtpTransporter() {
   });
 }
 
-export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
+async function sendEmail({
+  html,
+  subject,
+  text,
+  to
+}: {
+  html: string;
+  subject: string;
+  text: string;
+  to: string;
+}) {
+  if (process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
+    const response = await fetch("https://api.resend.com/emails", {
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM,
+        to: [to],
+        subject,
+        text,
+        html
+      }),
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      method: "POST"
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as {
+        message?: string;
+        name?: string;
+      };
+
+      throw new Error(payload.message || payload.name || "Resend email delivery failed.");
+    }
+
+    return response.json();
+  }
+
   const transporter = createSmtpTransporter();
-  const subject = `ExamPulse assignment: ${input.session.name}`;
 
   return transporter.sendMail({
     from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    text,
+    html
+  });
+}
+
+export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
+  const subject = `ExamPulse assignment: ${input.session.name}`;
+
+  return sendEmail({
     to: input.invigilator.email,
     subject,
     text: buildInstructionText(input),
@@ -128,10 +179,7 @@ function buildAccessCodeHtml(input: AccessCodeEmailInput) {
 }
 
 export async function sendInvigilatorAccessCodeEmail(input: AccessCodeEmailInput) {
-  const transporter = createSmtpTransporter();
-
-  return transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+  return sendEmail({
     to: input.email,
     subject: "ExamPulse access code",
     text: buildAccessCodeText(input),
