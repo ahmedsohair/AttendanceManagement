@@ -52,6 +52,22 @@ function queryLine() {
   return `For any queries, reply to this email or contact Ahmed at ${supportEmail}.`;
 }
 
+function closingText() {
+  return [
+    "Thank you for your support during the exam.",
+    "",
+    "Best regards,",
+    "ExamPulse"
+  ].join("\n");
+}
+
+function closingHtml() {
+  return `
+    <p style="margin:18px 0 0;color:#334155;line-height:1.55">Thank you for your support during the exam.</p>
+    <p style="margin:18px 0 0;color:#334155;line-height:1.55">Best regards,<br /><strong>ExamPulse</strong></p>
+  `;
+}
+
 function buildInstructionText({
   accessCode,
   appBaseUrl,
@@ -64,7 +80,7 @@ function buildInstructionText({
     "",
     `You have been assigned to ${session.name}.`,
     `Date: ${session.examDate}`,
-    `Time: ${session.startTime}`,
+    `Exam start time: ${session.startTime}`,
     "",
     "Assigned room(s):",
     buildRoomList(rooms),
@@ -84,7 +100,9 @@ function buildInstructionText({
     "",
     "If a student is in the wrong room, the system will show the correct room. Only use the override option if you are intentionally marking them present in your room.",
     "",
-    queryLine()
+    queryLine(),
+    "",
+    closingText()
   ].join("\n");
 }
 
@@ -110,7 +128,7 @@ function buildInstructionHtml(input: InstructionEmailInput) {
           <div style="border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:18px">
             <h2 style="margin:0 0 10px;font-size:21px">${escapeHtml(input.session.name)}</h2>
             <div style="color:#475569;font-size:15px">Date: ${escapeHtml(input.session.examDate)}</div>
-            <div style="color:#475569;font-size:15px">Time: ${escapeHtml(input.session.startTime)}</div>
+            <div style="color:#475569;font-size:15px">Exam start time: ${escapeHtml(input.session.startTime)}</div>
           </div>
           <div style="border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:18px">
             <div style="font-weight:700;margin-bottom:8px">Assigned room(s)</div>
@@ -136,6 +154,7 @@ function buildInstructionHtml(input: InstructionEmailInput) {
             <p style="margin:12px 0 0;color:#334155;line-height:1.55">If a student is in the wrong room, the system will show the correct room. Only use the override option if you are intentionally marking them present in your room.</p>
           </div>
           <p style="margin:22px 0 0;color:#475569;line-height:1.55">${escapeHtml(queryLine())}</p>
+          ${closingHtml()}
         </div>
       </div>
     </div>
@@ -237,7 +256,9 @@ function buildAccessCodeText({ accessCode, appBaseUrl, fullName }: AccessCodeEma
     "The OCR scanner may take 20-40 seconds to load the first time.",
     "If scanning fails, use Manual Mode to enter the student number.",
     "",
-    queryLine()
+    queryLine(),
+    "",
+    closingText()
   ].join("\n");
 }
 
@@ -266,6 +287,7 @@ function buildAccessCodeHtml(input: AccessCodeEmailInput) {
             <li>If scanning fails, use Manual Mode to enter the student number.</li>
           </ul>
           <p style="margin:22px 0 0;color:#475569;line-height:1.55">${escapeHtml(queryLine())}</p>
+          ${closingHtml()}
         </div>
       </div>
     </div>
