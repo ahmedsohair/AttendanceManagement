@@ -71,6 +71,7 @@ export function ExamAssignmentWizard({
   const [isSaving, setIsSaving] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
   const isSetupMode = mode === "setup";
@@ -247,6 +248,46 @@ export function ExamAssignmentWizard({
           text: error instanceof Error ? error.message : "Unable to publish exam."
         });
         setIsPublishing(false);
+      }
+    })();
+  }
+
+  function emailInvigilators() {
+    if (dirty) {
+      setNotice({
+        tone: "warn",
+        text: "Save assignment changes before emailing invigilators."
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Email assigned invigilators now? This will generate fresh access codes, so any previous codes for those invigilators will stop working."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsEmailing(true);
+    void (async () => {
+      try {
+        const payload = await readJsonResponse(
+          await fetch(`/api/exam-sessions/${sessionId}/email-instructions`, {
+            method: "POST"
+          })
+        );
+        setNotice({
+          tone: "ok",
+          text: payload.message || "Invigilator emails sent."
+        });
+      } catch (error) {
+        setNotice({
+          tone: "warn",
+          text: error instanceof Error ? error.message : "Unable to email invigilators."
+        });
+      } finally {
+        setIsEmailing(false);
       }
     })();
   }
@@ -496,6 +537,15 @@ export function ExamAssignmentWizard({
             onClick={saveAssignments}
           >
             {isSaving ? "Saving..." : isSetupMode ? "Save Draft" : "Save Changes"}
+          </button>
+          <button
+            className="secondary"
+            disabled={isSaving || isEmailing || dirty || !assignedCount}
+            title={dirty ? "Save assignments before emailing" : "Email assigned invigilators"}
+            type="button"
+            onClick={emailInvigilators}
+          >
+            {isEmailing ? "Emailing..." : "Email Invigilators"}
           </button>
           {isSetupMode ? (
             <button
