@@ -1,4 +1,4 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import type { ExamSession, Room, User } from "@algo-attendance/shared";
 
 type InstructionEmailInput = {
@@ -12,7 +12,13 @@ type InstructionEmailInput = {
 const scannerPath = "/scan";
 
 export function isEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL);
+  return Boolean(
+    process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS &&
+      process.env.EMAIL_FROM
+  );
 }
 
 function scannerUrl(appBaseUrl: string) {
@@ -60,23 +66,27 @@ function buildInstructionHtml(input: InstructionEmailInput) {
 
 export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
   if (!isEmailConfigured()) {
-    throw new Error("Email is not configured. Set RESEND_API_KEY and RESEND_FROM_EMAIL.");
+    throw new Error(
+      "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."
+    );
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
   const subject = `ExamPulse assignment: ${input.session.name}`;
 
-  const response = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL!,
+  return transporter.sendMail({
+    from: process.env.EMAIL_FROM,
     to: input.invigilator.email,
     subject,
     text: buildInstructionText(input),
     html: buildInstructionHtml(input)
   });
-
-  if (response.error) {
-    throw new Error(response.error.message);
-  }
-
-  return response.data;
 }
