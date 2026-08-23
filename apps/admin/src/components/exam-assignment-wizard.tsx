@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type { ExamSessionStatus, Room, User } from "@algo-attendance/shared";
-import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { CopyButton } from "./copy-button";
 
 type ExamAssignmentWizardProps = {
@@ -72,6 +71,7 @@ export function ExamAssignmentWizard({
   const [isCreating, setIsCreating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
+  const [isEmailingCode, setIsEmailingCode] = useState(false);
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
   const isSetupMode = mode === "setup";
@@ -292,6 +292,41 @@ export function ExamAssignmentWizard({
     })();
   }
 
+  function emailCreatedAccessCode() {
+    if (!createdAccess) {
+      return;
+    }
+
+    setIsEmailingCode(true);
+    void (async () => {
+      try {
+        const payload = await readJsonResponse(
+          await fetch("/api/invigilators/email-code", {
+            body: JSON.stringify({
+              accessCode: createdAccess.accessCode,
+              email: createdAccess.email
+            }),
+            headers: {
+              "Content-Type": "application/json"
+            },
+            method: "POST"
+          })
+        );
+        setNotice({
+          tone: "ok",
+          text: payload.message || "Access code emailed."
+        });
+      } catch (error) {
+        setNotice({
+          tone: "warn",
+          text: error instanceof Error ? error.message : "Unable to email access code."
+        });
+      } finally {
+        setIsEmailingCode(false);
+      }
+    })();
+  }
+
   return (
     <section className="assignment-workflow card">
       <div className="assignment-workflow-header">
@@ -329,12 +364,13 @@ export function ExamAssignmentWizard({
               label="Copy"
               value={createdAccess.accessCode}
             />
-            <a
-              className="button"
-              href={buildAccessCodeMailto(createdAccess.email, createdAccess.accessCode)}
+            <button
+              type="button"
+              onClick={emailCreatedAccessCode}
+              disabled={isEmailingCode}
             >
-              Email Code
-            </a>
+              {isEmailingCode ? "Emailing..." : "Email Code"}
+            </button>
           </div>
         </div>
       ) : null}

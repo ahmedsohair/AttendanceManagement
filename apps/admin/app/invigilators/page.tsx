@@ -5,13 +5,13 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyButton } from "@/components/copy-button";
 import { EditIcon, KeyIcon, TrashIcon } from "@/components/action-icons";
 import { requireAdminPageUser } from "@/lib/auth";
+import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-email";
 import {
   createInvigilator as createInvigilatorRecord,
   deleteInvigilator,
   resetInvigilatorAccessCode,
   updateInvigilatorDetails
 } from "@/lib/repository";
-import { buildAccessCodeMailto } from "@/lib/access-code-email";
 import { readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -130,6 +130,47 @@ async function submitAccessCodeReset(formData: FormData) {
   );
 }
 
+function getAppBaseUrl() {
+  return (
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_BASE_URL ||
+    "https://attendance-management-admin.vercel.app"
+  );
+}
+
+async function submitAccessCodeEmail(formData: FormData) {
+  "use server";
+
+  const accessCode = String(formData.get("accessCode") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const fullName = String(formData.get("fullName") || "").trim();
+  const userId = String(formData.get("userId") || "").trim();
+
+  try {
+    await requireAdminPageUser();
+
+    if (!accessCode || !email) {
+      throw new Error("Access code and email are required.");
+    }
+
+    await sendInvigilatorAccessCodeEmail({
+      accessCode,
+      appBaseUrl: getAppBaseUrl(),
+      email,
+      fullName
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to email access code.";
+    await setAccessCodeFlash({ accessCode, codeEmail: email, codeUserId: userId || undefined });
+    redirect(`/invigilators?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/invigilators");
+  await setAccessCodeFlash({ accessCode, codeEmail: email, codeUserId: userId || undefined });
+  redirect("/invigilators?message=Access%20code%20emailed.");
+}
+
 async function submitInvigilatorDelete(formData: FormData) {
   "use server";
 
@@ -196,15 +237,11 @@ export default async function InvigilatorsPage({
             {accessCodeFlash.codeEmail ? (
               <div className="inline-actions">
                 <CopyButton value={accessCodeFlash.accessCode} />
-                <a
-                  className="button"
-                  href={buildAccessCodeMailto(
-                    accessCodeFlash.codeEmail,
-                    accessCodeFlash.accessCode
-                  )}
-                >
-                  Email Code
-                </a>
+                <form action={submitAccessCodeEmail}>
+                  <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
+                  <input name="email" type="hidden" value={accessCodeFlash.codeEmail} />
+                  <button type="submit">Email Code</button>
+                </form>
               </div>
             ) : null}
           </div>
@@ -272,15 +309,13 @@ export default async function InvigilatorsPage({
                                 label="Copy"
                                 value={accessCodeFlash.accessCode}
                               />
-                              <a
-                                className="button"
-                                href={buildAccessCodeMailto(
-                                  accessCodeFlash.codeEmail || invigilator.email,
-                                  accessCodeFlash.accessCode
-                                )}
-                              >
-                                Email Code
-                              </a>
+                              <form action={submitAccessCodeEmail}>
+                                <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
+                                <input name="email" type="hidden" value={accessCodeFlash.codeEmail || invigilator.email} />
+                                <input name="fullName" type="hidden" value={invigilator.fullName} />
+                                <input name="userId" type="hidden" value={invigilator.id} />
+                                <button type="submit">Email Code</button>
+                              </form>
                             </div>
                           </div>
                         ) : (
@@ -364,15 +399,13 @@ export default async function InvigilatorsPage({
                           label="Copy"
                           value={accessCodeFlash.accessCode}
                         />
-                        <a
-                          className="button"
-                          href={buildAccessCodeMailto(
-                            accessCodeFlash.codeEmail || invigilator.email,
-                            accessCodeFlash.accessCode
-                          )}
-                        >
-                          Email Code
-                        </a>
+                        <form action={submitAccessCodeEmail}>
+                          <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
+                          <input name="email" type="hidden" value={accessCodeFlash.codeEmail || invigilator.email} />
+                          <input name="fullName" type="hidden" value={invigilator.fullName} />
+                          <input name="userId" type="hidden" value={invigilator.id} />
+                          <button type="submit">Email Code</button>
+                        </form>
                       </div>
                     </div>
                   ) : (

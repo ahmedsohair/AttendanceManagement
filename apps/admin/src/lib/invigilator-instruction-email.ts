@@ -9,6 +9,13 @@ type InstructionEmailInput = {
   session: ExamSession;
 };
 
+type AccessCodeEmailInput = {
+  accessCode: string;
+  appBaseUrl: string;
+  email: string;
+  fullName?: string;
+};
+
 const scannerPath = "/scan";
 
 export function isEmailConfigured() {
@@ -64,14 +71,14 @@ function buildInstructionHtml(input: InstructionEmailInput) {
   return `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#111">${text}</div>`;
 }
 
-export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
+function createSmtpTransporter() {
   if (!isEmailConfigured()) {
     throw new Error(
       "Email is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM."
     );
   }
 
-  const transporter = nodemailer.createTransport({
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 465),
     secure: process.env.SMTP_SECURE === "true",
@@ -80,6 +87,10 @@ export async function sendInvigilatorInstructionEmail(input: InstructionEmailInp
       pass: process.env.SMTP_PASS
     }
   });
+}
+
+export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
+  const transporter = createSmtpTransporter();
   const subject = `ExamPulse assignment: ${input.session.name}`;
 
   return transporter.sendMail({
@@ -88,5 +99,42 @@ export async function sendInvigilatorInstructionEmail(input: InstructionEmailInp
     subject,
     text: buildInstructionText(input),
     html: buildInstructionHtml(input)
+  });
+}
+
+function buildAccessCodeText({ accessCode, appBaseUrl, fullName }: AccessCodeEmailInput) {
+  return [
+    `Hello ${fullName || "Invigilator"},`,
+    "",
+    "Your ExamPulse invigilator access code is:",
+    "",
+    accessCode,
+    "",
+    `Scanner link: ${scannerUrl(appBaseUrl)}`,
+    "",
+    "Open the scanner link and enter this code to access your assigned active exam rooms.",
+    "",
+    "If this code does not work, contact the exam administrator."
+  ].join("\n");
+}
+
+function buildAccessCodeHtml(input: AccessCodeEmailInput) {
+  const text = buildAccessCodeText(input)
+    .split("\n")
+    .map((line) => line || "&nbsp;")
+    .join("<br />");
+
+  return `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#111">${text}</div>`;
+}
+
+export async function sendInvigilatorAccessCodeEmail(input: AccessCodeEmailInput) {
+  const transporter = createSmtpTransporter();
+
+  return transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to: input.email,
+    subject: "ExamPulse access code",
+    text: buildAccessCodeText(input),
+    html: buildAccessCodeHtml(input)
   });
 }
