@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@algo-attendance/shared";
 import { KeyIcon } from "@/components/action-icons";
 import { CopyButton } from "@/components/copy-button";
@@ -32,6 +32,34 @@ export function InvigilatorCodePanel({
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!panelRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
 
   async function generateCode() {
     setIsGenerating(true);
@@ -84,6 +112,7 @@ export function InvigilatorCodePanel({
       );
 
       setNotice(payload.message || "Access code emailed.");
+      window.setTimeout(() => setIsOpen(false), 800);
     } catch (emailError) {
       setError(emailError instanceof Error ? emailError.message : "Unable to email code.");
     } finally {
@@ -92,8 +121,15 @@ export function InvigilatorCodePanel({
   }
 
   return (
-    <details className="inline-details">
-      <summary className="icon-button" title="Access code">
+    <details className="inline-details" open={isOpen} ref={panelRef}>
+      <summary
+        className="icon-button"
+        onClick={(event) => {
+          event.preventDefault();
+          setIsOpen((current) => !current);
+        }}
+        title="Access code"
+      >
         <KeyIcon />
         <span className="sr-only">Access code</span>
       </summary>
