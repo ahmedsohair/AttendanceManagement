@@ -3,13 +3,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyButton } from "@/components/copy-button";
-import { EditIcon, KeyIcon, TrashIcon } from "@/components/action-icons";
+import { EditIcon, TrashIcon } from "@/components/action-icons";
+import { InvigilatorCodePanel } from "@/components/invigilator-code-panel";
 import { requireAdminPageUser } from "@/lib/auth";
 import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-email";
 import {
   createInvigilator as createInvigilatorRecord,
   deleteInvigilator,
-  resetInvigilatorAccessCode,
   updateInvigilatorDetails
 } from "@/lib/repository";
 import { readStore } from "@/lib/store";
@@ -102,32 +102,6 @@ async function submitInvigilatorDetails(formData: FormData) {
 
   revalidatePath("/invigilators");
   redirect("/invigilators?message=Invigilator%20updated.");
-}
-
-async function submitAccessCodeReset(formData: FormData) {
-  "use server";
-
-  const userId = String(formData.get("userId") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
-  let accessCode = "";
-
-  try {
-    await requireAdminPageUser();
-    const result = await resetInvigilatorAccessCode(userId);
-    accessCode = result.accessCode;
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to generate access code.";
-    redirect(`/invigilators?error=${encodeURIComponent(message)}`);
-  }
-
-  revalidatePath("/invigilators");
-  await setAccessCodeFlash({ accessCode, codeEmail: email, codeUserId: userId });
-  redirect(
-    `/invigilators?message=${encodeURIComponent(
-      "New invigilator access code generated."
-    )}`
-  );
 }
 
 function getAppBaseUrl() {
@@ -285,52 +259,14 @@ export default async function InvigilatorsPage({
                     <div className="subtle">{invigilator.email}</div>
                   </div>
                   <div className="staff-actions">
-                    <details className="inline-details">
-                      <summary className="icon-button" title="Access code">
-                        <KeyIcon />
-                        <span className="sr-only">Access code</span>
-                      </summary>
-                      <div className="inline-popover">
-                        {accessCodeFlash?.accessCode &&
-                        accessCodeFlash.codeUserId === invigilator.id ? (
-                          <div className="access-code-box compact-code-box">
-                            <div>
-                              <div className="kicker">New Code</div>
-                              <div className="access-code-value">
-                                {accessCodeFlash.accessCode}
-                              </div>
-                            </div>
-                            <div className="subtle">
-                              Share this now. Existing codes cannot be viewed later.
-                            </div>
-                            <div className="inline-actions">
-                              <CopyButton
-                                className="secondary compact-button"
-                                label="Copy"
-                                value={accessCodeFlash.accessCode}
-                              />
-                              <form action={submitAccessCodeEmail}>
-                                <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
-                                <input name="email" type="hidden" value={accessCodeFlash.codeEmail || invigilator.email} />
-                                <input name="fullName" type="hidden" value={invigilator.fullName} />
-                                <input name="userId" type="hidden" value={invigilator.id} />
-                                <button type="submit">Email Code</button>
-                              </form>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="subtle">
-                            Existing access codes are stored securely and cannot be
-                            viewed. Generate a new code if this invigilator needs access.
-                          </div>
-                        )}
-                        <form className="assignment-form" action={submitAccessCodeReset}>
-                          <input name="userId" type="hidden" value={invigilator.id} />
-                          <input name="email" type="hidden" value={invigilator.email} />
-                          <button type="submit">Generate New Code</button>
-                        </form>
-                      </div>
-                    </details>
+                    <InvigilatorCodePanel
+                      initialAccessCode={
+                        accessCodeFlash?.codeUserId === invigilator.id
+                          ? accessCodeFlash.accessCode
+                          : undefined
+                      }
+                      invigilator={invigilator}
+                    />
                     <details className="inline-details">
                       <summary className="icon-button" title="Edit invigilator">
                         <EditIcon />
@@ -379,46 +315,16 @@ export default async function InvigilatorsPage({
                   </div>
                 </div>
 
-                <details className="assignment-details mobile-details">
-                  <summary>Code</summary>
-                  {accessCodeFlash?.accessCode &&
-                  accessCodeFlash.codeUserId === invigilator.id ? (
-                    <div className="access-code-box compact-code-box">
-                      <div>
-                        <div className="kicker">New Code</div>
-                        <div className="access-code-value">
-                          {accessCodeFlash.accessCode}
-                        </div>
-                      </div>
-                      <div className="subtle">
-                        Share this now. Existing codes cannot be viewed later.
-                      </div>
-                      <div className="inline-actions">
-                        <CopyButton
-                          className="secondary compact-button"
-                          label="Copy"
-                          value={accessCodeFlash.accessCode}
-                        />
-                        <form action={submitAccessCodeEmail}>
-                          <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
-                          <input name="email" type="hidden" value={accessCodeFlash.codeEmail || invigilator.email} />
-                          <input name="fullName" type="hidden" value={invigilator.fullName} />
-                          <input name="userId" type="hidden" value={invigilator.id} />
-                          <button type="submit">Email Code</button>
-                        </form>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="subtle">
-                      Existing access codes are stored securely and cannot be viewed.
-                    </div>
-                  )}
-                  <form className="assignment-form" action={submitAccessCodeReset}>
-                    <input name="userId" type="hidden" value={invigilator.id} />
-                    <input name="email" type="hidden" value={invigilator.email} />
-                    <button type="submit">Generate New Code</button>
-                  </form>
-                </details>
+                <div className="assignment-details mobile-details">
+                  <InvigilatorCodePanel
+                    initialAccessCode={
+                      accessCodeFlash?.codeUserId === invigilator.id
+                        ? accessCodeFlash.accessCode
+                        : undefined
+                    }
+                    invigilator={invigilator}
+                  />
+                </div>
 
                 <details className="assignment-details mobile-details">
                   <summary>Edit</summary>
