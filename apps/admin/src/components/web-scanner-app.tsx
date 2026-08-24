@@ -791,11 +791,7 @@ export function WebScannerApp() {
       return;
     }
 
-    setOcrStatus(
-      `Detected candidate: ${candidate}${
-        result?.metrics?.totalMs ? ` (${Math.round(result.metrics.totalMs)}ms)` : ""
-      }`
-    );
+    setOcrStatus(`Detected candidate: ${candidate}`);
     const now = Date.now();
     if (
       lastCandidateRef.current?.value === candidate &&
