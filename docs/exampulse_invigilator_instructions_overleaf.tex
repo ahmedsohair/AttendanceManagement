@@ -64,6 +64,40 @@
   \end{center}
 }
 
+\newcommand{\screenshotthumb}[2]{
+  \begin{minipage}[t]{0.31\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{#1}\\[-2pt]
+    {\scriptsize\color{Muted} #2}
+  \end{minipage}
+}
+
+\newcommand{\screenshotpair}[4]{
+  \begin{center}
+    \begin{minipage}[t]{0.38\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{#1}\\[-2pt]
+      {\scriptsize\color{Muted} #2}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.38\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{#3}\\[-2pt]
+      {\scriptsize\color{Muted} #4}
+    \end{minipage}
+  \end{center}
+}
+
+\newcommand{\screenshotrow}[6]{
+  \begin{center}
+    \screenshotthumb{#1}{#2}
+    \hfill
+    \screenshotthumb{#3}{#4}
+    \hfill
+    \screenshotthumb{#5}{#6}
+  \end{center}
+}
+
 \newcommand{\importantbox}[1]{
   \vspace{6pt}
   \noindent\fcolorbox{Border}{SoftRed}{
@@ -105,10 +139,6 @@ Browser & Safari on iPhone, Chrome/Samsung Internet on Android \\
   \item Wait for the OCR scanner to finish loading.
 \end{enumerate}
 
-\screenshotimage{screenshots/scanner-login.png}{Invigilator login screen}
-
-\screenshotimage{screenshots/scanner-loading.png}{OCR model loading message on first use}
-
 \section{3. Select Your Room}
 
 After signing in, you will see the room(s) assigned to you for the active exam.
@@ -119,7 +149,10 @@ After signing in, you will see the room(s) assigned to you for the active exam.
   \item If no room appears, contact Ahmed before marking attendance.
 \end{itemize}
 
-\screenshotimage{screenshots/scanner-rooms.png}{Room selection screen}
+\screenshotrow
+  {screenshots/scanner-login.png}{Sign in with access code}
+  {screenshots/scanner-loading.png}{OCR loading message}
+  {screenshots/scanner-rooms.png}{Select assigned room}
 
 \section{4. Scan a Student ID}
 
@@ -133,7 +166,9 @@ After signing in, you will see the room(s) assigned to you for the active exam.
 
 \importantbox{The scanner reads the printed student number, not the barcode. If the room is dark, use the torch button or ask the student to hold the card under better light.}
 
-\screenshotimage{screenshots/scanner-scanner.png}{Live scanner with the red scan box}
+\screenshotpair
+  {screenshots/scanner-scanner.png}{Live scanner with red scan box}
+  {screenshots/scanner-detected.png}{Correct ID detected}
 
 \section{5. Understand the Scan Results}
 
@@ -143,8 +178,6 @@ After signing in, you will see the room(s) assigned to you for the active exam.
 Already marked & Student has already been marked present for this exam. Do not mark again. \\
 Student not found & Student number is not in the published exam roster. Check the number, edit it if OCR misread it, and tap \textbf{Lookup} again. If still not found, contact the exam administrator. \\
 \end{tabularx}
-
-\screenshotimage{screenshots/scanner-detected.png}{Correct ID detected and ready to mark present}
 
 \section{6. Wrong-Room Students}
 
@@ -157,8 +190,6 @@ If a student is in the wrong room, the app will show the expected room and zone.
 \end{itemize}
 
 \importantbox{Wrong-room override does not change the student's official room allocation. It only records that the student was marked present in a different room.}
-
-\screenshotimage{screenshots/scanner-wrong.png}{Wrong-room result with redirect and override actions}
 
 \section{7. Manual Entry}
 
@@ -175,7 +206,9 @@ Type the student number carefully and tap \textbf{Lookup}. The system will perfo
 
 If the student does not have their physical student ID card, use the \textbf{Comments} field to briefly record how their identity was checked. For example: ``checked photo of student ID'', ``checked another photo ID'', or ``verified by authorised staff''.
 
-\screenshotimage{screenshots/scanner-manual.png}{Manual entry with comments field}
+\screenshotpair
+  {screenshots/scanner-wrong.png}{Wrong-room actions}
+  {screenshots/scanner-manual.png}{Manual entry with comments}
 
 \section{8. Quick Troubleshooting}
 
