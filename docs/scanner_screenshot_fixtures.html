@@ -187,27 +187,27 @@
       z-index: 1;
       display: grid;
       min-height: 932px;
-      grid-template-rows: auto auto auto minmax(170px, 1fr) auto;
-      gap: 12px;
-      padding: 26px 18px 28px;
+      grid-template-rows: auto auto auto minmax(150px, 1fr) auto;
+      gap: 10px;
+      padding: 18px 18px 18px;
       color: white;
     }
 
     .camera-top {
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 14px;
+      grid-template-columns: 94px 1fr;
+      gap: 10px;
       align-items: start;
     }
 
     .camera-top h1 {
-      font-size: 52px;
+      font-size: 38px;
       margin: 4px 0;
     }
 
     .camera-top p {
       color: rgba(255, 255, 255, 0.78);
-      font-size: 22px;
+      font-size: 16px;
     }
 
     .torch {
@@ -224,14 +224,14 @@
     .status-strip span {
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.14);
-      padding: 8px 10px;
-      font-size: 12px;
+      padding: 7px 9px;
+      font-size: 11px;
       font-weight: 800;
     }
 
     .ocr-status {
       border-radius: 18px;
-      padding: 12px 14px;
+      padding: 11px 12px;
       background: rgba(17, 17, 17, 0.82);
       color: rgba(255, 255, 255, 0.9);
       font-weight: 800;
@@ -243,8 +243,8 @@
       align-self: center;
       justify-self: center;
       display: grid;
-      width: min(90vw, 680px);
-      height: min(26vh, 210px);
+      width: 100%;
+      height: 188px;
       place-items: center;
       border: 3px solid rgba(255, 255, 255, 0.78);
       border-radius: 28px;
@@ -263,7 +263,7 @@
       position: absolute;
       bottom: 24px;
       color: rgba(255, 255, 255, 0.86);
-      font-size: 22px;
+      font-size: 17px;
       font-weight: 800;
     }
 
@@ -302,15 +302,16 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 16px;
       background: rgba(17, 17, 17, 0.64);
-      padding: 12px;
+      padding: 9px 10px;
     }
 
     .stat strong {
-      font-size: 32px;
+      font-size: 26px;
     }
 
     .stat span {
       color: rgba(255, 255, 255, 0.78);
+      font-size: 13px;
     }
 
     .chips {
@@ -337,20 +338,24 @@
       z-index: 3;
       display: grid;
       align-items: end;
-      padding: 18px;
+      padding: 12px 18px 18px;
       background: rgba(0, 0, 0, 0.28);
     }
 
     .review-card {
       display: grid;
-      gap: 12px;
+      gap: 9px;
       border-radius: 28px;
       border: 1px solid var(--line);
       border-top: 8px solid var(--ok);
       background: white;
       color: var(--ink);
-      padding: 18px;
+      padding: 15px 18px 18px;
       box-shadow: var(--shadow);
+    }
+
+    .review-card h2 {
+      font-size: 24px;
     }
 
     .review-card.wrong,
@@ -462,6 +467,10 @@
         </div>
       `),
       scanner: () => cameraBase(),
+      loading: () => cameraBase().replace(
+        "Looking for student ID inside the red box",
+        "Loading OCR model... this may take 20-40 seconds"
+      ),
       ready: () => cameraBase(`
         <div class="review-sheet">
           <section class="review-card">
@@ -476,12 +485,26 @@
           </section>
         </div>
       `),
+      detected: () => cameraBase(`
+        <div class="review-sheet">
+          <section class="review-card">
+            <h2>Correct ID detected</h2>
+            <input value="4149287" />
+            <textarea rows="3" placeholder="Comments (optional)"></textarea>
+            <p class="subtle">Ahmed Student is assigned to this room. Tap Mark Present to record attendance.</p>
+            <div class="review-actions">
+              <button class="secondary">Lookup Edited ID</button>
+              <button>Mark Present</button>
+            </div>
+          </section>
+        </div>
+      `),
       wrong: () => cameraBase(`
         <div class="review-sheet">
           <section class="review-card wrong">
             <h2>Wrong room detected</h2>
             <input value="4181947" />
-            <textarea rows="3" placeholder="Comments (optional)">Student came to Room A.</textarea>
+            <textarea rows="2" placeholder="Comments (optional)">Student came to Room A.</textarea>
             <p class="subtle">Expected Room B, Zone 3. Choose whether to redirect or mark with a mismatch flag.</p>
             <div class="review-actions">
               <button class="secondary">Lookup Edited ID</button>
@@ -496,7 +519,7 @@
           <section class="review-card not-found">
             <h2>Manual entry / comments</h2>
             <input value="4149287" />
-            <textarea rows="3">Student forgot ID; checked photo of student ID.</textarea>
+            <textarea rows="2">Student forgot ID; checked photo of student ID.</textarea>
             <p class="subtle">Use comments when attendance is marked after an alternate identity check.</p>
             <div class="review-actions">
               <button class="secondary">Lookup Edited ID</button>
