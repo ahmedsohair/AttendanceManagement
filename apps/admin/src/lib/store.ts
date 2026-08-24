@@ -6,6 +6,7 @@ import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "store.json");
+const supabasePageSize = 1000;
 
 const seedUsers: User[] = [
   {
@@ -57,130 +58,143 @@ async function readFileStore(): Promise<DataStore> {
   return JSON.parse(raw) as DataStore;
 }
 
-async function readSupabaseStore(): Promise<DataStore> {
+async function fetchAllRows(table: string, columns: string) {
   const supabase = getSupabaseAdmin();
-  let sessionsResponse = await supabase
-    .from("exam_sessions")
-    .select("id, name, exam_date, start_time, published, status, created_at");
+  const rows: Record<string, unknown>[] = [];
 
-  if (sessionsResponse.error?.message.includes("status")) {
-    sessionsResponse = await supabase
-      .from("exam_sessions")
-      .select("id, name, exam_date, start_time, published, created_at");
-  }
+  for (let from = 0; ; from += supabasePageSize) {
+    const response = await supabase
+      .from(table)
+      .select(columns)
+      .range(from, from + supabasePageSize - 1);
 
-  const [
-    usersResponse,
-    roomAssignmentsResponse,
-    roomsResponse,
-    allocationsResponse,
-    attendanceResponse,
-    incidentsResponse
-  ] = await Promise.all([
-    supabase.from("users").select("id, email, full_name, role"),
-    supabase.from("room_assignments").select("room_id, user_id"),
-    supabase.from("rooms").select("id, exam_session_id, code, display_name, capacity"),
-    supabase
-      .from("student_allocations")
-      .select(
-        "id, exam_session_id, student_id, student_name, room_id, zone, course_code, program"
-      ),
-    supabase
-      .from("attendance_events")
-      .select(
-        "id, exam_session_id, student_id, marked_by_user_id, marked_in_room_id, expected_room_id, source, override_type, room_mismatch, comment, device_id, created_at"
-      ),
-    supabase
-      .from("incidents")
-      .select(
-        "id, exam_session_id, student_id, room_id, expected_room_id, user_id, incident_type, details, created_at"
-      )
-  ]);
-
-  const responses = [
-    usersResponse,
-    roomAssignmentsResponse,
-    sessionsResponse,
-    roomsResponse,
-    allocationsResponse,
-    attendanceResponse,
-    incidentsResponse
-  ];
-
-  for (const response of responses) {
     if (response.error) {
       throw new Error(response.error.message);
     }
+
+    const data = (response.data || []) as unknown as Record<string, unknown>[];
+    rows.push(...data);
+
+    if (data.length < supabasePageSize) {
+      return rows;
+    }
+  }
+}
+
+async function readSupabaseStore(): Promise<DataStore> {
+  let sessions: Record<string, unknown>[];
+  try {
+    sessions = await fetchAllRows(
+      "exam_sessions",
+      "id, name, exam_date, start_time, published, status, created_at"
+    );
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("status")) {
+      throw error;
+    }
+
+    sessions = await fetchAllRows(
+      "exam_sessions",
+      "id, name, exam_date, start_time, published, created_at"
+    );
   }
 
+  const [
+    users,
+    roomAssignments,
+    rooms,
+    allocations,
+    attendance,
+    incidents
+  ] = await Promise.all([
+    fetchAllRows("users", "id, email, full_name, role"),
+    fetchAllRows("room_assignments", "room_id, user_id"),
+    fetchAllRows("rooms", "id, exam_session_id, code, display_name, capacity"),
+    fetchAllRows(
+      "student_allocations",
+      "id, exam_session_id, student_id, student_name, room_id, zone, course_code, program"
+    ),
+    fetchAllRows(
+      "attendance_events",
+      "id, exam_session_id, student_id, marked_by_user_id, marked_in_room_id, expected_room_id, source, override_type, room_mismatch, comment, device_id, created_at"
+    ),
+    fetchAllRows(
+      "incidents",
+      "id, exam_session_id, student_id, room_id, expected_room_id, user_id, incident_type, details, created_at"
+    )
+  ]);
+
   const assignedRoomsByUser = new Map<string, string[]>();
-  for (const assignment of roomAssignmentsResponse.data || []) {
-    const current = assignedRoomsByUser.get(assignment.user_id) || [];
-    current.push(assignment.room_id);
-    assignedRoomsByUser.set(assignment.user_id, current);
+  for (const assignment of roomAssignments) {
+    const userId = String(assignment.user_id);
+    const current = assignedRoomsByUser.get(userId) || [];
+    current.push(String(assignment.room_id));
+    assignedRoomsByUser.set(userId, current);
   }
 
   return {
-    users: (usersResponse.data || []).map((row) => ({
-      id: row.id,
-      email: row.email,
-      fullName: row.full_name,
-      role: row.role,
-      assignedRoomIds: assignedRoomsByUser.get(row.id) || []
+    users: users.map((row) => ({
+      id: String(row.id),
+      email: String(row.email),
+      fullName: String(row.full_name),
+      role: row.role as User["role"],
+      assignedRoomIds: assignedRoomsByUser.get(String(row.id)) || []
     })),
-    examSessions: (sessionsResponse.data || []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      examDate: row.exam_date,
-      startTime: row.start_time,
-      published: row.published,
-      status: row.status ?? (row.published ? "active" : "draft"),
-      createdAt: row.created_at
+    examSessions: sessions.map((row) => ({
+      id: String(row.id),
+      name: String(row.name),
+      examDate: String(row.exam_date),
+      startTime: String(row.start_time),
+      published: Boolean(row.published),
+      status:
+        (row.status as ExamSession["status"] | undefined) ??
+        (row.published ? "active" : "draft"),
+      createdAt: String(row.created_at)
     })),
-    rooms: (roomsResponse.data || []).map((row) => ({
-      id: row.id,
-      examSessionId: row.exam_session_id,
-      code: row.code,
-      displayName: row.display_name,
-      capacity: row.capacity ?? undefined
+    rooms: rooms.map((row) => ({
+      id: String(row.id),
+      examSessionId: String(row.exam_session_id),
+      code: String(row.code),
+      displayName: String(row.display_name),
+      capacity: row.capacity === null || row.capacity === undefined ? undefined : Number(row.capacity)
     })),
-    studentAllocations: (allocationsResponse.data || []).map((row) => ({
-      id: row.id,
-      examSessionId: row.exam_session_id,
-      studentId: row.student_id,
-      studentName: row.student_name,
-      roomId: row.room_id,
-      zone: row.zone,
-      courseCode: row.course_code ?? undefined,
-      program: row.program ?? undefined
+    studentAllocations: allocations.map((row) => ({
+      id: String(row.id),
+      examSessionId: String(row.exam_session_id),
+      studentId: String(row.student_id),
+      studentName: String(row.student_name),
+      roomId: String(row.room_id),
+      zone: String(row.zone),
+      courseCode: row.course_code === null || row.course_code === undefined ? undefined : String(row.course_code),
+      program: row.program === null || row.program === undefined ? undefined : String(row.program)
     })),
-    attendanceEvents: (attendanceResponse.data || []).map((row) => ({
-      id: row.id,
-      examSessionId: row.exam_session_id,
-      studentId: row.student_id,
-      markedByUserId: row.marked_by_user_id,
-      markedInRoomId: row.marked_in_room_id,
-      expectedRoomId: row.expected_room_id,
-      source: row.source,
-      overrideType: row.override_type,
-      roomMismatch: row.room_mismatch,
-      comment: row.comment ?? undefined,
-      deviceId: row.device_id,
-      createdAt: row.created_at
+    attendanceEvents: attendance.map((row) => ({
+      id: String(row.id),
+      examSessionId: String(row.exam_session_id),
+      studentId: String(row.student_id),
+      markedByUserId: String(row.marked_by_user_id),
+      markedInRoomId: String(row.marked_in_room_id),
+      expectedRoomId: String(row.expected_room_id),
+      source: row.source as "ocr" | "manual",
+      overrideType: row.override_type as "none" | "wrong_room_present",
+      roomMismatch: Boolean(row.room_mismatch),
+      comment: row.comment === null || row.comment === undefined ? undefined : String(row.comment),
+      deviceId: String(row.device_id),
+      createdAt: String(row.created_at)
     })),
-    incidents: (incidentsResponse.data || []).map((row) => ({
-      id: row.id,
-      examSessionId: row.exam_session_id,
-      studentId: row.student_id ?? undefined,
-      roomId: row.room_id ?? undefined,
-      expectedRoomId: row.expected_room_id ?? undefined,
-      userId: row.user_id ?? undefined,
-      incidentType: row.incident_type,
+    incidents: incidents.map((row) => ({
+      id: String(row.id),
+      examSessionId: String(row.exam_session_id),
+      studentId: row.student_id === null || row.student_id === undefined ? undefined : String(row.student_id),
+      roomId: row.room_id === null || row.room_id === undefined ? undefined : String(row.room_id),
+      expectedRoomId: row.expected_room_id === null || row.expected_room_id === undefined ? undefined : String(row.expected_room_id),
+      userId: row.user_id === null || row.user_id === undefined ? undefined : String(row.user_id),
+      incidentType: row.incident_type as "wrong_room_redirected" | "wrong_room_present_override" | "duplicate_attempt" | "student_not_found",
       details:
         row.details && typeof row.details === "object"
           ? (row.details as Record<string, string | number | boolean | null | undefined>)
           : {},
-      createdAt: row.created_at
+      createdAt: String(row.created_at)
     }))
   };
 }
