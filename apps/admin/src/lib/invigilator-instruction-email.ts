@@ -69,8 +69,6 @@ function queryLine() {
 
 function closingText() {
   return [
-    "Thank you for your support during the exam.",
-    "",
     "Best regards,",
     "ExamPulse"
   ].join("\n");
@@ -78,7 +76,6 @@ function closingText() {
 
 function closingHtml() {
   return `
-    <p style="margin:18px 0 0;color:#334155;line-height:1.55">Thank you for your support during the exam.</p>
     <p style="margin:18px 0 0;color:#334155;line-height:1.55">Best regards,<br /><strong>ExamPulse</strong></p>
   `;
 }
@@ -99,31 +96,32 @@ function buildInstructionText({
   session
 }: InstructionEmailInput) {
   return [
-    `Hello ${invigilator.fullName || "Invigilator"},`,
+    `Hi ${invigilator.fullName || "Invigilator"},`,
     "",
-    `You have been assigned to ${session.name}.`,
+    "You have been assigned as an invigilator for the following exam:",
+    "",
+    `Exam: ${session.name}`,
     `Date: ${session.examDate}`,
     `Exam start time: ${session.startTime}`,
     "",
     "Assigned room(s):",
     buildRoomList(rooms),
     "",
-    `Your invigilator code: ${accessCode}`,
+    "Your ExamPulse access code is:",
+    accessCode,
     "",
-    `Open the scanner: ${scannerUrl(appBaseUrl)}`,
+    `Open the scanner here: ${scannerUrl(appBaseUrl)}`,
     "",
-    "Before the exam:",
+    "Please read the attached ExamPulse Invigilator Guide before the exam. It contains detailed instructions on how to use the app, including troubleshooting steps for common scanning or access issues.",
+    "",
+    "Quick reminder:",
     "- Open the scanner link on your phone.",
-    "- Enter your access code.",
-    "- Allow camera access.",
     "- Wait 20-40 seconds for the OCR scanner to load the first time.",
-    "- Keep the student number inside the red scan box.",
-    "",
-    "If the scanner cannot read the ID, use Manual Mode and type the student number.",
-    "",
-    "If a student is in the wrong room, the system will show the correct room. Only use the override option if you are intentionally marking them present in your room.",
+    "- Keep only the printed student number inside the red scan box.",
     "",
     queryLine(),
+    "",
+    "Thank you for your support during the exam.",
     "",
     closingText()
   ].join("\n");
@@ -143,11 +141,11 @@ function buildInstructionHtml(input: InstructionEmailInput) {
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden">
         <div style="background:#e4002b;color:#ffffff;padding:22px 28px">
           <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase">ExamPulse</div>
-          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.25">Invigilator assignment</h1>
+          <h1 style="margin:8px 0 0;font-size:24px;line-height:1.25">Invigilation assignment</h1>
         </div>
         <div style="padding:28px">
           <p style="margin:0 0 18px;font-size:16px">Hi ${escapeHtml(input.invigilator.fullName || "Invigilator")},</p>
-          <p style="margin:0 0 18px;font-size:16px;line-height:1.55">You have been assigned as an invigilator for:</p>
+          <p style="margin:0 0 18px;font-size:16px;line-height:1.55">You have been assigned as an invigilator for the following exam:</p>
           <div style="border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:18px">
             <h2 style="margin:0 0 10px;font-size:21px">${escapeHtml(input.session.name)}</h2>
             <div style="color:#475569;font-size:15px">Date: ${escapeHtml(input.session.examDate)}</div>
@@ -165,18 +163,16 @@ function buildInstructionHtml(input: InstructionEmailInput) {
             <a href="${escapeHtml(scanner)}" style="display:inline-block;background:#e4002b;color:#ffffff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Open ExamPulse Scanner</a>
           </p>
           <div style="border-top:1px solid #e2e8f0;padding-top:18px">
-            <div style="font-weight:700;margin-bottom:8px">Before the exam</div>
+            <p style="margin:0 0 16px;color:#334155;line-height:1.55">Please read the attached ExamPulse Invigilator Guide before the exam. It contains detailed instructions on how to use the app, including troubleshooting steps for common scanning or access issues.</p>
+            <div style="font-weight:700;margin-bottom:8px">Quick reminder</div>
             <ul style="margin:0;padding-left:20px;line-height:1.7;color:#334155">
               <li>Open the scanner link on your phone.</li>
-              <li>Enter your access code.</li>
-              <li>Allow camera access.</li>
               <li>Wait 20-40 seconds for the OCR scanner to load the first time.</li>
-              <li>Keep the student number inside the red scan box.</li>
+              <li>Keep only the printed student number inside the red scan box.</li>
             </ul>
-            <p style="margin:16px 0 0;color:#334155;line-height:1.55">If the scanner cannot read the ID, use Manual Mode and type the student number.</p>
-            <p style="margin:12px 0 0;color:#334155;line-height:1.55">If a student is in the wrong room, the system will show the correct room. Only use the override option if you are intentionally marking them present in your room.</p>
           </div>
           <p style="margin:22px 0 0;color:#475569;line-height:1.55">${escapeHtml(queryLine())}</p>
+          <p style="margin:18px 0 0;color:#334155;line-height:1.55">Thank you for your support during the exam.</p>
           ${closingHtml()}
         </div>
       </div>
@@ -266,7 +262,7 @@ async function sendEmail({
 }
 
 export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
-  const subject = `ExamPulse assignment: ${input.session.name}`;
+  const subject = `ExamPulse invigilation assignment: ${input.session.name}`;
 
   return sendEmail({
     to: input.invigilator.email,
@@ -279,17 +275,17 @@ export async function sendInvigilatorInstructionEmail(input: InstructionEmailInp
 
 function buildAccessCodeText({ accessCode, appBaseUrl, fullName }: AccessCodeEmailInput) {
   return [
-    `Hello ${fullName || "Invigilator"},`,
+    `Hi ${fullName || "Invigilator"},`,
     "",
-    "Your ExamPulse invigilator access code is:",
+    "Your ExamPulse access code is:",
     "",
     accessCode,
     "",
-    `Open the scanner: ${scannerUrl(appBaseUrl)}`,
+    `Open the scanner here: ${scannerUrl(appBaseUrl)}`,
     "",
-    "Open the scanner link and enter this code to access your assigned active exam rooms.",
-    "The OCR scanner may take 20-40 seconds to load the first time.",
-    "If scanning fails, use Manual Mode to enter the student number.",
+    "Use this code to access any active exam rooms assigned to you.",
+    "",
+    "Please keep this code secure. If a new code is generated later, this code will stop working.",
     "",
     queryLine(),
     "",
@@ -316,11 +312,8 @@ function buildAccessCodeHtml(input: AccessCodeEmailInput) {
           <p style="text-align:center;margin:0 0 24px">
             <a href="${escapeHtml(scanner)}" style="display:inline-block;background:#e4002b;color:#ffffff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Open ExamPulse Scanner</a>
           </p>
-          <ul style="margin:0;padding-left:20px;line-height:1.7;color:#334155">
-            <li>The OCR scanner may take 20-40 seconds to load the first time.</li>
-            <li>Allow camera access when prompted.</li>
-            <li>If scanning fails, use Manual Mode to enter the student number.</li>
-          </ul>
+          <p style="margin:0;color:#334155;line-height:1.55">Use this code to access any active exam rooms assigned to you.</p>
+          <p style="margin:12px 0 0;color:#334155;line-height:1.55">Please keep this code secure. If a new code is generated later, this code will stop working.</p>
           <p style="margin:22px 0 0;color:#475569;line-height:1.55">${escapeHtml(queryLine())}</p>
           ${closingHtml()}
         </div>
