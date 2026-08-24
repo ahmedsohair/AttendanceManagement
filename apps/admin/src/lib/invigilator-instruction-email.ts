@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import nodemailer from "nodemailer";
 import type { ExamSession, Room, User } from "@algo-attendance/shared";
 
@@ -16,8 +18,21 @@ type AccessCodeEmailInput = {
   fullName?: string;
 };
 
+type EmailAttachment = {
+  content: Buffer;
+  contentType: string;
+  filename: string;
+};
+
 const scannerPath = "/scan";
 const supportEmail = "ahmed.sohair.khan@rmit.edu.au";
+const invigilatorGuidePath = path.join(
+  process.cwd(),
+  "src",
+  "lib",
+  "assets",
+  "exampulse-invigilator-guide.pdf"
+);
 
 export function isEmailConfigured() {
   return Boolean(process.env.EMAIL_FROM && (process.env.RESEND_API_KEY || isSmtpConfigured()));
@@ -66,6 +81,14 @@ function closingHtml() {
     <p style="margin:18px 0 0;color:#334155;line-height:1.55">Thank you for your support during the exam.</p>
     <p style="margin:18px 0 0;color:#334155;line-height:1.55">Best regards,<br /><strong>ExamPulse</strong></p>
   `;
+}
+
+async function buildInvigilatorGuideAttachment(): Promise<EmailAttachment> {
+  return {
+    content: await readFile(invigilatorGuidePath),
+    contentType: "application/pdf",
+    filename: "ExamPulse Invigilator Guide.pdf"
+  };
 }
 
 function buildInstructionText({
@@ -180,11 +203,13 @@ function createSmtpTransporter() {
 }
 
 async function sendEmail({
+  attachments,
   html,
   subject,
   text,
   to
 }: {
+  attachments?: EmailAttachment[];
   html: string;
   subject: string;
   text: string;
@@ -198,7 +223,11 @@ async function sendEmail({
         to: [to],
         subject,
         text,
-        html
+        html,
+        attachments: attachments?.map((attachment) => ({
+          content: attachment.content.toString("base64"),
+          filename: attachment.filename
+        }))
       }),
       headers: {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
@@ -227,7 +256,12 @@ async function sendEmail({
     to,
     subject,
     text,
-    html
+    html,
+    attachments: attachments?.map((attachment) => ({
+      content: attachment.content,
+      contentType: attachment.contentType,
+      filename: attachment.filename
+    }))
   });
 }
 
@@ -238,7 +272,8 @@ export async function sendInvigilatorInstructionEmail(input: InstructionEmailInp
     to: input.invigilator.email,
     subject,
     text: buildInstructionText(input),
-    html: buildInstructionHtml(input)
+    html: buildInstructionHtml(input),
+    attachments: [await buildInvigilatorGuideAttachment()]
   });
 }
 

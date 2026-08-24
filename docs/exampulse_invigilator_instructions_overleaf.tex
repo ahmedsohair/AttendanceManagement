@@ -46,27 +46,8 @@
 \setlist[itemize]{leftmargin=*, itemsep=2pt, topsep=3pt}
 \setlist[enumerate]{leftmargin=*, itemsep=3pt, topsep=3pt}
 
-\newcommand{\screenshotplaceholder}[2]{
-  \begin{center}
-    \fcolorbox{Border}{SoftRed}{
-      \begin{minipage}[c][#2][c]{0.88\linewidth}
-        \centering
-        \textbf{\color{ExamPulseRed} Screenshot Placeholder}\\[6pt]
-        \color{Muted} #1
-      \end{minipage}
-    }
-  \end{center}
-}
-
-\newcommand{\screenshotimage}[2]{
-  \begin{center}
-    \includegraphics[width=0.52\linewidth]{#1}\\[4pt]
-    {\small\color{Muted} #2}
-  \end{center}
-}
-
 \newcommand{\screenshotthumb}[2]{
-  \begin{minipage}[t]{0.20\linewidth}
+  \begin{minipage}[t]{0.17\linewidth}
     \centering
     \includegraphics[width=\linewidth]{#1}\\[-4pt]
     {\scriptsize\color{Muted} #2}
@@ -75,13 +56,13 @@
 
 \newcommand{\screenshotpair}[4]{
   \begin{center}
-    \begin{minipage}[t]{0.25\linewidth}
+    \begin{minipage}[t]{0.22\linewidth}
       \centering
       \includegraphics[width=\linewidth]{#1}\\[-4pt]
       {\scriptsize\color{Muted} #2}
     \end{minipage}
-    \hspace{0.05\linewidth}
-    \begin{minipage}[t]{0.25\linewidth}
+    \hspace{0.06\linewidth}
+    \begin{minipage}[t]{0.22\linewidth}
       \centering
       \includegraphics[width=\linewidth]{#3}\\[-4pt]
       {\scriptsize\color{Muted} #4}
@@ -92,9 +73,9 @@
 \newcommand{\screenshotrow}[6]{
   \begin{center}
     \screenshotthumb{#1}{#2}
-    \hspace{0.045\linewidth}
+    \hspace{0.06\linewidth}
     \screenshotthumb{#3}{#4}
-    \hspace{0.045\linewidth}
+    \hspace{0.06\linewidth}
     \screenshotthumb{#5}{#6}
   \end{center}
 }
@@ -112,8 +93,8 @@
 \begin{document}
 
 \begin{center}
-  {\Huge \textbf{\color{ExamPulseRed} ExamPulse}}\\[6pt]
-  {\Large Invigilator Attendance Scanner Guide}\\[8pt]
+  \includegraphics[width=0.34\linewidth]{screenshots/guide/exampulse-logo.png}\\[8pt]
+  {\Large \textbf{Invigilator Attendance Scanner Guide}}\\[6pt]
   {\color{Muted} Short instructions for marking exam attendance using the web scanner}
 \end{center}
 
@@ -130,69 +111,67 @@ Device & Any phone with a camera and internet access \\
 Browser & Safari on iPhone, Chrome/Samsung Internet on Android \\
 \end{tabularx}
 
-\section{2. Sign In}
+\section{2. Sign In and Select Your Room}
 
 \begin{enumerate}
   \item Open the scanner link on your phone:
   \href{https://exampulse.xyz/scan}{https://exampulse.xyz/scan}
   \item Enter your invigilator access code.
+  \item Select the room where you are invigilating.
   \item Allow camera access when prompted.
   \item Wait for the OCR scanner to finish loading.
+
 \end{enumerate}
 
-\section{3. Select Your Room}
-
-After signing in, you will see the room(s) assigned to you for the active exam.
-
 \begin{itemize}
-  \item Select the room where you are invigilating.
+  \item After signing in, you will only see the room(s) assigned to you for the active exam.
   \item Make sure the room name matches your physical exam room.
-  \item If no room appears, contact Ahmed before marking attendance.
 \end{itemize}
 
 \screenshotrow
-  {screenshots/scanner-login.png}{Sign in with access code}
-  {screenshots/scanner-rooms.png}{Select assigned room}
-  {screenshots/scanner-loading.png}{OCR loading message}
+  {screenshots/guide/guide-login.png}{Sign in with access code}
+  {screenshots/guide/guide-room.png}{Select assigned room}
+  {screenshots/guide/guide-loading.png}{OCR loading message}
 
-\section{4. Scan a Student ID}
+\section{3. Scan a Student ID}
 
 \begin{enumerate}
   \item Hold the student ID card under the camera.
   \item Place only the \textbf{student number} inside the red scan box.
   \item Keep the card steady for a moment.
-  \item When the student number is detected, review the result shown by the system.
+  \item When the correct student number is detected, review the student details and tap \textbf{Mark Present}.
   \item If OCR detects the wrong number, edit the number manually and tap \textbf{Lookup} again before marking attendance.
 \end{enumerate}
 
-\importantbox{The scanner reads the printed student number, not the barcode. If the room is dark, use the torch button or ask the student to hold the card under better light.}
+\importantbox{The scanner reads the printed student number, not the barcode. It is optimized for low-light exam rooms, but if scanning is difficult, use the torch button or manual entry.}
 
-\screenshotpair
-  {screenshots/scanner-scanner.png}{Live scanner with red scan box}
-  {screenshots/scanner-detected.png}{Correct ID detected}
+\screenshotrow
+  {screenshots/guide/guide-live.png}{Live scanner with red scan box}
+  {screenshots/guide/guide-ready.png}{Correct ID detected}
+  {screenshots/guide/guide-not-found.png}{Edit misread ID and look up again}
 
-\section{5. Understand the Scan Results}
+\section{4. Understand the Scan Results}
 
 \begin{tabularx}{\linewidth}{>{\bfseries}l X}
 \textcolor{Success}{Present} & Student is in the correct room. Mark attendance. \\
 \textcolor{Warning}{Wrong room} & Student belongs to another room. The system will show the correct room/zone. \\
 Already marked & Student has already been marked present for this exam. Do not mark again. \\
-Student not found & Student number is not in the published exam roster. Check the number, edit it if OCR misread it, and tap \textbf{Lookup} again. If still not found, contact the exam administrator. \\
+Student not found & Student number is not in the published exam roster. Check the number, edit it if OCR misread it, and tap \textbf{Lookup} again. If still not found, contact the Team leader in the room. \\
 \end{tabularx}
 
-\section{6. Wrong-Room Students}
+\section{5. Wrong-Room Students}
 
-If a student is in the wrong room, the app will show the expected room and zone.
+If a student is in the wrong room, the app will show the expected room and zone. Inform the room Team Leader and follow their instructions.
 
 \begin{itemize}
   \item Use \textbf{Send to correct room} if the student should move to their assigned room.
-  \item Use \textbf{Mark present in this room} only if you intentionally want to record attendance in your room.
-  \item Wrong-room attendance is flagged automatically for audit purposes.
+  \item Use \textbf{Mark present in this room} only if the Team Leader asks you to record attendance.
+  \item Wrong-room attendance is flagged automatically.
 \end{itemize}
 
 \importantbox{Wrong-room override does not change the student's official room allocation. It only records that the student was marked present in a different room.}
 
-\section{7. Manual Entry}
+\section{6. Manual Entry}
 
 Use manual entry if:
 
@@ -208,21 +187,20 @@ Type the student number carefully and tap \textbf{Lookup}. The system will perfo
 If the student does not have their physical student ID card, use the \textbf{Comments} field to briefly record how their identity was checked. For example: ``checked photo of student ID'', ``checked another photo ID'', or ``verified by authorised staff''.
 
 \screenshotpair
-  {screenshots/scanner-wrong.png}{Wrong-room actions}
-  {screenshots/scanner-manual.png}{Manual entry with comments}
+  {screenshots/guide/guide-wrong.png}{Wrong-room actions}
+  {screenshots/guide/guide-manual.png}{Manual entry with comments}
 
-\section{8. Quick Troubleshooting}
+\section{7. Quick Troubleshooting}
 
 \begin{tabularx}{\linewidth}{>{\bfseries}l X}
 Scanner is still loading & Wait 20--40 seconds on first use. Keep the browser tab open. \\
 Camera does not open & Check browser camera permission and refresh the page. \\
-OCR is not detecting & Improve lighting, use torch, keep only the student number inside the red box, or use Manual Mode. \\
+OCR is not detecting & Use torch, keep only the student number inside the red box, or use Manual Mode. \\
 Student not found & Recheck the digits. If still not found, the student may not be in the exam roster. \\
-No rooms assigned & Confirm you used the correct access code, then contact Ahmed. \\
 Network issue & Refresh the page or switch between Wi-Fi and mobile data. \\
 \end{tabularx}
 
-\vfill
+\vspace{10pt}
 
 \begin{center}
   \color{Muted}

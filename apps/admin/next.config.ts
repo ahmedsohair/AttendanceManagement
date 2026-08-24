@@ -4,6 +4,11 @@ import path from "node:path";
 const nextConfig: NextConfig = {
   transpilePackages: ["@algo-attendance/shared"],
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  outputFileTracingIncludes: {
+    "/api/exam-sessions/[id]/email-instructions": [
+      "./src/lib/assets/exampulse-invigilator-guide.pdf"
+    ]
+  },
   webpack(config, { isServer }) {
     if (!isServer) {
       config.resolve = config.resolve || {};
