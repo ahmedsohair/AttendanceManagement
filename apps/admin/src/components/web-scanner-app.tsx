@@ -251,6 +251,7 @@ export function WebScannerApp() {
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
   const scanPausedRef = useRef(false);
+  const lookupPendingRef = useRef(false);
   const lastCandidateRef = useRef<{ value: string; count: number; seenAt: number } | null>(
     null
   );
@@ -347,6 +348,10 @@ export function WebScannerApp() {
   }, [scanPaused]);
 
   useEffect(() => {
+    lookupPendingRef.current = lookupPending;
+  }, [lookupPending]);
+
+  useEffect(() => {
     if (scanPaused) {
       return;
     }
@@ -378,6 +383,69 @@ export function WebScannerApp() {
       ocrWorkerRef.current?.dispose().catch(() => undefined);
     };
   }, []);
+
+  const stopCamera = useCallback(() => {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+    setTorchSupported(false);
+    setTorchEnabled(false);
+    setTorchMessage("");
+    setScanHold(false);
+    scanPausedRef.current = false;
+    setScanPaused(false);
+    selectedRoomRef.current = null;
+    setSelectedRoom(null);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    const scannerHistoryState = {
+      ...(window.history.state || {}),
+      examPulseScannerGuard: true
+    };
+
+    window.history.pushState(scannerHistoryState, "", window.location.href);
+
+    function handleBrowserBack() {
+      window.history.pushState(scannerHistoryState, "", window.location.href);
+
+      if (busyRef.current || lookupPendingRef.current) {
+        setStatusMessage("Please wait for the current action to finish.");
+        return;
+      }
+
+      if (scanPausedRef.current) {
+        resetForNextScan();
+        setStatusMessage("Scan cancelled. Continue with the next student.");
+        return;
+      }
+
+      if (selectedRoomRef.current) {
+        stopCamera();
+        setStatusMessage("Returned to room selection.");
+        return;
+      }
+
+      setStatusMessage("Use Sign Out if you want to leave the scanner.");
+    }
+
+    window.addEventListener("popstate", handleBrowserBack);
+
+    return () => {
+      window.removeEventListener("popstate", handleBrowserBack);
+    };
+  }, [resetForNextScan, stopCamera, user]);
 
   async function signIn() {
     const normalizedCode = normalizeAccessCode(accessCode);
@@ -604,27 +672,6 @@ export function WebScannerApp() {
           : "Camera permission failed. Check browser permissions."
       );
     }
-  }
-
-  function stopCamera() {
-    if (scanTimerRef.current) {
-      window.clearInterval(scanTimerRef.current);
-      scanTimerRef.current = null;
-    }
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-    setTorchSupported(false);
-    setTorchEnabled(false);
-    setTorchMessage("");
-    setScanHold(false);
-    scanPausedRef.current = false;
-    setScanPaused(false);
-    selectedRoomRef.current = null;
-    setSelectedRoom(null);
   }
 
   async function toggleTorch() {
