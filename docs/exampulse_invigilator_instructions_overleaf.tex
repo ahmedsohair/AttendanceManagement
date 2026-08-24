@@ -35,6 +35,7 @@
   {}
   {0pt}
   {}
+\titlespacing*{\section}{0pt}{8pt}{5pt}
 
 \titleformat{\subsection}
   {\large\bfseries\color{Ink}}
@@ -42,8 +43,8 @@
   {0pt}
   {}
 
-\setlist[itemize]{leftmargin=*, itemsep=3pt, topsep=4pt}
-\setlist[enumerate]{leftmargin=*, itemsep=4pt, topsep=4pt}
+\setlist[itemize]{leftmargin=*, itemsep=2pt, topsep=3pt}
+\setlist[enumerate]{leftmargin=*, itemsep=3pt, topsep=3pt}
 
 \newcommand{\screenshotplaceholder}[2]{
   \begin{center}
@@ -65,24 +66,24 @@
 }
 
 \newcommand{\screenshotthumb}[2]{
-  \begin{minipage}[t]{0.26\linewidth}
+  \begin{minipage}[t]{0.20\linewidth}
     \centering
-    \includegraphics[width=\linewidth]{#1}\\[-2pt]
+    \includegraphics[width=\linewidth]{#1}\\[-4pt]
     {\scriptsize\color{Muted} #2}
   \end{minipage}
 }
 
 \newcommand{\screenshotpair}[4]{
   \begin{center}
-    \begin{minipage}[t]{0.31\linewidth}
+    \begin{minipage}[t]{0.25\linewidth}
       \centering
-      \includegraphics[width=\linewidth]{#1}\\[-2pt]
+      \includegraphics[width=\linewidth]{#1}\\[-4pt]
       {\scriptsize\color{Muted} #2}
     \end{minipage}
-    \hspace{0.06\linewidth}
-    \begin{minipage}[t]{0.31\linewidth}
+    \hspace{0.05\linewidth}
+    \begin{minipage}[t]{0.25\linewidth}
       \centering
-      \includegraphics[width=\linewidth]{#3}\\[-2pt]
+      \includegraphics[width=\linewidth]{#3}\\[-4pt]
       {\scriptsize\color{Muted} #4}
     \end{minipage}
   \end{center}
@@ -91,9 +92,9 @@
 \newcommand{\screenshotrow}[6]{
   \begin{center}
     \screenshotthumb{#1}{#2}
-    \hspace{0.035\linewidth}
+    \hspace{0.045\linewidth}
     \screenshotthumb{#3}{#4}
-    \hspace{0.035\linewidth}
+    \hspace{0.045\linewidth}
     \screenshotthumb{#5}{#6}
   \end{center}
 }
