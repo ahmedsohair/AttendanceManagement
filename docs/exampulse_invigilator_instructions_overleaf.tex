@@ -119,6 +119,7 @@ After signing in, you will see the room(s) assigned to you for the active exam.
   \item Place only the \textbf{student number} inside the red scan box.
   \item Keep the card steady for a moment.
   \item When the student number is detected, review the result shown by the system.
+  \item If OCR detects the wrong number, edit the number manually and tap \textbf{Lookup} again before marking attendance.
 \end{enumerate}
 
 \importantbox{The scanner reads the printed student number, not the barcode. If the room is dark, use the torch button or ask the student to hold the card under better light.}
@@ -131,7 +132,7 @@ After signing in, you will see the room(s) assigned to you for the active exam.
 \textcolor{Success}{Present} & Student is in the correct room. Mark attendance. \\
 \textcolor{Warning}{Wrong room} & Student belongs to another room. The system will show the correct room/zone. \\
 Already marked & Student has already been marked present for this exam. Do not mark again. \\
-Student not found & Student number is not in the published exam roster. Check the number or contact the exam administrator. \\
+Student not found & Student number is not in the published exam roster. Check the number, edit it if OCR misread it, and tap \textbf{Lookup} again. If still not found, contact the exam administrator. \\
 \end{tabularx}
 
 \screenshotplaceholder{Insert screenshot of a successful scan result.}{4.5cm}
@@ -163,7 +164,9 @@ Use manual entry if:
 
 Type the student number carefully and tap \textbf{Lookup}. The system will perform the same attendance checks as a camera scan.
 
-\screenshotplaceholder{Insert screenshot of manual mode / manual lookup.}{4.5cm}
+If the student does not have their physical student ID card, use the \textbf{Comments} field to briefly record how their identity was checked. For example: ``checked photo of student ID'', ``checked another photo ID'', or ``verified by authorised staff''.
+
+\screenshotplaceholder{Insert screenshot of manual mode / manual lookup, including the comments field.}{4.5cm}
 
 \section{8. Quick Troubleshooting}
 
@@ -176,20 +179,11 @@ No rooms assigned & Confirm you used the correct access code, then contact Ahmed
 Network issue & Refresh the page or switch between Wi-Fi and mobile data. \\
 \end{tabularx}
 
-\section{9. End-of-Exam Checklist}
-
-\begin{itemize}
-  \item Confirm the room count looks reasonable.
-  \item Check any wrong-room or flagged entries.
-  \item Report unresolved issues to Ahmed.
-  \item Do not share your invigilator access code with students.
-\end{itemize}
-
 \vfill
 
 \begin{center}
   \color{Muted}
-  For any queries, reply to the ExamPulse email or contact Ahmed at\\
+  For any queries, contact Ahmed at\\
   \href{mailto:ahmed.sohair.khan@rmit.edu.au}{ahmed.sohair.khan@rmit.edu.au}
 \end{center}
 
