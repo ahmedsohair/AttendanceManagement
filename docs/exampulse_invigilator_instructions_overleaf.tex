@@ -65,7 +65,7 @@
 }
 
 \newcommand{\screenshotthumb}[2]{
-  \begin{minipage}[t]{0.31\linewidth}
+  \begin{minipage}[t]{0.26\linewidth}
     \centering
     \includegraphics[width=\linewidth]{#1}\\[-2pt]
     {\scriptsize\color{Muted} #2}
@@ -74,13 +74,13 @@
 
 \newcommand{\screenshotpair}[4]{
   \begin{center}
-    \begin{minipage}[t]{0.38\linewidth}
+    \begin{minipage}[t]{0.31\linewidth}
       \centering
       \includegraphics[width=\linewidth]{#1}\\[-2pt]
       {\scriptsize\color{Muted} #2}
     \end{minipage}
-    \hfill
-    \begin{minipage}[t]{0.38\linewidth}
+    \hspace{0.06\linewidth}
+    \begin{minipage}[t]{0.31\linewidth}
       \centering
       \includegraphics[width=\linewidth]{#3}\\[-2pt]
       {\scriptsize\color{Muted} #4}
@@ -91,9 +91,9 @@
 \newcommand{\screenshotrow}[6]{
   \begin{center}
     \screenshotthumb{#1}{#2}
-    \hfill
+    \hspace{0.035\linewidth}
     \screenshotthumb{#3}{#4}
-    \hfill
+    \hspace{0.035\linewidth}
     \screenshotthumb{#5}{#6}
   \end{center}
 }
@@ -151,8 +151,8 @@ After signing in, you will see the room(s) assigned to you for the active exam.
 
 \screenshotrow
   {screenshots/scanner-login.png}{Sign in with access code}
-  {screenshots/scanner-loading.png}{OCR loading message}
   {screenshots/scanner-rooms.png}{Select assigned room}
+  {screenshots/scanner-loading.png}{OCR loading message}
 
 \section{4. Scan a Student ID}
 
