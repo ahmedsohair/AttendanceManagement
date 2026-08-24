@@ -252,6 +252,9 @@ export function WebScannerApp() {
   const busyRef = useRef(false);
   const scanPausedRef = useRef(false);
   const lookupPendingRef = useRef(false);
+  const historyGuardActiveRef = useRef(false);
+  const historyGuardIdRef = useRef("");
+  const lastBackHandledAtRef = useRef(0);
   const lastCandidateRef = useRef<{ value: string; count: number; seenAt: number } | null>(
     null
   );
@@ -405,20 +408,49 @@ export function WebScannerApp() {
     setSelectedRoom(null);
   }, []);
 
+  const pushScannerHistoryGuard = useCallback(() => {
+    if (!historyGuardIdRef.current) {
+      historyGuardIdRef.current =
+        typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `scanner-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    window.history.pushState(
+      {
+        ...(window.history.state || {}),
+        examPulseScannerGuard: true,
+        examPulseScannerGuardId: historyGuardIdRef.current
+      },
+      "",
+      window.location.href
+    );
+  }, []);
+
   useEffect(() => {
     if (!user) {
+      historyGuardActiveRef.current = false;
       return undefined;
     }
 
-    const scannerHistoryState = {
-      ...(window.history.state || {}),
-      examPulseScannerGuard: true
-    };
-
-    window.history.pushState(scannerHistoryState, "", window.location.href);
+    historyGuardActiveRef.current = true;
+    lastBackHandledAtRef.current = 0;
+    pushScannerHistoryGuard();
+    pushScannerHistoryGuard();
 
     function handleBrowserBack() {
-      window.history.pushState(scannerHistoryState, "", window.location.href);
+      if (!historyGuardActiveRef.current) {
+        return;
+      }
+
+      pushScannerHistoryGuard();
+
+      const now = Date.now();
+      if (now - lastBackHandledAtRef.current < 450) {
+        setStatusMessage("Back already handled. Use the on-screen controls if needed.");
+        return;
+      }
+      lastBackHandledAtRef.current = now;
 
       if (busyRef.current || lookupPendingRef.current) {
         setStatusMessage("Please wait for the current action to finish.");
@@ -443,9 +475,10 @@ export function WebScannerApp() {
     window.addEventListener("popstate", handleBrowserBack);
 
     return () => {
+      historyGuardActiveRef.current = false;
       window.removeEventListener("popstate", handleBrowserBack);
     };
-  }, [resetForNextScan, stopCamera, user]);
+  }, [pushScannerHistoryGuard, resetForNextScan, stopCamera, user]);
 
   async function signIn() {
     const normalizedCode = normalizeAccessCode(accessCode);
