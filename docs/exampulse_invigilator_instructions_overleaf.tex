@@ -1,0 +1,196 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1.8cm]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+
+\definecolor{ExamPulseRed}{HTML}{E4002B}
+\definecolor{Ink}{HTML}{0F172A}
+\definecolor{Muted}{HTML}{475569}
+\definecolor{SoftRed}{HTML}{FFF1F2}
+\definecolor{Border}{HTML}{E2E8F0}
+\definecolor{Success}{HTML}{15803D}
+\definecolor{Warning}{HTML}{B45309}
+
+\hypersetup{
+  colorlinks=true,
+  urlcolor=ExamPulseRed,
+  linkcolor=ExamPulseRed
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\textbf{ExamPulse}}
+\rhead{Invigilator Guide}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}
+  {\Large\bfseries\color{Ink}}
+  {}
+  {0pt}
+  {}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{Ink}}
+  {}
+  {0pt}
+  {}
+
+\setlist[itemize]{leftmargin=*, itemsep=3pt, topsep=4pt}
+\setlist[enumerate]{leftmargin=*, itemsep=4pt, topsep=4pt}
+
+\newcommand{\screenshotplaceholder}[2]{
+  \begin{center}
+    \fcolorbox{Border}{SoftRed}{
+      \begin{minipage}[c][#2][c]{0.88\linewidth}
+        \centering
+        \textbf{\color{ExamPulseRed} Screenshot Placeholder}\\[6pt]
+        \color{Muted} #1
+      \end{minipage}
+    }
+  \end{center}
+}
+
+\newcommand{\importantbox}[1]{
+  \vspace{6pt}
+  \noindent\fcolorbox{Border}{SoftRed}{
+    \begin{minipage}{0.96\linewidth}
+      \textbf{\color{ExamPulseRed} Important:} #1
+    \end{minipage}
+  }
+  \vspace{6pt}
+}
+
+\begin{document}
+
+\begin{center}
+  {\Huge \textbf{\color{ExamPulseRed} ExamPulse}}\\[6pt]
+  {\Large Invigilator Attendance Scanner Guide}\\[8pt]
+  {\color{Muted} Short instructions for marking exam attendance using the web scanner}
+\end{center}
+
+\vspace{8pt}
+
+\importantbox{Please open the scanner link before the exam starts. The OCR scanner may take \textbf{20--40 seconds} to load the first time on a phone.}
+
+\section{1. What You Need}
+
+\begin{tabularx}{\linewidth}{>{\bfseries}l X}
+Scanner link & \href{https://exampulse.xyz/scan}{https://exampulse.xyz/scan} \\
+Access code & Your personal invigilator code, sent by email \\
+Device & Any phone with a camera and internet access \\
+Browser & Safari on iPhone, Chrome/Samsung Internet on Android \\
+\end{tabularx}
+
+\section{2. Sign In}
+
+\begin{enumerate}
+  \item Open the scanner link on your phone:
+  \href{https://exampulse.xyz/scan}{https://exampulse.xyz/scan}
+  \item Enter your invigilator access code.
+  \item Allow camera access when prompted.
+  \item Wait for the OCR scanner to finish loading.
+\end{enumerate}
+
+\screenshotplaceholder{Insert screenshot of the invigilator login screen with the access-code field.}{4.5cm}
+
+\section{3. Select Your Room}
+
+After signing in, you will see the room(s) assigned to you for the active exam.
+
+\begin{itemize}
+  \item Select the room where you are invigilating.
+  \item Make sure the room name matches your physical exam room.
+  \item If no room appears, contact Ahmed before marking attendance.
+\end{itemize}
+
+\screenshotplaceholder{Insert screenshot of the room selection screen.}{4.5cm}
+
+\section{4. Scan a Student ID}
+
+\begin{enumerate}
+  \item Hold the student ID card under the camera.
+  \item Place only the \textbf{student number} inside the red scan box.
+  \item Keep the card steady for a moment.
+  \item When the student number is detected, review the result shown by the system.
+\end{enumerate}
+
+\importantbox{The scanner reads the printed student number, not the barcode. If the room is dark, use the torch button or ask the student to hold the card under better light.}
+
+\screenshotplaceholder{Insert screenshot of the live scanner with the red scan box.}{5.2cm}
+
+\section{5. Understand the Scan Results}
+
+\begin{tabularx}{\linewidth}{>{\bfseries}l X}
+\textcolor{Success}{Present} & Student is in the correct room. Mark attendance. \\
+\textcolor{Warning}{Wrong room} & Student belongs to another room. The system will show the correct room/zone. \\
+Already marked & Student has already been marked present for this exam. Do not mark again. \\
+Student not found & Student number is not in the published exam roster. Check the number or contact the exam administrator. \\
+\end{tabularx}
+
+\screenshotplaceholder{Insert screenshot of a successful scan result.}{4.5cm}
+
+\section{6. Wrong-Room Students}
+
+If a student is in the wrong room, the app will show the expected room and zone.
+
+\begin{itemize}
+  \item Use \textbf{Send to correct room} if the student should move to their assigned room.
+  \item Use \textbf{Mark present in this room} only if you intentionally want to record attendance in your room.
+  \item Wrong-room attendance is flagged automatically for audit purposes.
+\end{itemize}
+
+\importantbox{Wrong-room override does not change the student's official room allocation. It only records that the student was marked present in a different room.}
+
+\screenshotplaceholder{Insert screenshot of the wrong-room result with both actions visible.}{5cm}
+
+\section{7. Manual Entry}
+
+Use manual entry if:
+
+\begin{itemize}
+  \item the student forgot their ID card,
+  \item the card is damaged,
+  \item lighting is poor,
+  \item OCR reads the number incorrectly.
+\end{itemize}
+
+Type the student number carefully and tap \textbf{Lookup}. The system will perform the same attendance checks as a camera scan.
+
+\screenshotplaceholder{Insert screenshot of manual mode / manual lookup.}{4.5cm}
+
+\section{8. Quick Troubleshooting}
+
+\begin{tabularx}{\linewidth}{>{\bfseries}l X}
+Scanner is still loading & Wait 20--40 seconds on first use. Keep the browser tab open. \\
+Camera does not open & Check browser camera permission and refresh the page. \\
+OCR is not detecting & Improve lighting, use torch, keep only the student number inside the red box, or use Manual Mode. \\
+Student not found & Recheck the digits. If still not found, the student may not be in the exam roster. \\
+No rooms assigned & Confirm you used the correct access code, then contact Ahmed. \\
+Network issue & Refresh the page or switch between Wi-Fi and mobile data. \\
+\end{tabularx}
+
+\section{9. End-of-Exam Checklist}
+
+\begin{itemize}
+  \item Confirm the room count looks reasonable.
+  \item Check any wrong-room or flagged entries.
+  \item Report unresolved issues to Ahmed.
+  \item Do not share your invigilator access code with students.
+\end{itemize}
+
+\vfill
+
+\begin{center}
+  \color{Muted}
+  For any queries, reply to the ExamPulse email or contact Ahmed at\\
+  \href{mailto:ahmed.sohair.khan@rmit.edu.au}{ahmed.sohair.khan@rmit.edu.au}
+\end{center}
+
+\end{document}
