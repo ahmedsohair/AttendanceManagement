@@ -57,6 +57,13 @@
   \end{center}
 }
 
+\newcommand{\screenshotimage}[2]{
+  \begin{center}
+    \includegraphics[width=0.52\linewidth]{#1}\\[4pt]
+    {\small\color{Muted} #2}
+  \end{center}
+}
+
 \newcommand{\importantbox}[1]{
   \vspace{6pt}
   \noindent\fcolorbox{Border}{SoftRed}{
@@ -98,7 +105,7 @@ Browser & Safari on iPhone, Chrome/Samsung Internet on Android \\
   \item Wait for the OCR scanner to finish loading.
 \end{enumerate}
 
-\screenshotplaceholder{Insert screenshot of the invigilator login screen with the access-code field.}{4.5cm}
+\screenshotimage{screenshots/scanner-login.png}{Invigilator login screen}
 
 \section{3. Select Your Room}
 
@@ -110,7 +117,7 @@ After signing in, you will see the room(s) assigned to you for the active exam.
   \item If no room appears, contact Ahmed before marking attendance.
 \end{itemize}
 
-\screenshotplaceholder{Insert screenshot of the room selection screen.}{4.5cm}
+\screenshotimage{screenshots/scanner-rooms.png}{Room selection screen}
 
 \section{4. Scan a Student ID}
 
@@ -124,7 +131,7 @@ After signing in, you will see the room(s) assigned to you for the active exam.
 
 \importantbox{The scanner reads the printed student number, not the barcode. If the room is dark, use the torch button or ask the student to hold the card under better light.}
 
-\screenshotplaceholder{Insert screenshot of the live scanner with the red scan box.}{5.2cm}
+\screenshotimage{screenshots/scanner-scanner.png}{Live scanner with the red scan box}
 
 \section{5. Understand the Scan Results}
 
@@ -135,7 +142,7 @@ Already marked & Student has already been marked present for this exam. Do not m
 Student not found & Student number is not in the published exam roster. Check the number, edit it if OCR misread it, and tap \textbf{Lookup} again. If still not found, contact the exam administrator. \\
 \end{tabularx}
 
-\screenshotplaceholder{Insert screenshot of a successful scan result.}{4.5cm}
+\screenshotimage{screenshots/scanner-ready.png}{Successful scan result ready to mark}
 
 \section{6. Wrong-Room Students}
 
@@ -149,7 +156,7 @@ If a student is in the wrong room, the app will show the expected room and zone.
 
 \importantbox{Wrong-room override does not change the student's official room allocation. It only records that the student was marked present in a different room.}
 
-\screenshotplaceholder{Insert screenshot of the wrong-room result with both actions visible.}{5cm}
+\screenshotimage{screenshots/scanner-wrong.png}{Wrong-room result with redirect and override actions}
 
 \section{7. Manual Entry}
 
@@ -166,7 +173,7 @@ Type the student number carefully and tap \textbf{Lookup}. The system will perfo
 
 If the student does not have their physical student ID card, use the \textbf{Comments} field to briefly record how their identity was checked. For example: ``checked photo of student ID'', ``checked another photo ID'', or ``verified by authorised staff''.
 
-\screenshotplaceholder{Insert screenshot of manual mode / manual lookup, including the comments field.}{4.5cm}
+\screenshotimage{screenshots/scanner-manual.png}{Manual entry with comments field}
 
 \section{8. Quick Troubleshooting}
 

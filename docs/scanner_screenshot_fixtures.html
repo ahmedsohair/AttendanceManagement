@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ExamPulse Scanner Screenshot Fixtures</title>
+  <style>
+    :root {
+      --red: #e4002b;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --panel: #ffffff;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--ink);
+      background: #f8fafc;
+    }
+
+    #app {
+      position: relative;
+      width: 430px;
+      height: 932px;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      background: var(--red);
+      color: white;
+      padding: 14px 18px;
+      font-weight: 800;
+    }
+
+    button.secondary {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(17, 17, 17, 0.68);
+      color: white;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      border-radius: 18px;
+      background: white;
+      padding: 14px 16px;
+      color: var(--ink);
+    }
+
+    textarea {
+      resize: none;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .brand-icon {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      place-items: center;
+      border-radius: 9px;
+      background: var(--red);
+      color: white;
+      font-size: 18px;
+    }
+
+    .brand span span {
+      color: var(--red);
+      font-weight: 400;
+    }
+
+    .shell {
+      display: grid;
+      min-height: 932px;
+      place-items: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(228, 0, 43, 0.12), transparent 28%),
+        linear-gradient(135deg, #ffffff, #f3f4f6);
+    }
+
+    .card {
+      display: grid;
+      width: min(560px, 100%);
+      gap: 16px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(228, 0, 43, 0.06), rgba(15, 23, 42, 0.02)), white;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .kicker {
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    .subtle {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .room-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .room-card {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      border-radius: 22px;
+      border: 1px solid rgba(228, 0, 43, 0.18);
+      background: #fff5f6;
+      color: var(--ink);
+      text-align: left;
+      box-shadow: none;
+    }
+
+    .room-card strong {
+      font-size: 26px;
+    }
+
+    .camera-page {
+      position: relative;
+      min-height: 932px;
+      height: 932px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.55), rgba(0, 0, 0, 0.12)),
+        repeating-linear-gradient(35deg, #aaa 0 1px, #d7d7d7 1px 46px);
+    }
+
+    .camera-page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.68), transparent 30%),
+        linear-gradient(0deg, rgba(0, 0, 0, 0.76), transparent 42%);
+    }
+
+    .camera-overlay {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      min-height: 932px;
+      grid-template-rows: auto auto auto minmax(170px, 1fr) auto;
+      gap: 12px;
+      padding: 26px 18px 28px;
+      color: white;
+    }
+
+    .camera-top {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .camera-top h1 {
+      font-size: 52px;
+      margin: 4px 0;
+    }
+
+    .camera-top p {
+      color: rgba(255, 255, 255, 0.78);
+      font-size: 22px;
+    }
+
+    .torch {
+      justify-self: start;
+      grid-column: 1 / -1;
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .status-strip span {
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .ocr-status {
+      border-radius: 18px;
+      padding: 12px 14px;
+      background: rgba(17, 17, 17, 0.82);
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .scan-guide {
+      position: relative;
+      align-self: center;
+      justify-self: center;
+      display: grid;
+      width: min(90vw, 680px);
+      height: min(26vh, 210px);
+      place-items: center;
+      border: 3px solid rgba(255, 255, 255, 0.78);
+      border-radius: 28px;
+      box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.14);
+    }
+
+    .scan-region {
+      width: 78%;
+      height: 42%;
+      border: 4px solid var(--red);
+      border-radius: 18px;
+      background: rgba(228, 0, 43, 0.08);
+    }
+
+    .scan-guide span {
+      position: absolute;
+      bottom: 24px;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .camera-bottom {
+      display: grid;
+      gap: 12px;
+    }
+
+    .manual-row {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 20px;
+      background: rgba(17, 17, 17, 0.64);
+    }
+
+    .manual-row input {
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .camera-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      display: grid;
+      gap: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      background: rgba(17, 17, 17, 0.64);
+      padding: 12px;
+    }
+
+    .stat strong {
+      font-size: 32px;
+    }
+
+    .stat span {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    .chip {
+      display: grid;
+      min-width: 112px;
+      border-radius: 16px;
+      background: rgba(12, 122, 67, 0.82);
+      padding: 10px 12px;
+    }
+
+    .chip.warn {
+      background: rgba(183, 107, 0, 0.86);
+    }
+
+    .review-sheet {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      align-items: end;
+      padding: 18px;
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .review-card {
+      display: grid;
+      gap: 12px;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      border-top: 8px solid var(--ok);
+      background: white;
+      color: var(--ink);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .review-card.wrong,
+    .review-card.not-found {
+      border-top-color: var(--danger);
+    }
+
+    .review-card.done {
+      border-top-color: var(--muted);
+    }
+
+    .review-card.pending {
+      border-top-color: var(--warn);
+    }
+
+    .review-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .review-actions .secondary {
+      background: #f8fafc;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <script>
+    const state = new URLSearchParams(location.search).get("state") || "login";
+    const app = document.querySelector("#app");
+
+    function brand() {
+      return `<div class="brand"><div class="brand-icon">⌁</div><span>Exam<span>Pulse</span></span></div>`;
+    }
+
+    function shell(inner) {
+      return `<div class="shell"><section class="card">${inner}</section></div>`;
+    }
+
+    function cameraBase(review = "") {
+      return `
+        <div class="camera-page">
+          <div class="camera-overlay">
+            <div class="camera-top">
+              <button class="secondary">Back</button>
+              <div>
+                <div class="kicker">Live attendance</div>
+                <h1>Room A</h1>
+                <p>Algorithms and Analysis | 09:30</p>
+              </div>
+              <button class="secondary torch">Torch On</button>
+            </div>
+            <div class="status-strip">
+              <span>Connected</span>
+              <span>Room Room A</span>
+              <span>Last sync 09:12:18</span>
+            </div>
+            <div class="ocr-status">Looking for student ID inside the red box</div>
+            <div class="scan-guide">
+              <div class="scan-region"></div>
+              <span>Place student number here</span>
+            </div>
+            <div class="camera-bottom">
+              <div class="manual-row">
+                <input placeholder="Manual student number" value="" />
+                <button class="secondary">Lookup</button>
+              </div>
+              <div class="camera-actions">
+                <button class="secondary">Pause Scanning</button>
+                <button class="secondary">Manual Mode</button>
+              </div>
+              <div class="stats">
+                <div class="stat"><strong>42</strong><span>Present</span></div>
+                <div class="stat"><strong>113</strong><span>Allocated</span></div>
+                <div class="stat"><strong>1</strong><span>Mismatch</span></div>
+                <div class="stat"><strong>2</strong><span>Redirected</span></div>
+              </div>
+              <div class="chips">
+                <div class="chip"><strong>4149287</strong><span>Present</span></div>
+                <div class="chip warn"><strong>4181947</strong><span>Mismatch</span></div>
+                <div class="chip"><strong>4178032</strong><span>Present</span></div>
+              </div>
+            </div>
+          </div>
+          ${review}
+        </div>
+      `;
+    }
+
+    const states = {
+      login: () => shell(`
+        ${brand()}
+        <h1>Invigilator Web Login</h1>
+        <p class="subtle">Use the access code emailed to you. This scanner works from Safari or Chrome using the browser camera.</p>
+        <input value="AMS-1234-5678" />
+        <button>Sign In</button>
+      `),
+      rooms: () => shell(`
+        ${brand()}
+        <div class="kicker">Assigned rooms</div>
+        <h1>Choose Room</h1>
+        <p class="subtle">Ahmed Invigilator</p>
+        <div class="room-grid">
+          <button class="room-card"><strong>Room A</strong><span>Algorithms and Analysis | 09:30</span></button>
+          <button class="room-card"><strong>Room B</strong><span>Algorithms and Analysis | 09:30</span></button>
+        </div>
+      `),
+      scanner: () => cameraBase(),
+      ready: () => cameraBase(`
+        <div class="review-sheet">
+          <section class="review-card">
+            <h2>Ready to mark</h2>
+            <input value="4149287" />
+            <textarea rows="3" placeholder="Comments (optional)"></textarea>
+            <p class="subtle">Student found in Room A, Zone 2.</p>
+            <div class="review-actions">
+              <button class="secondary">Lookup Edited ID</button>
+              <button>Mark Present</button>
+            </div>
+          </section>
+        </div>
+      `),
+      wrong: () => cameraBase(`
+        <div class="review-sheet">
+          <section class="review-card wrong">
+            <h2>Wrong room detected</h2>
+            <input value="4181947" />
+            <textarea rows="3" placeholder="Comments (optional)">Student came to Room A.</textarea>
+            <p class="subtle">Expected Room B, Zone 3. Choose whether to redirect or mark with a mismatch flag.</p>
+            <div class="review-actions">
+              <button class="secondary">Lookup Edited ID</button>
+              <button class="secondary">Send To Room</button>
+              <button>Mark Anyway</button>
+            </div>
+          </section>
+        </div>
+      `),
+      manual: () => cameraBase(`
+        <div class="review-sheet">
+          <section class="review-card not-found">
+            <h2>Manual entry / comments</h2>
+            <input value="4149287" />
+            <textarea rows="3">Student forgot ID; checked photo of student ID.</textarea>
+            <p class="subtle">Use comments when attendance is marked after an alternate identity check.</p>
+            <div class="review-actions">
+              <button class="secondary">Lookup Edited ID</button>
+              <button>Mark Present</button>
+            </div>
+          </section>
+        </div>
+      `)
+    };
+
+    app.innerHTML = states[state]();
+  </script>
+</body>
+</html>
