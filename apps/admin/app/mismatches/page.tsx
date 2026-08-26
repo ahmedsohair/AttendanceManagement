@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getExamSessionStatus } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
 import { formatAuditTime } from "@/lib/audit-time";
-import { readStore } from "@/lib/store";
+import { readAdminAuditStoreFast } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,10 @@ export default async function MismatchesPage({
   await requireAdminPageUser();
   const params = (await searchParams) || {};
   const examSessionFilter = (params.examSessionId || "active").trim();
-  const store = await readStore();
+  const store = await readAdminAuditStoreFast(examSessionFilter, {
+    includeAttendance: true,
+    attendanceMismatchOnly: true
+  });
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
   const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
   const userMap = new Map(store.users.map((user) => [user.id, user]));

@@ -1697,6 +1697,118 @@ export async function readExamSessionStoreFast(examSessionId: string): Promise<D
   };
 }
 
+export async function readAdminAuditStoreFast(
+  examSessionFilter: string,
+  options: {
+    includeAttendance?: boolean;
+    includeIncidents?: boolean;
+    attendanceMismatchOnly?: boolean;
+  } = {}
+): Promise<DataStore> {
+  if (!isSupabaseConfigured()) {
+    return readStore();
+  }
+
+  const supabase = getSupabaseAdmin();
+  const [sessionsResponse, usersResponse] = await Promise.all([
+    supabase
+      .from("exam_sessions")
+      .select("id, name, exam_date, start_time, published, status, created_at"),
+    supabase.from("users").select("id, email, full_name, role")
+  ]);
+
+  if (sessionsResponse.error) {
+    throw new Error(sessionsResponse.error.message);
+  }
+
+  if (usersResponse.error) {
+    throw new Error(usersResponse.error.message);
+  }
+
+  const examSessions = (sessionsResponse.data || []).map(mapSupabaseSession);
+  const users = (usersResponse.data || []).map((user) =>
+    userWithAssignments({
+      id: String(user.id),
+      email: String(user.email),
+      full_name: String(user.full_name),
+      role: user.role as User["role"]
+    })
+  );
+  const selectedSessionIds =
+    examSessionFilter === "all"
+      ? examSessions.map((session) => session.id)
+      : examSessionFilter === "active"
+        ? examSessions
+            .filter((session) => (session.status || (session.published ? "active" : "draft")) === "active")
+            .map((session) => session.id)
+        : [examSessionFilter];
+
+  if (!selectedSessionIds.length) {
+    return {
+      users,
+      examSessions,
+      rooms: [],
+      studentAllocations: [],
+      attendanceEvents: [],
+      incidents: []
+    };
+  }
+
+  const roomsQuery = supabase
+    .from("rooms")
+    .select("id, exam_session_id, code, display_name, capacity")
+    .in("exam_session_id", selectedSessionIds);
+  const allocationsQuery = supabase
+    .from("student_allocations")
+    .select("id, exam_session_id, student_id, student_name, room_id, zone, course_code, program")
+    .in("exam_session_id", selectedSessionIds);
+  let attendanceQuery = supabase
+    .from("attendance_events")
+    .select("id, exam_session_id, student_id, marked_by_user_id, marked_in_room_id, expected_room_id, source, override_type, room_mismatch, comment, device_id, created_at")
+    .in("exam_session_id", selectedSessionIds);
+
+  if (options.attendanceMismatchOnly) {
+    attendanceQuery = attendanceQuery.eq("room_mismatch", true);
+  }
+
+  const incidentsQuery = supabase
+    .from("incidents")
+    .select("id, exam_session_id, student_id, room_id, expected_room_id, user_id, incident_type, details, created_at")
+    .in("exam_session_id", selectedSessionIds);
+
+  const [roomsResponse, allocationsResponse, attendanceResponse, incidentsResponse] =
+    await Promise.all([
+      roomsQuery,
+      allocationsQuery,
+      options.includeAttendance
+        ? attendanceQuery
+        : Promise.resolve({ data: [], error: null }),
+      options.includeIncidents
+        ? incidentsQuery
+        : Promise.resolve({ data: [], error: null })
+    ]);
+
+  for (const response of [
+    roomsResponse,
+    allocationsResponse,
+    attendanceResponse,
+    incidentsResponse
+  ]) {
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+  }
+
+  return {
+    users,
+    examSessions,
+    rooms: (roomsResponse.data || []).map(mapSupabaseRoom),
+    studentAllocations: (allocationsResponse.data || []).map(mapSupabaseAllocation),
+    attendanceEvents: (attendanceResponse.data || []).map(mapSupabaseAttendance),
+    incidents: (incidentsResponse.data || []).map(mapSupabaseIncident)
+  };
+}
+
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
   const result = await lookupStudentFast({
     examSessionId: request.examSessionId,
