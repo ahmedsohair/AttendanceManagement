@@ -165,7 +165,7 @@ async function createDigitOcrWorker(
         backend: "wasm",
         numThreads: 1,
         simd: true,
-        wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/"
+        wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/"
       }
     }),
     onnxModelTimeoutMs,
