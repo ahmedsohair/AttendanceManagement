@@ -1388,6 +1388,114 @@ export async function lookupStudentFast(request: LookupRequest): Promise<LookupR
   };
 }
 
+export async function getRoomLiveStateFast(roomId: string) {
+  if (!isSupabaseConfigured()) {
+    const { getRoomLiveState } = await import("./selectors");
+    return getRoomLiveState(await readStore(), roomId);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const roomResponse = await supabase
+    .from("rooms")
+    .select("id, exam_session_id, code, display_name, capacity")
+    .eq("id", roomId)
+    .maybeSingle();
+
+  if (roomResponse.error) {
+    throw new Error(roomResponse.error.message);
+  }
+
+  if (!roomResponse.data) {
+    throw new Error("Room not found.");
+  }
+
+  const room = mapSupabaseRoom(roomResponse.data);
+  const [
+    allocatedResponse,
+    attendanceResponse,
+    mismatchResponse,
+    redirectedResponse,
+    recentAttendanceResponse,
+    recentIncidentsResponse
+  ] = await Promise.all([
+    supabase
+      .from("student_allocations")
+      .select("id", { count: "exact", head: true })
+      .eq("room_id", roomId),
+    supabase
+      .from("attendance_events")
+      .select("id", { count: "exact", head: true })
+      .eq("marked_in_room_id", roomId),
+    supabase
+      .from("attendance_events")
+      .select("id", { count: "exact", head: true })
+      .eq("marked_in_room_id", roomId)
+      .eq("room_mismatch", true),
+    supabase
+      .from("incidents")
+      .select("id", { count: "exact", head: true })
+      .eq("room_id", roomId)
+      .eq("incident_type", "wrong_room_redirected"),
+    supabase
+      .from("attendance_events")
+      .select("student_id, created_at, room_mismatch, comment")
+      .eq("marked_in_room_id", roomId)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("incidents")
+      .select("incident_type, student_id, created_at, details")
+      .eq("room_id", roomId)
+      .order("created_at", { ascending: false })
+      .limit(10)
+  ]);
+
+  for (const response of [
+    allocatedResponse,
+    attendanceResponse,
+    mismatchResponse,
+    redirectedResponse,
+    recentAttendanceResponse,
+    recentIncidentsResponse
+  ]) {
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+  }
+
+  return {
+    room,
+    summary: {
+      roomId: room.id,
+      roomCode: room.code,
+      roomName: room.displayName,
+      allocatedCount: allocatedResponse.count || 0,
+      presentCount: attendanceResponse.count || 0,
+      mismatchPresentCount: mismatchResponse.count || 0,
+      redirectedCount: redirectedResponse.count || 0
+    },
+    recentAttendance: (recentAttendanceResponse.data || []).map((item) => ({
+      studentId: String(item.student_id),
+      createdAt: String(item.created_at),
+      roomMismatch: Boolean(item.room_mismatch),
+      comment: item.comment === null || item.comment === undefined ? undefined : String(item.comment)
+    })),
+    recentIncidents: (recentIncidentsResponse.data || []).map((item) => {
+      const details =
+        item.details && typeof item.details === "object"
+          ? (item.details as Record<string, string | number | boolean | null | undefined>)
+          : {};
+
+      return {
+        incidentType: String(item.incident_type),
+        studentId: item.student_id === null || item.student_id === undefined ? undefined : String(item.student_id),
+        createdAt: String(item.created_at),
+        comment: typeof details.comment === "string" ? details.comment : undefined
+      };
+    })
+  };
+}
+
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
   const result = await lookupStudentFast({
     examSessionId: request.examSessionId,
