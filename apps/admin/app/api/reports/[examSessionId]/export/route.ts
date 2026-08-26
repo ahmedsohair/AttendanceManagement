@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { buildExamSessionReport } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
+import { readExamSessionStoreFast } from "@/lib/repository";
 import { buildWorkbookSheets } from "@/lib/spreadsheet";
-import { readStore } from "@/lib/store";
 
 export async function GET(
   request: Request,
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   await requireApiUser(request, { allowedRoles: ["admin"] });
   const { examSessionId } = await params;
-  const store = await readStore();
+  const store = await readExamSessionStoreFast(examSessionId);
   const report = buildExamSessionReport(store, examSessionId);
 
   const roomMap = new Map(store.rooms.map((room) => [room.id, room]));

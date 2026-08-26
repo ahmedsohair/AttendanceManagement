@@ -5,7 +5,7 @@ import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ExamAssignmentWizard } from "@/components/exam-assignment-wizard";
 import { formatAuditTime } from "@/lib/audit-time";
 import { requireAdminPageUser } from "@/lib/auth";
-import { readStore } from "@/lib/store";
+import { readExamSessionStoreFast } from "@/lib/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export default async function SessionDetailPage({
   const { id } = await params;
   const notices = (await searchParams) || {};
   const searchTerm = (notices.q || "").trim().toLowerCase();
-  const store = await readStore();
+  const store = await readExamSessionStoreFast(id);
   const session = store.examSessions.find((item) => item.id === id);
 
   if (!session) {

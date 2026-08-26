@@ -4,6 +4,7 @@ import {
   normalizeImportPayload,
   type AttendanceEvent,
   type DataStore,
+  type ExamSession,
   type Incident,
   type LookupRequest,
   type LookupResult,
@@ -1270,6 +1271,21 @@ function mapSupabaseAllocation(row: Record<string, unknown>): StudentAllocation 
   };
 }
 
+function mapSupabaseSession(row: Record<string, unknown>): ExamSession {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    examDate: String(row.exam_date),
+    startTime: String(row.start_time),
+    published: Boolean(row.published),
+    status:
+      row.status === "draft" || row.status === "active" || row.status === "closed"
+        ? row.status
+        : undefined,
+    createdAt: String(row.created_at)
+  };
+}
+
 function mapSupabaseAttendance(row: Record<string, unknown>): AttendanceEvent {
   return {
     id: String(row.id),
@@ -1283,6 +1299,28 @@ function mapSupabaseAttendance(row: Record<string, unknown>): AttendanceEvent {
     roomMismatch: Boolean(row.room_mismatch),
     comment: row.comment === null || row.comment === undefined ? undefined : String(row.comment),
     deviceId: String(row.device_id),
+    createdAt: String(row.created_at)
+  };
+}
+
+function mapSupabaseIncident(row: Record<string, unknown>): Incident {
+  const details =
+    row.details && typeof row.details === "object"
+      ? (row.details as Incident["details"])
+      : {};
+
+  return {
+    id: String(row.id),
+    examSessionId: String(row.exam_session_id),
+    studentId: row.student_id === null || row.student_id === undefined ? undefined : String(row.student_id),
+    roomId: row.room_id === null || row.room_id === undefined ? undefined : String(row.room_id),
+    expectedRoomId:
+      row.expected_room_id === null || row.expected_room_id === undefined
+        ? undefined
+        : String(row.expected_room_id),
+    userId: row.user_id === null || row.user_id === undefined ? undefined : String(row.user_id),
+    incidentType: row.incident_type as Incident["incidentType"],
+    details,
     createdAt: String(row.created_at)
   };
 }
@@ -1576,6 +1614,87 @@ export async function listMobileRoomsForUserFast(user: User) {
         : undefined
     };
   });
+}
+
+export async function readExamSessionStoreFast(examSessionId: string): Promise<DataStore> {
+  if (!isSupabaseConfigured()) {
+    return readStore();
+  }
+
+  const supabase = getSupabaseAdmin();
+  const [
+    sessionResponse,
+    roomsResponse,
+    allocationsResponse,
+    attendanceResponse,
+    incidentsResponse,
+    usersResponse
+  ] = await Promise.all([
+    supabase
+      .from("exam_sessions")
+      .select("id, name, exam_date, start_time, published, status, created_at")
+      .eq("id", examSessionId)
+      .maybeSingle(),
+    supabase
+      .from("rooms")
+      .select("id, exam_session_id, code, display_name, capacity")
+      .eq("exam_session_id", examSessionId),
+    supabase
+      .from("student_allocations")
+      .select("id, exam_session_id, student_id, student_name, room_id, zone, course_code, program")
+      .eq("exam_session_id", examSessionId),
+    supabase
+      .from("attendance_events")
+      .select("id, exam_session_id, student_id, marked_by_user_id, marked_in_room_id, expected_room_id, source, override_type, room_mismatch, comment, device_id, created_at")
+      .eq("exam_session_id", examSessionId),
+    supabase
+      .from("incidents")
+      .select("id, exam_session_id, student_id, room_id, expected_room_id, user_id, incident_type, details, created_at")
+      .eq("exam_session_id", examSessionId),
+    supabase.from("users").select("id, email, full_name, role")
+  ]);
+
+  for (const response of [
+    sessionResponse,
+    roomsResponse,
+    allocationsResponse,
+    attendanceResponse,
+    incidentsResponse,
+    usersResponse
+  ]) {
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+  }
+
+  const users = (usersResponse.data || []).map((user) =>
+    userWithAssignments({
+      id: String(user.id),
+      email: String(user.email),
+      full_name: String(user.full_name),
+      role: user.role as User["role"]
+    })
+  );
+
+  if (!sessionResponse.data) {
+    return {
+      users,
+      examSessions: [],
+      rooms: [],
+      studentAllocations: [],
+      attendanceEvents: [],
+      incidents: []
+    };
+  }
+
+  return {
+    users,
+    examSessions: [mapSupabaseSession(sessionResponse.data)],
+    rooms: (roomsResponse.data || []).map(mapSupabaseRoom),
+    studentAllocations: (allocationsResponse.data || []).map(mapSupabaseAllocation),
+    attendanceEvents: (attendanceResponse.data || []).map(mapSupabaseAttendance),
+    incidents: (incidentsResponse.data || []).map(mapSupabaseIncident)
+  };
 }
 
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
