@@ -185,7 +185,13 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   const supabase = getSupabaseAdmin();
   const activeSessionIdSet = new Set(activeSessionIds);
-  const [roomsResponse, assignmentsResponse, attendanceResponse, incidentsResponse] = await Promise.all([
+  const [
+    roomsResponse,
+    assignmentsResponse,
+    attendanceResponse,
+    mismatchResponse,
+    incidentsResponse
+  ] = await Promise.all([
     supabase
       .from("rooms")
       .select("id, exam_session_id")
@@ -193,11 +199,16 @@ export async function getDashboardData(): Promise<DashboardData> {
     supabase.from("room_assignments").select("room_id"),
     supabase
       .from("attendance_events")
-      .select("exam_session_id, room_mismatch")
+      .select("id", { count: "exact", head: true })
       .in("exam_session_id", activeSessionIds),
     supabase
+      .from("attendance_events")
+      .select("id", { count: "exact", head: true })
+      .in("exam_session_id", activeSessionIds)
+      .eq("room_mismatch", true),
+    supabase
       .from("incidents")
-      .select("exam_session_id")
+      .select("id", { count: "exact", head: true })
       .in("exam_session_id", activeSessionIds)
   ]);
 
@@ -211,6 +222,10 @@ export async function getDashboardData(): Promise<DashboardData> {
 
   if (attendanceResponse.error) {
     throw new Error(attendanceResponse.error.message);
+  }
+
+  if (mismatchResponse.error) {
+    throw new Error(mismatchResponse.error.message);
   }
 
   if (incidentsResponse.error) {
@@ -227,10 +242,9 @@ export async function getDashboardData(): Promise<DashboardData> {
       .map((assignment) => assignment.room_id)
       .filter((roomId) => activeRoomIds.has(roomId))
   );
-  const present = (attendanceResponse.data || []).length;
-  const mismatch = (attendanceResponse.data || []).filter((event) => event.room_mismatch)
-    .length;
-  const incidents = (incidentsResponse.data || []).length;
+  const present = attendanceResponse.count || 0;
+  const mismatch = mismatchResponse.count || 0;
+  const incidents = incidentsResponse.count || 0;
 
   return {
     ...overview,
