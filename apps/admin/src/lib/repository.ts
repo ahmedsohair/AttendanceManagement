@@ -1,9 +1,16 @@
 import {
+  lookupStudent,
   markAttendance,
   normalizeImportPayload,
+  type AttendanceEvent,
   type DataStore,
+  type Incident,
+  type LookupRequest,
+  type LookupResult,
   type MarkAttendanceRequest,
+  type Room,
   type SessionImportPayload,
+  type StudentAllocation,
   type User
 } from "@algo-attendance/shared";
 import { generateAccessCode, hashAccessCode } from "./access-code";
@@ -1235,64 +1242,302 @@ export async function deleteExamSession(sessionId: string) {
   }
 }
 
+function normalizeComment(comment?: string) {
+  const trimmed = comment?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function mapSupabaseRoom(row: Record<string, unknown>): Room {
+  return {
+    id: String(row.id),
+    examSessionId: String(row.exam_session_id),
+    code: String(row.code),
+    displayName: String(row.display_name),
+    capacity: row.capacity === null || row.capacity === undefined ? undefined : Number(row.capacity)
+  };
+}
+
+function mapSupabaseAllocation(row: Record<string, unknown>): StudentAllocation {
+  return {
+    id: String(row.id),
+    examSessionId: String(row.exam_session_id),
+    studentId: String(row.student_id),
+    studentName: String(row.student_name),
+    roomId: String(row.room_id),
+    zone: String(row.zone),
+    courseCode: row.course_code === null || row.course_code === undefined ? undefined : String(row.course_code),
+    program: row.program === null || row.program === undefined ? undefined : String(row.program)
+  };
+}
+
+function mapSupabaseAttendance(row: Record<string, unknown>): AttendanceEvent {
+  return {
+    id: String(row.id),
+    examSessionId: String(row.exam_session_id),
+    studentId: String(row.student_id),
+    markedByUserId: String(row.marked_by_user_id),
+    markedInRoomId: String(row.marked_in_room_id),
+    expectedRoomId: String(row.expected_room_id),
+    source: row.source as AttendanceEvent["source"],
+    overrideType: row.override_type as AttendanceEvent["overrideType"],
+    roomMismatch: Boolean(row.room_mismatch),
+    comment: row.comment === null || row.comment === undefined ? undefined : String(row.comment),
+    deviceId: String(row.device_id),
+    createdAt: String(row.created_at)
+  };
+}
+
+async function insertSupabaseIncident(incident: Incident) {
+  const supabase = getSupabaseAdmin();
+  const incidentInsert = await supabase.from("incidents").insert({
+    id: incident.id,
+    exam_session_id: incident.examSessionId,
+    student_id: incident.studentId ?? null,
+    room_id: incident.roomId ?? null,
+    expected_room_id: incident.expectedRoomId ?? null,
+    user_id: incident.userId ?? null,
+    incident_type: incident.incidentType,
+    details: incident.details,
+    created_at: incident.createdAt
+  });
+
+  if (incidentInsert.error) {
+    throw new Error(incidentInsert.error.message);
+  }
+}
+
+export async function lookupStudentFast(request: LookupRequest): Promise<LookupResult> {
+  if (!isSupabaseConfigured()) {
+    return lookupStudent(await readStore(), request);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const attendanceResponse = await supabase
+    .from("attendance_events")
+    .select("id, exam_session_id, student_id, marked_by_user_id, marked_in_room_id, expected_room_id, source, override_type, room_mismatch, comment, device_id, created_at")
+    .eq("exam_session_id", request.examSessionId)
+    .eq("student_id", request.studentId)
+    .maybeSingle();
+
+  if (attendanceResponse.error) {
+    throw new Error(attendanceResponse.error.message);
+  }
+
+  if (attendanceResponse.data) {
+    return {
+      status: "already_marked",
+      examSessionId: request.examSessionId,
+      studentId: request.studentId,
+      message: "Attendance already marked.",
+      attendance: mapSupabaseAttendance(attendanceResponse.data)
+    };
+  }
+
+  const allocationResponse = await supabase
+    .from("student_allocations")
+    .select("id, exam_session_id, student_id, student_name, room_id, zone, course_code, program")
+    .eq("exam_session_id", request.examSessionId)
+    .eq("student_id", request.studentId)
+    .maybeSingle();
+
+  if (allocationResponse.error) {
+    throw new Error(allocationResponse.error.message);
+  }
+
+  if (!allocationResponse.data) {
+    return {
+      status: "student_not_found",
+      examSessionId: request.examSessionId,
+      studentId: request.studentId,
+      message: "Student was not found in this exam session."
+    };
+  }
+
+  const allocation = mapSupabaseAllocation(allocationResponse.data);
+  if (allocation.roomId !== request.roomId) {
+    const expectedRoomResponse = await supabase
+      .from("rooms")
+      .select("id, exam_session_id, code, display_name, capacity")
+      .eq("id", allocation.roomId)
+      .maybeSingle();
+
+    if (expectedRoomResponse.error) {
+      throw new Error(expectedRoomResponse.error.message);
+    }
+
+    if (!expectedRoomResponse.data) {
+      throw new Error(`Expected room ${allocation.roomId} not found.`);
+    }
+
+    return {
+      status: "wrong_room",
+      examSessionId: request.examSessionId,
+      studentId: request.studentId,
+      message: "Student belongs to a different room.",
+      allocation,
+      expectedRoom: mapSupabaseRoom(expectedRoomResponse.data)
+    };
+  }
+
+  return {
+    status: "ready_to_mark",
+    examSessionId: request.examSessionId,
+    studentId: request.studentId,
+    message: "Student is in the correct room.",
+    allocation
+  };
+}
+
+async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
+  const result = await lookupStudentFast({
+    examSessionId: request.examSessionId,
+    roomId: request.roomId,
+    studentId: request.studentId
+  });
+  const createdAt = nowIso();
+
+  if (result.status === "student_not_found") {
+    const incident: Incident = {
+      id: nextId(),
+      examSessionId: request.examSessionId,
+      roomId: request.roomId,
+      studentId: request.studentId,
+      userId: request.userId,
+      incidentType: "student_not_found",
+      details: {
+        source: request.source,
+        comment: normalizeComment(request.comment)
+      },
+      createdAt
+    };
+
+    await insertSupabaseIncident(incident);
+    return { incident, result };
+  }
+
+  if (result.status === "already_marked") {
+    const incident: Incident = {
+      id: nextId(),
+      examSessionId: request.examSessionId,
+      roomId: request.roomId,
+      expectedRoomId: result.attendance.expectedRoomId,
+      studentId: request.studentId,
+      userId: request.userId,
+      incidentType: "duplicate_attempt",
+      details: {
+        originalAttendanceId: result.attendance.id,
+        source: request.source,
+        comment: normalizeComment(request.comment)
+      },
+      createdAt
+    };
+
+    await insertSupabaseIncident(incident);
+    return { incident, result };
+  }
+
+  if (result.status === "wrong_room" && request.action === "redirect_only") {
+    const incident: Incident = {
+      id: nextId(),
+      examSessionId: request.examSessionId,
+      roomId: request.roomId,
+      expectedRoomId: result.expectedRoom.id,
+      studentId: request.studentId,
+      userId: request.userId,
+      incidentType: "wrong_room_redirected",
+      details: {
+        zone: result.allocation.zone,
+        expectedRoomCode: result.expectedRoom.code,
+        comment: normalizeComment(request.comment)
+      },
+      createdAt
+    };
+
+    await insertSupabaseIncident(incident);
+    return { incident, result };
+  }
+
+  if (result.status === "wrong_room" && !request.overrideWrongRoom) {
+    throw new Error("Wrong-room attendance requires overrideWrongRoom=true.");
+  }
+
+  const allocation = result.allocation;
+  const event: AttendanceEvent = {
+    id: nextId(),
+    examSessionId: request.examSessionId,
+    studentId: request.studentId,
+    markedByUserId: request.userId,
+    markedInRoomId: request.roomId,
+    expectedRoomId: allocation.roomId,
+    source: request.source,
+    overrideType: result.status === "wrong_room" ? "wrong_room_present" : "none",
+    roomMismatch: result.status === "wrong_room",
+    comment: normalizeComment(request.comment),
+    deviceId: request.deviceId,
+    createdAt
+  };
+
+  const supabase = getSupabaseAdmin();
+  const attendanceInsert = await supabase.from("attendance_events").insert({
+    id: event.id,
+    exam_session_id: event.examSessionId,
+    student_id: event.studentId,
+    marked_by_user_id: event.markedByUserId,
+    marked_in_room_id: event.markedInRoomId,
+    expected_room_id: event.expectedRoomId,
+    source: event.source,
+    override_type: event.overrideType,
+    room_mismatch: event.roomMismatch,
+    comment: event.comment ?? null,
+    device_id: event.deviceId,
+    created_at: event.createdAt
+  });
+
+  if (attendanceInsert.error) {
+    if (attendanceInsert.error.code === "23505") {
+      throw new Error("Attendance already marked by another device.");
+    }
+    throw new Error(attendanceInsert.error.message);
+  }
+
+  if (result.status === "wrong_room") {
+    const incident: Incident = {
+      id: nextId(),
+      examSessionId: request.examSessionId,
+      roomId: request.roomId,
+      expectedRoomId: result.expectedRoom.id,
+      studentId: request.studentId,
+      userId: request.userId,
+      incidentType: "wrong_room_present_override",
+      details: {
+        zone: result.allocation.zone,
+        expectedRoomCode: result.expectedRoom.code,
+        comment: normalizeComment(request.comment)
+      },
+      createdAt
+    };
+
+    await insertSupabaseIncident(incident);
+    return { event, incident, result };
+  }
+
+  return { event, result };
+}
+
 export async function applyAttendanceMark(
   request: MarkAttendanceRequest,
   existingStore?: DataStore
 ) {
+  if (isSupabaseConfigured()) {
+    return applySupabaseAttendanceMark(request);
+  }
+
   const store = existingStore || (await readStore());
   const response = markAttendance(store, request, {
     now: nowIso,
     nextId
   });
 
-  if (!isSupabaseConfigured()) {
-    await writeStore(store);
-    return response;
-  }
-
-  const supabase = getSupabaseAdmin();
-
-  if (response.event) {
-    const attendanceInsert = await supabase.from("attendance_events").insert({
-      id: response.event.id,
-      exam_session_id: response.event.examSessionId,
-      student_id: response.event.studentId,
-      marked_by_user_id: response.event.markedByUserId,
-      marked_in_room_id: response.event.markedInRoomId,
-      expected_room_id: response.event.expectedRoomId,
-      source: response.event.source,
-      override_type: response.event.overrideType,
-      room_mismatch: response.event.roomMismatch,
-      comment: response.event.comment ?? null,
-      device_id: response.event.deviceId,
-      created_at: response.event.createdAt
-    });
-
-    if (attendanceInsert.error) {
-      if (attendanceInsert.error.code === "23505") {
-        throw new Error("Attendance already marked by another device.");
-      }
-      throw new Error(attendanceInsert.error.message);
-    }
-  }
-
-  if (response.incident) {
-    const incidentInsert = await supabase.from("incidents").insert({
-      id: response.incident.id,
-      exam_session_id: response.incident.examSessionId,
-      student_id: response.incident.studentId ?? null,
-      room_id: response.incident.roomId ?? null,
-      expected_room_id: response.incident.expectedRoomId ?? null,
-      user_id: response.incident.userId ?? null,
-      incident_type: response.incident.incidentType,
-      details: response.incident.details,
-      created_at: response.incident.createdAt
-    });
-
-    if (incidentInsert.error) {
-      throw new Error(incidentInsert.error.message);
-    }
-  }
-
+  await writeStore(store);
   return response;
 }

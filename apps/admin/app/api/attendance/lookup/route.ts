@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { lookupRequestSchema, lookupStudent, normalizeStudentId } from "@algo-attendance/shared";
-import { requireApiUserWithStore } from "@/lib/auth";
-import { readStore } from "@/lib/store";
+import { requireApiUserForRoom } from "@/lib/auth";
+import { lookupStudentFast } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
 
 export async function POST(request: Request) {
@@ -14,13 +14,12 @@ export async function POST(request: Request) {
       ...parsedBody,
       studentId: normalizeStudentId(parsedBody.studentId)
     };
-    const { store: authorizedStore } = await requireApiUserWithStore(request, {
+    const { store } = await requireApiUserForRoom(request, {
       allowedRoles: ["admin", "invigilator"],
       roomId: body.roomId,
       examSessionId: body.examSessionId
     });
-    const store = authorizedStore || (await readStore());
-    const result = lookupStudent(store, body);
+    const result = store ? lookupStudent(store, body) : await lookupStudentFast(body);
     return NextResponse.json({ result });
   } catch (error) {
     status = 400;

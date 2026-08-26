@@ -164,6 +164,82 @@ export async function requireApiUser(
   return user;
 }
 
+export async function requireApiUserForRoom(
+  request: Request,
+  options: {
+    allowedRoles?: UserRole[];
+    roomId: string;
+    examSessionId: string;
+  }
+) {
+  if (!isSupabaseConfigured()) {
+    const { user, store } = await requireApiUserWithStore(request, options);
+    return { user, store };
+  }
+
+  const user = await resolveSupabaseRequestUser(request);
+  if (!user) {
+    throw new Error("Not authenticated.");
+  }
+
+  if (!isRoleAllowed(user.role, options.allowedRoles)) {
+    throw new Error("You do not have permission to access this resource.");
+  }
+
+  const supabase = getSupabaseAdmin();
+  const roomResponse = await supabase
+    .from("rooms")
+    .select("id, exam_session_id")
+    .eq("id", options.roomId)
+    .maybeSingle();
+
+  if (roomResponse.error) {
+    throw new Error(roomResponse.error.message);
+  }
+
+  if (!roomResponse.data) {
+    throw new Error("Room not found.");
+  }
+
+  if (roomResponse.data.exam_session_id !== options.examSessionId) {
+    throw new Error("Room does not belong to this exam session.");
+  }
+
+  if (user.role === "admin") {
+    return { user };
+  }
+
+  const [sessionResponse, assignmentResponse] = await Promise.all([
+    supabase
+      .from("exam_sessions")
+      .select("id, published, status")
+      .eq("id", options.examSessionId)
+      .maybeSingle(),
+    supabase
+      .from("room_assignments")
+      .select("room_id")
+      .eq("room_id", options.roomId)
+      .eq("user_id", user.id)
+      .maybeSingle()
+  ]);
+
+  if (sessionResponse.error) {
+    throw new Error(sessionResponse.error.message);
+  }
+
+  if (assignmentResponse.error) {
+    throw new Error(assignmentResponse.error.message);
+  }
+
+  const session = sessionResponse.data;
+  const sessionIsActive = session?.status === "active" || session?.published === true;
+  if (!session || !sessionIsActive || !assignmentResponse.data) {
+    throw new Error("You do not have access to this room.");
+  }
+
+  return { user };
+}
+
 export async function requireApiUserWithStore(
   request: Request,
   options?: {
