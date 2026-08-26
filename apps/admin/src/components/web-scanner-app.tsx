@@ -40,6 +40,13 @@ type LiveRoomState = {
   }>;
 };
 
+type RecentScanChip = {
+  key: string;
+  label: string;
+  detail: string;
+  tone: "ok" | "warn";
+};
+
 type OcrWorker = {
   predict(
     image: HTMLCanvasElement,
@@ -275,6 +282,12 @@ export function WebScannerApp() {
   const [lookupPending, setLookupPending] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [scanPaused, setScanPaused] = useState(false);
+  const [optimisticStats, setOptimisticStats] = useState({
+    present: 0,
+    mismatch: 0,
+    redirected: 0
+  });
+  const [localRecentChips, setLocalRecentChips] = useState<RecentScanChip[]>([]);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [torchMessage, setTorchMessage] = useState("");
@@ -284,11 +297,11 @@ export function WebScannerApp() {
   const roomStats = useMemo(
     () => ({
       allocated: liveState?.summary?.allocatedCount ?? 0,
-      present: liveState?.summary?.presentCount ?? 0,
-      mismatch: liveState?.summary?.mismatchPresentCount ?? 0,
-      redirected: liveState?.summary?.redirectedCount ?? 0
+      present: (liveState?.summary?.presentCount ?? 0) + optimisticStats.present,
+      mismatch: (liveState?.summary?.mismatchPresentCount ?? 0) + optimisticStats.mismatch,
+      redirected: (liveState?.summary?.redirectedCount ?? 0) + optimisticStats.redirected
     }),
-    [liveState]
+    [liveState, optimisticStats]
   );
 
   const resetForNextScan = useCallback(() => {
@@ -327,6 +340,12 @@ export function WebScannerApp() {
       await fetch(`/api/rooms/${roomId}/live`)
     );
     setLiveState(payload);
+    setOptimisticStats({
+      present: 0,
+      mismatch: 0,
+      redirected: 0
+    });
+    setLocalRecentChips([]);
     setLastSyncAt(new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -624,15 +643,33 @@ export function WebScannerApp() {
         })
       );
 
-      setStatusMessage(
-        payload.event?.roomMismatch
-          ? "Present marked with room mismatch flag."
+      const successMessage = payload.event?.roomMismatch
+        ? "Present marked with room mismatch flag."
+        : payload.event
+          ? "Attendance marked."
+          : "Incident logged.";
+      const chip: RecentScanChip = {
+        key: `local-${Date.now()}-${normalizedId}`,
+        label: normalizedId,
+        detail: payload.event?.roomMismatch
+          ? "Mismatch"
           : payload.event
-            ? "Attendance marked."
-            : "Incident logged."
-      );
-      await loadLiveState(currentRoom.id);
-      window.setTimeout(resetForNextScan, 650);
+            ? "Present"
+            : payload.incident?.incidentType.replaceAll("_", " ") || "Incident",
+        tone: payload.event && !payload.event.roomMismatch ? "ok" : "warn"
+      };
+
+      setStatusMessage(successMessage);
+      setOptimisticStats((current) => ({
+        present: current.present + (payload.event ? 1 : 0),
+        mismatch: current.mismatch + (payload.event?.roomMismatch ? 1 : 0),
+        redirected:
+          current.redirected +
+          (payload.incident?.incidentType === "wrong_room_redirected" ? 1 : 0)
+      }));
+      setLocalRecentChips((current) => [chip, ...current].slice(0, 3));
+      window.setTimeout(resetForNextScan, 180);
+      loadLiveState(currentRoom.id).catch(() => undefined);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Unable to mark attendance.");
     } finally {
@@ -952,12 +989,12 @@ export function WebScannerApp() {
       .filter((item) => item.roomMismatch)
       .map((item) => item.studentId)
   );
-  const recentScanChips = [
+  const serverRecentScanChips: RecentScanChip[] = [
     ...recentAttendance.map((item) => ({
       key: `attendance-${item.createdAt}-${item.studentId}`,
       label: item.studentId,
       detail: item.roomMismatch ? "Mismatch" : "Present",
-      tone: item.roomMismatch ? "warn" : "ok"
+      tone: item.roomMismatch ? "warn" as const : "ok" as const
     })),
     ...(liveState?.recentIncidents || [])
       .filter(
@@ -970,8 +1007,13 @@ export function WebScannerApp() {
         key: `incident-${item.createdAt}-${item.studentId || item.incidentType}`,
         label: item.studentId || "Unknown",
         detail: item.incidentType.replaceAll("_", " "),
-        tone: "warn"
+        tone: "warn" as const
       }))
+  ];
+  const serverChipStudentIds = new Set(serverRecentScanChips.map((chip) => chip.label));
+  const recentScanChips = [
+    ...localRecentChips.filter((chip) => !serverChipStudentIds.has(chip.label)),
+    ...serverRecentScanChips
   ].slice(0, 3);
 
   return (
