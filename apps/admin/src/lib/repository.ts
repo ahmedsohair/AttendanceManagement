@@ -1496,6 +1496,88 @@ export async function getRoomLiveStateFast(roomId: string) {
   };
 }
 
+export async function listMobileRoomsForUserFast(user: User) {
+  if (!isSupabaseConfigured()) {
+    const { listPublishedRoomsForUser } = await import("./selectors");
+    const store = await readStore();
+    return listPublishedRoomsForUser(store, user.id).map((room) => ({
+      ...room,
+      session: store.examSessions.find((item) => item.id === room.examSessionId)
+    }));
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  if (user.role === "admin") {
+    const roomsResponse = await supabase
+      .from("rooms")
+      .select("id, exam_session_id, code, display_name, capacity, exam_sessions!inner(id, name, exam_date, start_time, status, published)")
+      .eq("exam_sessions.status", "active")
+      .order("code", { ascending: true });
+
+    if (roomsResponse.error) {
+      throw new Error(roomsResponse.error.message);
+    }
+
+    return (roomsResponse.data || []).map((row) => {
+      const session = Array.isArray(row.exam_sessions)
+        ? row.exam_sessions[0]
+        : row.exam_sessions;
+
+      return {
+        id: String(row.id),
+        examSessionId: String(row.exam_session_id),
+        code: String(row.code),
+        displayName: String(row.display_name),
+        capacity: row.capacity === null || row.capacity === undefined ? undefined : Number(row.capacity),
+        session: session
+          ? {
+              id: String(session.id),
+              name: String(session.name),
+              examDate: String(session.exam_date),
+              startTime: String(session.start_time)
+            }
+          : undefined
+      };
+    });
+  }
+
+  const assignmentsResponse = await supabase
+    .from("room_assignments")
+    .select("rooms!inner(id, exam_session_id, code, display_name, capacity, exam_sessions!inner(id, name, exam_date, start_time, status, published))")
+    .eq("user_id", user.id)
+    .eq("rooms.exam_sessions.status", "active");
+
+  if (assignmentsResponse.error) {
+    throw new Error(assignmentsResponse.error.message);
+  }
+
+  return (assignmentsResponse.data || []).map((row) => {
+    const room = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+    const session = room
+      ? Array.isArray(room.exam_sessions)
+        ? room.exam_sessions[0]
+        : room.exam_sessions
+      : null;
+
+    return {
+      id: String(room.id),
+      examSessionId: String(room.exam_session_id),
+      code: String(room.code),
+      displayName: String(room.display_name),
+      capacity: room.capacity === null || room.capacity === undefined ? undefined : Number(room.capacity),
+      session: session
+        ? {
+            id: String(session.id),
+            name: String(session.name),
+            examDate: String(session.exam_date),
+            startTime: String(session.start_time)
+          }
+        : undefined
+    };
+  });
+}
+
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
   const result = await lookupStudentFast({
     examSessionId: request.examSessionId,
