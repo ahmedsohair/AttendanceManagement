@@ -27,6 +27,8 @@ alter table exam_sessions
 add column if not exists status text not null default 'draft'
 check (status in ('draft', 'active', 'closed'));
 
+alter table exam_sessions add column if not exists venue text;
+
 update exam_sessions
 set status = case when published then 'active' else 'draft' end
 where status is null or status = '';
@@ -58,6 +60,9 @@ create table if not exists student_allocations (
   program text,
   unique (exam_session_id, student_id)
 );
+
+alter table student_allocations add column if not exists cohort text;
+alter table student_allocations add column if not exists seat text;
 
 create table if not exists attendance_events (
   id uuid primary key default gen_random_uuid(),
@@ -186,3 +191,17 @@ with check (
       )
   )
 );
+
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+grant all on tables to anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+grant all on sequences to anon, authenticated, service_role;
+
+alter default privileges for role postgres in schema public
+grant all on functions to anon, authenticated, service_role;

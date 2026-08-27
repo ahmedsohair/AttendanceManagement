@@ -6,6 +6,8 @@ build
 .expo-shared
 .expo-export*
 coverage
+backups/
+supabase/.temp/
 *.log
 .env
 .env.local
