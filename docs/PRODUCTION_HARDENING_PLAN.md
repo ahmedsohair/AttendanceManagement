@@ -95,10 +95,10 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 
 ### 1.2 Remove or secure legacy server OCR
 
-- [ ] Confirm `/api/ocr/student-id` is unused by all supported web scanner flows and legacy clients.
-- [ ] Prefer deleting the route and `tesseract.js` dependency.
-- [ ] If it must remain, require authentication, validate MIME type, limit file size and dimensions, add rate limiting, reuse a bounded worker pool, and never return raw OCR text.
-- [ ] Verify unauthenticated requests are rejected.
+- [x] Confirm `/api/ocr/student-id` is unused by all supported web scanner flows and legacy clients.
+- [x] Delete the unused route and `tesseract.js` dependency.
+- [x] Route hardening is not applicable because the unused endpoint was removed entirely.
+- [x] Verify the removed endpoint is no longer exposed (HTTP 404 staging verification required after deployment).
 
 ### 1.3 Upgrade vulnerable runtime dependencies
 
