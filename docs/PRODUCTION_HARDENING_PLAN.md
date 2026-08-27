@@ -98,7 +98,7 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 - [x] Confirm `/api/ocr/student-id` is unused by all supported web scanner flows and legacy clients.
 - [x] Delete the unused route and `tesseract.js` dependency.
 - [x] Route hardening is not applicable because the unused endpoint was removed entirely.
-- [x] Verify the removed endpoint is no longer exposed (HTTP 404 staging verification required after deployment).
+- [x] Verify the removed endpoint is no longer exposed (HTTP 404 confirmed on staging), while scanner load and synthetic login still return HTTP 200.
 
 ### 1.3 Upgrade vulnerable runtime dependencies
 
@@ -530,7 +530,7 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 | Phase | Commit | Staging verified | Production deployed | Result / notes |
 | --- | --- | --- | --- | --- |
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
-| 1 | `352af9e` | Yes, region alignment | No | Staging functions execute in `sin1`; 150-request acceptance run passed, with attendance marking at 0.395 s p50 and 0.497 s p95. |
+| 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
 | 2 |  |  |  |  |
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
