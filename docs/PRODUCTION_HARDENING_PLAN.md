@@ -118,12 +118,12 @@ Residual review (2026-08-27):
 
 ### 1.4 Add baseline HTTP security headers
 
-- [ ] Disable `X-Powered-By`.
-- [ ] Add `X-Content-Type-Options: nosniff`.
-- [ ] Add an appropriate `Referrer-Policy`.
-- [ ] Prevent framing with CSP `frame-ancestors` or equivalent protection.
-- [ ] Add a restrictive `Permissions-Policy`, allowing camera access only where required.
-- [ ] Introduce CSP in report-only mode first, including Supabase and approved OCR asset origins.
+- [x] Disable `X-Powered-By`.
+- [x] Add `X-Content-Type-Options: nosniff`.
+- [x] Add an appropriate `Referrer-Policy`.
+- [x] Prevent framing with report-only CSP `frame-ancestors` plus enforced `X-Frame-Options: DENY`.
+- [x] Add a restrictive `Permissions-Policy`, allowing same-origin camera access while disabling microphone, geolocation, payment, and USB.
+- [x] Introduce CSP in report-only mode first, including Supabase, jsDelivr ONNX assets, and Paddle model origins.
 - [ ] Move to enforced CSP after verifying scanner, authentication, fonts, WASM, workers, and email links.
 
 ### 1.5 Rate-limit authentication surfaces
