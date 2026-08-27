@@ -102,7 +102,7 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 
 ### 1.3 Upgrade vulnerable runtime dependencies
 
-- [ ] Upgrade Next.js to a release that resolves the reported advisories.
+- [x] Upgrade Next.js from 15.5.19 to 15.5.21 to resolve the framework-level advisories; PostCSS and Sharp transitive advisories remain tracked separately.
 - [ ] Apply safe non-breaking dependency updates first.
 - [ ] Review `sharp`, `postcss`, `protobufjs`, `ws`, `exceljs`, and Expo transitive advisories individually.
 - [ ] Do not use `npm audit fix --force` without reviewing proposed breaking changes.
