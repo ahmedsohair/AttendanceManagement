@@ -96,10 +96,24 @@ Commit `352af9e` configured the staging Vercel functions for Singapore (`sin1`).
 
 All 60 measured requests succeeded. Region alignment delivered the expected latency reduction without changing attendance logic. A final 30-sample run remains required before production promotion.
 
+### Staging Acceptance Run
+
+The final API acceptance run used 30 samples per operation after the `sin1` deployment. Attendance marking used 30 distinct, correct-room synthetic students so every sample executed the real successful write path rather than the duplicate shortcut.
+
+| Operation | Samples | p50 | p95 | p99 | Maximum | HTTP status |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Valid access-code verification | 30 | 0.210 s | 0.236 s | 0.242 s | 0.602 s | 200 |
+| Assigned-room loading | 30 | 0.304 s | 0.396 s | 0.419 s | 0.481 s | 200 |
+| Room live-state refresh | 30 | 0.489 s | 0.677 s | 0.746 s | 0.946 s | 200 |
+| Student lookup | 30 | 0.393 s | 0.713 s | 0.985 s | 1.041 s | 200 |
+| Correct-room attendance marking | 30 | 0.395 s | 0.497 s | 0.533 s | 1.219 s | 200 |
+
+All 150 requests succeeded. The attendance benchmark added 30 deterministic staging attendance records and should be followed by re-running the synthetic seed before unrelated scenario testing.
+
 - [x] Access-code verification with a valid dedicated test invigilator (preliminary staging baseline; final 30-sample run still required).
 - [x] Assigned-room loading (preliminary staging baseline; final 30-sample run still required).
 - [ ] Student lookup for found, not-found, already-marked, and wrong-room cases.
-- [ ] Correct-room attendance marking.
+- [x] Correct-room attendance marking (30 successful synthetic writes on staging).
 - [ ] Wrong-room redirect and override.
 - [x] Room live-state refresh (preliminary staging baseline; final 30-sample run still required).
 - [ ] Admin dashboard loading.

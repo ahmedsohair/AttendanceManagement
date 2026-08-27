@@ -88,7 +88,7 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 
 - [x] Configure staging Vercel Node.js functions to execute in Singapore (`sin1`), close to the Supabase project.
 - [x] Confirm staging deployment headers no longer show execution in `iad1`.
-- [x] Repeat the preliminary Phase 0 latency measurements on staging.
+- [x] Repeat the Phase 0 latency measurements on staging with 30 samples per operational API, including 30 real attendance writes.
 - [x] Retain global CDN delivery for static assets; only server functions were moved near the database.
 
 **Expected result:** Large reduction in API round-trip latency without application logic changes.
@@ -530,7 +530,7 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 | Phase | Commit | Staging verified | Production deployed | Result / notes |
 | --- | --- | --- | --- | --- |
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
-| 1 | `352af9e` | Yes, region alignment | No | Staging functions execute in `sin1`; preliminary API medians improved by 62-86%. |
+| 1 | `352af9e` | Yes, region alignment | No | Staging functions execute in `sin1`; 150-request acceptance run passed, with attendance marking at 0.395 s p50 and 0.497 s p95. |
 | 2 |  |  |  |  |
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
