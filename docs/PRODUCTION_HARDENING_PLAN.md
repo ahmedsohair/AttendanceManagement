@@ -86,10 +86,10 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 
 ### 1.1 Align Vercel functions with Supabase
 
-- [ ] Configure Vercel Node.js functions to execute in Singapore (`sin1`), close to the Supabase project.
-- [ ] Confirm deployment headers no longer show execution in `iad1`.
-- [ ] Repeat the Phase 0 latency measurements.
-- [ ] Retain Sydney CDN delivery for static assets; only server functions need database proximity.
+- [x] Configure staging Vercel Node.js functions to execute in Singapore (`sin1`), close to the Supabase project.
+- [x] Confirm staging deployment headers no longer show execution in `iad1`.
+- [x] Repeat the preliminary Phase 0 latency measurements on staging.
+- [x] Retain global CDN delivery for static assets; only server functions were moved near the database.
 
 **Expected result:** Large reduction in API round-trip latency without application logic changes.
 
@@ -529,8 +529,8 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 
 | Phase | Commit | Staging verified | Production deployed | Result / notes |
 | --- | --- | --- | --- | --- |
-| 0 |  |  |  |  |
-| 1 |  |  |  |  |
+| 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
+| 1 | `352af9e` | Yes, region alignment | No | Staging functions execute in `sin1`; preliminary API medians improved by 62-86%. |
 | 2 |  |  |  |  |
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |

@@ -83,6 +83,19 @@ Captured on 27 August 2026 against `https://exampulse-stagings.vercel.app` using
 
 These are preliminary comparison samples, not the final 30-sample acceptance run. They already demonstrate the cost of multiple Washington-to-Singapore database round trips, especially in room authorization and live-state loading.
 
+### Staging After Singapore Region Alignment
+
+Commit `352af9e` configured the staging Vercel functions for Singapore (`sin1`). Response headers changed from `syd1::iad1` to `syd1::sin1`, while static assets remain globally distributed by Vercel's CDN. The same client, synthetic account, operations, and 15-sample method produced:
+
+| Operation | Samples | p50 | p95 | Maximum | HTTP status | Median improvement |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Valid access-code verification | 15 | 0.223 s | 0.250 s | 0.916 s | 200 | 62% |
+| Assigned-room loading | 15 | 0.286 s | 0.335 s | 0.476 s | 200 | 80% |
+| Room live-state refresh | 15 | 0.495 s | 0.700 s | 0.988 s | 200 | 86% |
+| Student lookup | 15 | 0.338 s | 0.370 s | 0.437 s | 200 | 84% |
+
+All 60 measured requests succeeded. Region alignment delivered the expected latency reduction without changing attendance logic. A final 30-sample run remains required before production promotion.
+
 - [x] Access-code verification with a valid dedicated test invigilator (preliminary staging baseline; final 30-sample run still required).
 - [x] Assigned-room loading (preliminary staging baseline; final 30-sample run still required).
 - [ ] Student lookup for found, not-found, already-marked, and wrong-room cases.
