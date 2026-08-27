@@ -103,11 +103,18 @@ The work is divided into phases so that high-risk changes are isolated, tested, 
 ### 1.3 Upgrade vulnerable runtime dependencies
 
 - [x] Upgrade Next.js from 15.5.19 to 15.5.21 to resolve the framework-level advisories; PostCSS and Sharp transitive advisories remain tracked separately.
-- [ ] Apply safe non-breaking dependency updates first.
-- [ ] Review `sharp`, `postcss`, `protobufjs`, `ws`, `exceljs`, and Expo transitive advisories individually.
-- [ ] Do not use `npm audit fix --force` without reviewing proposed breaking changes.
-- [ ] Regenerate the lockfile from a clean install and rerun build/type checks.
-- [ ] Record accepted build-only residual vulnerabilities with justification and review date.
+- [x] Apply safe non-breaking dependency updates first (`ws` 8.21.3).
+- [x] Review `sharp`, `postcss`, `protobufjs`, `ws`, and `exceljs` transitive advisories individually. Expo/native advisories are tracked separately from the web hardening scope.
+- [x] Do not use `npm audit fix --force` without reviewing proposed breaking changes.
+- [x] Regenerate the lockfile metadata and rerun the production build/type checks.
+- [x] Record accepted build-only residual vulnerabilities with justification and review date.
+
+Residual review (2026-08-27):
+
+- Next.js is pinned to 15.5.21, which contains the available framework security fixes for this release line. The remaining `postcss` advisory is in Next's build pipeline, and the `sharp` advisory is in an optional dependency that is not exercised because the admin app does not use `next/image`.
+- ExcelJS 4.4.0 still brings `uuid` and archive-related advisories. npm's suggested remediation downgrades ExcelJS to 3.4.0 and is not accepted. Spreadsheet values are bounded, formula injection is escaped on export, and uploaded workbooks are parsed server-side with row/cell limits.
+- PaddleOCR's ONNX dependency still brings a moderate `protobufjs` advisory. The model remains browser-only and does not parse attacker-provided protobuf messages. It will be upgraded only after scanner compatibility testing.
+- `npm audit` also traverses native/Expo packages in the monorepo. Those packages are excluded from this web-only phase and will be handled during the planned native rebuild.
 
 ### 1.4 Add baseline HTTP security headers
 
