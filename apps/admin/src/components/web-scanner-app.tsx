@@ -254,6 +254,8 @@ export function WebScannerApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const scanTimerRef = useRef<number | null>(null);
+  const ocrInFlightRef = useRef(false);
+  const scanLoopGenerationRef = useRef(0);
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
@@ -396,21 +398,24 @@ export function WebScannerApp() {
     return () => window.clearInterval(intervalId);
   }, [loadLiveState, selectedRoom]);
 
+  const stopOcrLoop = useCallback(() => {
+    scanLoopGenerationRef.current += 1;
+    if (scanTimerRef.current !== null) {
+      window.clearTimeout(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
-      if (scanTimerRef.current) {
-        window.clearInterval(scanTimerRef.current);
-      }
+      stopOcrLoop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       ocrWorkerRef.current?.dispose().catch(() => undefined);
     };
-  }, []);
+  }, [stopOcrLoop]);
 
   const stopCamera = useCallback(() => {
-    if (scanTimerRef.current) {
-      window.clearInterval(scanTimerRef.current);
-      scanTimerRef.current = null;
-    }
+    stopOcrLoop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) {
@@ -425,7 +430,7 @@ export function WebScannerApp() {
     setScanPaused(false);
     selectedRoomRef.current = null;
     setSelectedRoom(null);
-  }, []);
+  }, [stopOcrLoop]);
 
   const pushScannerHistoryGuard = useCallback(() => {
     if (!historyGuardIdRef.current) {
@@ -725,14 +730,7 @@ export function WebScannerApp() {
       }
 
       setOcrStatus("Looking for a student number...");
-      if (scanTimerRef.current) {
-        window.clearInterval(scanTimerRef.current);
-      }
-      scanTimerRef.current = window.setInterval(() => {
-        runOcrScan().catch((error) =>
-          setOcrStatus(error instanceof Error ? error.message : "OCR scan failed.")
-        );
-      }, 900);
+      startOcrLoop();
     } catch (error) {
       setCameraActive(false);
       setOcrStatus("");
@@ -879,6 +877,39 @@ export function WebScannerApp() {
     if (lastCandidateRef.current.count >= 2) {
       await lookupStudent(candidate, "ocr");
     }
+  }
+
+  function startOcrLoop() {
+    stopOcrLoop();
+    const generation = scanLoopGenerationRef.current;
+
+    const scheduleNextScan = (delayMs: number) => {
+      if (generation !== scanLoopGenerationRef.current) {
+        return;
+      }
+
+      scanTimerRef.current = window.setTimeout(async () => {
+        scanTimerRef.current = null;
+        if (generation !== scanLoopGenerationRef.current) {
+          return;
+        }
+
+        if (!ocrInFlightRef.current) {
+          ocrInFlightRef.current = true;
+          try {
+            await runOcrScan();
+          } catch (error) {
+            setOcrStatus(error instanceof Error ? error.message : "OCR scan failed.");
+          } finally {
+            ocrInFlightRef.current = false;
+          }
+        }
+
+        scheduleNextScan(900);
+      }, delayMs);
+    };
+
+    scheduleNextScan(0);
   }
 
   if (!user) {
