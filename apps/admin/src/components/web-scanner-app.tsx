@@ -611,6 +611,13 @@ export function WebScannerApp() {
           : `scanner-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     }
 
+    if (
+      window.history.state?.examPulseScannerGuard === true &&
+      window.history.state?.examPulseScannerGuardId === historyGuardIdRef.current
+    ) {
+      return;
+    }
+
     window.history.pushState(
       {
         ...(window.history.state || {}),
@@ -622,6 +629,36 @@ export function WebScannerApp() {
     );
   }, []);
 
+  const initializeScannerHistory = useCallback(() => {
+    const currentState = window.history.state || {};
+    if (
+      currentState.examPulseScannerGuard === true &&
+      typeof currentState.examPulseScannerGuardId === "string"
+    ) {
+      historyGuardIdRef.current = currentState.examPulseScannerGuardId;
+      return;
+    }
+
+    if (!historyGuardIdRef.current) {
+      historyGuardIdRef.current =
+        typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `scanner-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    window.history.replaceState(
+      {
+        ...currentState,
+        examPulseScannerBase: true,
+        examPulseScannerGuard: false,
+        examPulseScannerGuardId: historyGuardIdRef.current
+      },
+      "",
+      window.location.href
+    );
+    pushScannerHistoryGuard();
+  }, [pushScannerHistoryGuard]);
+
   useEffect(() => {
     if (!user) {
       historyGuardActiveRef.current = false;
@@ -630,40 +667,42 @@ export function WebScannerApp() {
 
     historyGuardActiveRef.current = true;
     lastBackHandledAtRef.current = 0;
-    pushScannerHistoryGuard();
-    pushScannerHistoryGuard();
+    initializeScannerHistory();
 
     function handleBrowserBack() {
       if (!historyGuardActiveRef.current) {
         return;
       }
 
-      pushScannerHistoryGuard();
-
       const now = Date.now();
       if (now - lastBackHandledAtRef.current < 450) {
+        pushScannerHistoryGuard();
         setStatusMessage("Back already handled. Use the on-screen controls if needed.");
         return;
       }
       lastBackHandledAtRef.current = now;
 
       if (busyRef.current || lookupPendingRef.current) {
+        pushScannerHistoryGuard();
         setStatusMessage("Please wait for the current action to finish.");
         return;
       }
 
       if (scanPausedRef.current) {
         resetForNextScan();
+        pushScannerHistoryGuard();
         setStatusMessage("Scan cancelled. Continue with the next student.");
         return;
       }
 
       if (selectedRoomRef.current) {
         stopCamera();
+        pushScannerHistoryGuard();
         setStatusMessage("Returned to room selection.");
         return;
       }
 
+      pushScannerHistoryGuard();
       setStatusMessage("Use Sign Out if you want to leave the scanner.");
     }
 
@@ -673,7 +712,7 @@ export function WebScannerApp() {
       historyGuardActiveRef.current = false;
       window.removeEventListener("popstate", handleBrowserBack);
     };
-  }, [pushScannerHistoryGuard, resetForNextScan, stopCamera, user]);
+  }, [initializeScannerHistory, pushScannerHistoryGuard, resetForNextScan, stopCamera, user]);
 
   async function signIn() {
     const normalizedCode = normalizeAccessCode(accessCode);
