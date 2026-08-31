@@ -4,6 +4,10 @@ import { upsertFallbackUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ message: "Not found." }, { status: 404 });
+    }
+
     if (isSupabaseConfigured()) {
       return NextResponse.json(
         { message: "Direct API login is disabled when Supabase Auth is enabled." },

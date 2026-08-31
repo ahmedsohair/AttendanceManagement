@@ -11,6 +11,12 @@ export function isSupabaseConfigured() {
   );
 }
 
+export function assertDevelopmentFallbackAllowed() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Supabase configuration is required in production.");
+  }
+}
+
 export function getSupabaseAdmin() {
   if (!isSupabaseConfigured()) {
     throw new Error(

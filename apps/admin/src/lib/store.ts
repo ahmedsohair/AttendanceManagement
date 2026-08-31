@@ -2,7 +2,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { DataStore, ExamSession, Room, User } from "@algo-attendance/shared";
-import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
+import {
+  assertDevelopmentFallbackAllowed,
+  getSupabaseAdmin,
+  isSupabaseConfigured
+} from "./supabase";
 
 const dataDir = path.join(process.cwd(), "data");
 const dataFile = path.join(dataDir, "store.json");
@@ -204,6 +208,7 @@ export async function readStore(): Promise<DataStore> {
     return readSupabaseStore();
   }
 
+  assertDevelopmentFallbackAllowed();
   return readFileStore();
 }
 
@@ -214,6 +219,7 @@ export async function writeStore(store: DataStore): Promise<void> {
     );
   }
 
+  assertDevelopmentFallbackAllowed();
   await ensureStore();
   await writeFile(dataFile, JSON.stringify(store, null, 2), "utf8");
 }
