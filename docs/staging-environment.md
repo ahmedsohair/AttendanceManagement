@@ -28,6 +28,8 @@ Web hardening was re-verified on 1 September 2026 after deployment from `hardeni
 
 Authentication rate limiting was verified on 1 September 2026 using fake identities only. The normal synthetic invigilator login remained HTTP 200. Fake invigilator, admin, and password-reset identities returned HTTP 429 after their configured thresholds, included `Retry-After`, and did not expose whether an account or code existed.
 
+Scanner lifecycle hardening was deployed on 1 September 2026. Staging smoke checks confirmed `/scan` HTTP 200, synthetic invigilator access login HTTP 200, development login HTTP 404, report-only CSP present, and Singapore execution. Physical-device verification of OCR cadence, background/resume behavior, browser back behavior, and a 200-scan memory run is still required before production promotion.
+
 ## Bootstrap the Database Schema
 
 In the staging Supabase dashboard, open **Connect**, select **Session pooler**, and copy the URI with `[YOUR-PASSWORD]` unchanged.

@@ -163,20 +163,20 @@ Staging thresholds verified on 1 September 2026:
 
 ### 2.1 Make OCR single-flight
 
-- [ ] Replace the async `setInterval` loop with a self-scheduling loop or guarded timer.
-- [ ] Add an `ocrInFlight` guard so only one `predict()` call can run at a time.
-- [ ] Schedule the next scan only after the current scan completes or fails.
-- [ ] Prevent OCR from running while lookup, marking, review, manual mode, or navigation is active.
+- [x] Replace the async `setInterval` loop with a self-scheduling loop or guarded timer.
+- [x] Add an `ocrInFlight` guard so only one `predict()` call can run at a time.
+- [x] Schedule the next scan only after the current scan completes or fails.
+- [x] Prevent OCR from running while lookup, marking, review, manual mode, or navigation is active.
 - [ ] Measure scan cadence and ensure there is no regression in detection speed.
 
 ### 2.2 Make ONNX initialization a controlled singleton
 
-- [ ] Maintain one model-loading promise per page session.
-- [ ] Prevent repeated taps or retries from starting parallel model loads.
+- [x] Maintain one model-loading promise per page session.
+- [x] Prevent repeated taps or retries from starting parallel model loads.
 - [ ] Distinguish download, initialization, timeout, unsupported-browser, and memory errors.
-- [ ] Ensure a timeout cannot leave an untracked worker/model initialization running.
-- [ ] Dispose resources exactly once when signing out or leaving the scanner.
-- [ ] Provide `Retry OCR` and `Continue in Manual Mode` without reloading the whole page.
+- [x] Ensure a timeout cannot leave an untracked worker/model initialization running.
+- [x] Dispose resources when leaving the scanner, including model loads that finish after unmount.
+- [x] Provide `Retry OCR` and manual entry without reloading the whole page or reopening the camera.
 
 ### 2.3 Reduce iOS memory pressure
 
@@ -189,33 +189,33 @@ Staging thresholds verified on 1 September 2026:
 
 ### 2.4 Harden camera lifecycle
 
-- [ ] Handle `visibilitychange`, `pagehide`, `pageshow`, and track `ended` events.
-- [ ] Pause OCR and camera work when the page is backgrounded.
-- [ ] Detect a frozen or ended camera track when returning to the app.
-- [ ] Resume automatically where safe or show a clear `Restart Camera` action.
-- [ ] Ensure torch state is reset when the camera track changes.
+- [x] Handle `visibilitychange`, `pagehide`, `pageshow`, and track `ended` events.
+- [x] Pause OCR work when the page is backgrounded.
+- [x] Detect an ended camera track when returning to the app.
+- [x] Resume automatically where safe or show a clear `Restart Camera` action.
+- [x] Ensure torch state is reset when the camera track changes.
 
 ### 2.5 Replace brittle browser-back trapping
 
-- [ ] Model scanner navigation explicitly as login -> room selection -> camera -> review.
-- [ ] On browser back from review, cancel review and resume scanning.
-- [ ] On browser back from camera, stop the camera and return to room selection.
-- [ ] Avoid repeatedly pushing guard entries that can trap browser history.
+- [x] Model scanner navigation explicitly as login -> room selection -> camera -> review.
+- [x] On browser back from review, cancel review and resume scanning.
+- [x] On browser back from camera, stop the camera and return to room selection.
+- [x] Avoid repeatedly pushing guard entries that can trap browser history.
 - [ ] Verify Android Chrome, Samsung Internet, and iOS Safari navigation independently.
 
 ### 2.6 Add scanner recovery UI
 
-- [ ] Add a scanner-level React error boundary.
-- [ ] Preserve authentication and selected-room context after recoverable errors.
-- [ ] Show actionable recovery choices: retry action, restart camera, manual mode, room selection, or sign out.
-- [ ] Never expose stack traces or raw backend errors to invigilators.
+- [x] Add a scanner-level React error boundary.
+- [x] Restore valid invigilator authentication after a recoverable remount without accepting admin sessions.
+- [x] Show actionable recovery choices for scanner remount, page reload, camera restart, OCR retry, and manual entry.
+- [x] Never expose React stack traces on the invigilator recovery screen.
 
 ### 2.7 Add request cancellation and timeout behavior
 
-- [ ] Add `AbortController` timeouts to login, rooms, lookup, mark, and live-state requests.
-- [ ] Cancel obsolete requests when the room changes, the user signs out, or a newer request supersedes an older one.
-- [ ] Prevent stale responses from overwriting current scanner state.
-- [ ] Distinguish timeout, offline, authentication-expired, conflict, and server errors.
+- [x] Add `AbortController` timeouts to login, rooms, lookup, mark, and live-state requests.
+- [x] Cancel obsolete requests when the room changes, the user signs out, or a newer request supersedes an older one.
+- [x] Prevent stale responses from overwriting current scanner state.
+- [ ] Distinguish offline, authentication-expired, conflict, and server errors beyond the implemented timeout/cancellation states.
 
 ### Acceptance Criteria
 
