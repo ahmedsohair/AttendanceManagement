@@ -2,15 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-
-function getRecoveryRedirectUrl() {
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return `${window.location.origin}/auth/callback?next=/update-password`;
-}
 
 export function ResetPasswordRequestForm({
   initialError
@@ -29,16 +20,17 @@ export function ResetPasswordRequestForm({
     setSent(false);
 
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email.trim().toLowerCase(),
-        {
-          redirectTo: getRecoveryRedirectUrl()
-        }
-      );
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() })
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+      } | null;
 
-      if (resetError) {
-        throw resetError;
+      if (!response.ok) {
+        throw new Error(payload?.message || "Unable to send reset email.");
       }
 
       setSent(true);
@@ -78,7 +70,7 @@ export function ResetPasswordRequestForm({
 
       {sent ? (
         <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
-          Reset email sent. Open the link from your inbox to choose a new password.
+          If an eligible account exists, a reset email will be sent shortly.
         </p>
       ) : null}
 
