@@ -70,6 +70,16 @@ type TorchMediaTrack = MediaStreamTrack & {
 const deviceIdStorageKey = "ams-web-scanner-device-id";
 const onnxModelTimeoutMs = 45000;
 
+class ScannerRequestError extends Error {
+  constructor(
+    message: string,
+    readonly kind: "cancelled" | "timeout"
+  ) {
+    super(message);
+    this.name = "ScannerRequestError";
+  }
+}
+
 function normalizeAccessCode(input: string) {
   const compact = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const withoutPrefix = compact.startsWith("AMS") ? compact.slice(3) : compact;
@@ -255,6 +265,7 @@ export function WebScannerApp() {
   const ocrInFlightRef = useRef(false);
   const scanLoopGenerationRef = useRef(0);
   const startOcrLoopRef = useRef<() => void>(() => undefined);
+  const requestControllersRef = useRef(new Map<string, AbortController>());
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
@@ -307,6 +318,53 @@ export function WebScannerApp() {
     [liveState, optimisticStats]
   );
 
+  const requestJson = useCallback(async <T,>(
+    key: string,
+    input: RequestInfo | URL,
+    init?: RequestInit,
+    timeoutMs = 10000
+  ): Promise<T> => {
+    requestControllersRef.current.get(key)?.abort();
+    const controller = new AbortController();
+    requestControllersRef.current.set(key, controller);
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+
+    try {
+      return await readJson<T>(await fetch(input, { ...init, signal: controller.signal }));
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new ScannerRequestError(
+          timedOut
+            ? "The request timed out. Check the connection and try again."
+            : "Request cancelled.",
+          timedOut ? "timeout" : "cancelled"
+        );
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (requestControllersRef.current.get(key) === controller) {
+        requestControllersRef.current.delete(key);
+      }
+    }
+  }, []);
+
+  const cancelRequests = useCallback((...keys: string[]) => {
+    for (const key of keys) {
+      requestControllersRef.current.get(key)?.abort();
+      requestControllersRef.current.delete(key);
+    }
+  }, []);
+
+  const cancelAllRequests = useCallback(() => {
+    requestControllersRef.current.forEach((controller) => controller.abort());
+    requestControllersRef.current.clear();
+  }, []);
+
   const resetForNextScan = useCallback(() => {
     setStudentId("");
     setComment("");
@@ -319,28 +377,32 @@ export function WebScannerApp() {
   }, []);
 
   const loadCurrentUser = useCallback(async () => {
-    const payload = await readJson<{ user: User }>(await fetch("/api/auth/me"));
+    const payload = await requestJson<{ user: User }>("current-user", "/api/auth/me");
     userRef.current = payload.user;
     setUser(payload.user);
     return payload.user;
-  }, []);
+  }, [requestJson]);
 
   const loadRooms = useCallback(async () => {
     setRoomsLoading(true);
     try {
-      const payload = await readJson<{ rooms: RoomWithSession[] }>(
-        await fetch("/api/mobile/my-rooms")
+      const payload = await requestJson<{ rooms: RoomWithSession[] }>(
+        "rooms",
+        "/api/mobile/my-rooms"
       );
       setRooms(payload.rooms);
       return payload.rooms;
     } finally {
       setRoomsLoading(false);
     }
-  }, []);
+  }, [requestJson]);
 
   const loadLiveState = useCallback(async (roomId: string) => {
-    const payload = await readJson<LiveRoomState>(
-      await fetch(`/api/rooms/${roomId}/live`)
+    const payload = await requestJson<LiveRoomState>(
+      "live-state",
+      `/api/rooms/${roomId}/live`,
+      undefined,
+      8000
     );
     setLiveState(payload);
     setOptimisticStats({
@@ -422,19 +484,21 @@ export function WebScannerApp() {
       setTorchEnabled(false);
       setTorchMessage("");
     }
-  }, []);
+  }, [requestJson]);
 
   useEffect(() => {
     componentActiveRef.current = true;
     return () => {
       componentActiveRef.current = false;
+      cancelAllRequests();
       stopOcrLoop();
       releaseCameraStream(false);
       ocrWorkerRef.current?.dispose().catch(() => undefined);
     };
-  }, [releaseCameraStream, stopOcrLoop]);
+  }, [cancelAllRequests, releaseCameraStream, stopOcrLoop]);
 
   const stopCamera = useCallback(() => {
+    cancelRequests("lookup", "live-state");
     stopOcrLoop();
     releaseCameraStream();
     setCameraRecoveryNeeded(false);
@@ -443,7 +507,7 @@ export function WebScannerApp() {
     setScanPaused(false);
     selectedRoomRef.current = null;
     setSelectedRoom(null);
-  }, [releaseCameraStream, stopOcrLoop]);
+  }, [cancelRequests, releaseCameraStream, stopOcrLoop]);
 
   useEffect(() => {
     const pauseScanner = () => {
@@ -586,12 +650,15 @@ export function WebScannerApp() {
     setBusy(true);
     setStatusMessage("");
     try {
-      const loginPayload = await readJson<{ email: string }>(
-        await fetch("/api/mobile/access-login", {
+      const loginPayload = await requestJson<{ email: string }>(
+        "access-login",
+        "/api/mobile/access-login",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ accessCode: normalizedCode })
-        })
+        },
+        10000
       );
 
       const supabase = getSupabaseBrowserClient();
@@ -618,6 +685,7 @@ export function WebScannerApp() {
   async function signOut() {
     setBusy(true);
     try {
+      cancelAllRequests();
       await getSupabaseBrowserClient().auth.signOut();
     } finally {
       stopCamera();
@@ -649,8 +717,10 @@ export function WebScannerApp() {
     scanPausedRef.current = true;
     setScanPaused(true);
     try {
-      const payload = await readJson<{ result: LookupResult }>(
-        await fetch("/api/attendance/lookup", {
+      const payload = await requestJson<{ result: LookupResult }>(
+        "lookup",
+        "/api/attendance/lookup",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -658,7 +728,8 @@ export function WebScannerApp() {
             roomId: currentRoom.id,
             studentId: normalizedId
           })
-        })
+        },
+        8000
       );
 
       setLastLookup(payload.result);
@@ -674,7 +745,9 @@ export function WebScannerApp() {
         setStatusMessage("Student not found. Edit the number if OCR misread it, then look up again.");
       }
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Lookup failed.");
+      if (!(error instanceof ScannerRequestError && error.kind === "cancelled")) {
+        setStatusMessage(error instanceof Error ? error.message : "Lookup failed.");
+      }
     } finally {
       setLookupPending(false);
       setBusy(false);
@@ -708,16 +781,19 @@ export function WebScannerApp() {
         ...overrides
       };
 
-      const payload = await readJson<{
+      const payload = await requestJson<{
         event?: { id: string; roomMismatch: boolean; createdAt: string };
         incident?: { id: string; incidentType: string; createdAt: string };
         result: LookupResult;
       }>(
-        await fetch("/api/attendance/mark", {
+        "mark",
+        "/api/attendance/mark",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody)
-        })
+        },
+        12000
       );
 
       const successMessage = payload.event?.roomMismatch
@@ -748,13 +824,20 @@ export function WebScannerApp() {
       window.setTimeout(resetForNextScan, 180);
       loadLiveState(currentRoom.id).catch(() => undefined);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : "Unable to mark attendance.");
+      if (error instanceof ScannerRequestError && error.kind === "timeout") {
+        setStatusMessage(
+          "Attendance confirmation timed out. Check recent activity before trying again."
+        );
+      } else if (!(error instanceof ScannerRequestError && error.kind === "cancelled")) {
+        setStatusMessage(error instanceof Error ? error.message : "Unable to mark attendance.");
+      }
     } finally {
       setBusy(false);
     }
   }
 
   async function startCamera(room: RoomWithSession) {
+    cancelRequests("lookup", "live-state");
     stopOcrLoop();
     releaseCameraStream();
     selectedRoomRef.current = room;
