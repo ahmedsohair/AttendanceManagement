@@ -18,6 +18,14 @@ The isolated Vercel deployment was smoke-tested successfully on 27 August 2026. 
 
 The complete browser login and assigned-room flow was manually verified with synthetic access code `AMS-T001-0001` on 27 August 2026.
 
+Web hardening was re-verified on 1 September 2026 after deployment from `hardening/staging`:
+
+- `/scan` returned HTTP 200 and rendered the invigilator login without browser console warnings or errors.
+- Synthetic access login returned HTTP 200 and resolved to `invigilator01@example.com`.
+- `/api/auth/dev-login`, `/api/auth/login`, and the removed `/api/ocr/student-id` route returned HTTP 404.
+- `X-Powered-By` was absent. `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and report-only CSP headers were present.
+- The Vercel request continued to execute in Singapore (`sin1`).
+
 ## Bootstrap the Database Schema
 
 In the staging Supabase dashboard, open **Connect**, select **Session pooler**, and copy the URI with `[YOUR-PASSWORD]` unchanged.
