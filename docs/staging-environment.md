@@ -26,6 +26,8 @@ Web hardening was re-verified on 1 September 2026 after deployment from `hardeni
 - `X-Powered-By` was absent. `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and report-only CSP headers were present.
 - The Vercel request continued to execute in Singapore (`sin1`).
 
+Authentication rate limiting was verified on 1 September 2026 using fake identities only. The normal synthetic invigilator login remained HTTP 200. Fake invigilator, admin, and password-reset identities returned HTTP 429 after their configured thresholds, included `Retry-After`, and did not expose whether an account or code existed.
+
 ## Bootstrap the Database Schema
 
 In the staging Supabase dashboard, open **Connect**, select **Session pooler**, and copy the URI with `[YOUR-PASSWORD]` unchanged.

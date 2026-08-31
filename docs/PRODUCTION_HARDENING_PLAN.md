@@ -128,11 +128,18 @@ Residual review (2026-08-27):
 
 ### 1.5 Rate-limit authentication surfaces
 
-- [ ] Add rate limiting to access-code verification by IP and normalized code fingerprint.
-- [ ] Add rate limiting to admin sign-in and password-reset requests.
-- [ ] Add progressive delays or temporary lockouts after repeated failures.
-- [ ] Return a generic invalid-credentials response that does not disclose whether a code or email exists.
-- [ ] Log rate-limit events without logging access codes.
+- [x] Add rate limiting to access-code verification by keyed IP and normalized-code hashes.
+- [x] Add rate limiting to admin sign-in and password-reset requests.
+- [x] Add temporary lockouts after repeated attempts.
+- [x] Return generic credential and password-reset responses that do not disclose whether a code or email exists.
+- [x] Log rate-limit events by scope and dimension without logging IPs, emails, or access codes.
+
+Staging thresholds verified on 1 September 2026:
+
+- Invigilator access: 120 attempts per address and 10 per normalized code in 10 minutes; a breach blocks that key for 10 minutes.
+- Admin sign-in: 30 attempts per address and 8 per normalized email in 10 minutes; a breach blocks that key for 15 minutes.
+- Password reset: 20 requests per address and 3 per normalized email per hour; a breach blocks that key for one hour.
+- Address limits are intentionally higher to support university networks where many invigilators may share one public IP.
 
 ### Acceptance Criteria
 
