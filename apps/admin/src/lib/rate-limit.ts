@@ -80,8 +80,22 @@ export async function enforceAuthRateLimits(
 
   const addressResult = await consumeLimit(addressHash, rules.address);
   if (!addressResult.allowed) {
+    console.warn("Authentication rate limit enforced.", {
+      scope,
+      dimension: "address",
+      retryAfterSeconds: addressResult.retryAfterSeconds
+    });
     return addressResult;
   }
 
-  return consumeLimit(identityHash, rules.identity);
+  const identityResult = await consumeLimit(identityHash, rules.identity);
+  if (!identityResult.allowed) {
+    console.warn("Authentication rate limit enforced.", {
+      scope,
+      dimension: "identity",
+      retryAfterSeconds: identityResult.retryAfterSeconds
+    });
+  }
+
+  return identityResult;
 }
