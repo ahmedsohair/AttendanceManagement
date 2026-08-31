@@ -2,6 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getUserById } from "@/lib/auth";
+import { enforceAuthRateLimits } from "@/lib/rate-limit";
+
+const adminLoginLimits = {
+  address: { limit: 30, windowSeconds: 600, blockSeconds: 900 },
+  identity: { limit: 8, windowSeconds: 600, blockSeconds: 900 }
+};
 
 function getSupabaseSessionConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -31,6 +37,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const rateLimit = await enforceAuthRateLimits(
+      request,
+      "admin-login",
+      normalizedEmail,
+      adminLoginLimits
+    );
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { message: "Too many attempts. Try again later." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) }
+        }
+      );
+    }
+
     const { url, publishableKey } = getSupabaseSessionConfig();
     const response = NextResponse.json({ ok: true });
     const supabase = createServerClient(url, publishableKey, {
@@ -50,32 +73,31 @@ export async function POST(request: NextRequest) {
       data: { user },
       error
     } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password
     });
 
     if (error || !user) {
       return NextResponse.json(
-        { message: error?.message || "Unable to sign in." },
+        { message: "Invalid email or password." },
         { status: 401 }
       );
     }
 
     const profile = await getUserById(user.id);
     if (!profile || profile.role !== "admin") {
+      await supabase.auth.signOut();
       return NextResponse.json(
-        { message: "This account is not allowed to access the admin dashboard." },
-        { status: 403 }
+        { message: "Invalid email or password." },
+        { status: 401 }
       );
     }
 
     return response;
   } catch (error) {
+    console.error("Admin sign-in request failed.", error);
     return NextResponse.json(
-      {
-        message:
-          error instanceof Error ? error.message : "Unable to sign in."
-      },
+      { message: "Unable to sign in. Try again shortly." },
       { status: 500 }
     );
   }
