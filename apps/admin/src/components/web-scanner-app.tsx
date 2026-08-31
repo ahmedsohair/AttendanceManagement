@@ -154,23 +154,19 @@ async function createDigitOcrWorker(
 ): Promise<OcrWorker> {
   onStatus("Loading ONNX OCR models... first load can take 20-40 seconds.");
   const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
-  const ocr = await withTimeout(
-    PaddleOCR.create({
-      lang: "en",
-      ocrVersion: "PP-OCRv5",
-      worker: false,
-      textDetectionBatchSize: 1,
-      textRecognitionBatchSize: 4,
-      ortOptions: {
-        backend: "wasm",
-        numThreads: 1,
-        simd: true,
-        wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/"
-      }
-    }),
-    onnxModelTimeoutMs,
-    "ONNX OCR model loading"
-  );
+  const ocr = await PaddleOCR.create({
+    lang: "en",
+    ocrVersion: "PP-OCRv5",
+    worker: false,
+    textDetectionBatchSize: 1,
+    textRecognitionBatchSize: 4,
+    ortOptions: {
+      backend: "wasm",
+      numThreads: 1,
+      simd: true,
+      wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/"
+    }
+  });
 
   onStatus("ONNX OCR ready.");
   return ocr as OcrWorker;
@@ -253,6 +249,8 @@ export function WebScannerApp() {
   const manualInputRef = useRef<HTMLInputElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
+  const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
+  const componentActiveRef = useRef(true);
   const scanTimerRef = useRef<number | null>(null);
   const ocrInFlightRef = useRef(false);
   const scanLoopGenerationRef = useRef(0);
@@ -279,6 +277,7 @@ export function WebScannerApp() {
   const [lastLookup, setLastLookup] = useState<LookupResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
   const [ocrStatus, setOcrStatus] = useState("");
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [lookupPending, setLookupPending] = useState(false);
@@ -407,7 +406,9 @@ export function WebScannerApp() {
   }, []);
 
   useEffect(() => {
+    componentActiveRef.current = true;
     return () => {
+      componentActiveRef.current = false;
       stopOcrLoop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
       ocrWorkerRef.current?.dispose().catch(() => undefined);
@@ -717,7 +718,7 @@ export function WebScannerApp() {
       if (!ocrWorkerRef.current) {
         setOcrStatus("Loading OCR engine...");
         try {
-          ocrWorkerRef.current = await createDigitOcrWorker(setOcrStatus);
+          await loadOcrWorker();
         } catch (error) {
           setOcrStatus("");
           setStatusMessage(
@@ -876,6 +877,59 @@ export function WebScannerApp() {
 
     if (lastCandidateRef.current.count >= 2) {
       await lookupStudent(candidate, "ocr");
+    }
+  }
+
+  async function loadOcrWorker() {
+    if (ocrWorkerRef.current) {
+      return ocrWorkerRef.current;
+    }
+
+    if (!ocrLoadPromiseRef.current) {
+      const loadPromise = createDigitOcrWorker(setOcrStatus).then(async (worker) => {
+        if (!componentActiveRef.current) {
+          await worker.dispose();
+          throw new Error("OCR loading was cancelled because the scanner was closed.");
+        }
+
+        ocrWorkerRef.current = worker;
+        return worker;
+      });
+      ocrLoadPromiseRef.current = loadPromise;
+      void loadPromise.catch(() => {
+        if (ocrLoadPromiseRef.current === loadPromise) {
+          ocrLoadPromiseRef.current = null;
+        }
+      });
+    }
+
+    return withTimeout(
+      ocrLoadPromiseRef.current,
+      onnxModelTimeoutMs,
+      "ONNX OCR model loading"
+    );
+  }
+
+  async function retryOcrLoad() {
+    if (ocrLoading || ocrWorkerRef.current) {
+      return;
+    }
+
+    setOcrLoading(true);
+    setStatusMessage("");
+    try {
+      await loadOcrWorker();
+      setOcrStatus("Looking for a student number...");
+      startOcrLoop();
+    } catch (error) {
+      setOcrStatus("");
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load ONNX OCR models. Continue with manual entry or try again."
+      );
+    } finally {
+      setOcrLoading(false);
     }
   }
 
@@ -1158,10 +1212,10 @@ export function WebScannerApp() {
             <button
               className="secondary"
               type="button"
-              onClick={() => startCamera(selectedRoom)}
-              disabled={busy}
+              onClick={retryOcrLoad}
+              disabled={busy || ocrLoading}
             >
-              Retry OCR Load
+              {ocrLoading ? "Loading OCR..." : "Retry OCR Load"}
             </button>
           ) : null}
         </div>
