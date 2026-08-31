@@ -254,6 +254,7 @@ export function WebScannerApp() {
   const scanTimerRef = useRef<number | null>(null);
   const ocrInFlightRef = useRef(false);
   const scanLoopGenerationRef = useRef(0);
+  const startOcrLoopRef = useRef<() => void>(() => undefined);
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
@@ -282,6 +283,7 @@ export function WebScannerApp() {
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [lookupPending, setLookupPending] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraRecoveryNeeded, setCameraRecoveryNeeded] = useState(false);
   const [scanPaused, setScanPaused] = useState(false);
   const [optimisticStats, setOptimisticStats] = useState({
     present: 0,
@@ -405,32 +407,101 @@ export function WebScannerApp() {
     }
   }, []);
 
+  const releaseCameraStream = useCallback((updateState = true) => {
+    streamRef.current?.getTracks().forEach((track) => {
+      track.onended = null;
+      track.stop();
+    });
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    if (updateState) {
+      setCameraActive(false);
+      setTorchSupported(false);
+      setTorchEnabled(false);
+      setTorchMessage("");
+    }
+  }, []);
+
   useEffect(() => {
     componentActiveRef.current = true;
     return () => {
       componentActiveRef.current = false;
       stopOcrLoop();
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      releaseCameraStream(false);
       ocrWorkerRef.current?.dispose().catch(() => undefined);
     };
-  }, [stopOcrLoop]);
+  }, [releaseCameraStream, stopOcrLoop]);
 
   const stopCamera = useCallback(() => {
     stopOcrLoop();
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-    setTorchSupported(false);
-    setTorchEnabled(false);
-    setTorchMessage("");
+    releaseCameraStream();
+    setCameraRecoveryNeeded(false);
     setScanHold(false);
     scanPausedRef.current = false;
     setScanPaused(false);
     selectedRoomRef.current = null;
     setSelectedRoom(null);
+  }, [releaseCameraStream, stopOcrLoop]);
+
+  useEffect(() => {
+    const pauseScanner = () => {
+      if (!selectedRoomRef.current) {
+        return;
+      }
+      stopOcrLoop();
+      setOcrStatus("Scanner paused while the app is in the background.");
+    };
+
+    const resumeScanner = async () => {
+      if (!selectedRoomRef.current || document.visibilityState === "hidden") {
+        return;
+      }
+
+      const stream = streamRef.current;
+      const track = stream?.getVideoTracks()[0];
+      if (!stream || !track || track.readyState !== "live") {
+        setCameraActive(false);
+        setCameraRecoveryNeeded(true);
+        setOcrStatus("Camera stopped while the app was in the background.");
+        return;
+      }
+
+      try {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+        }
+        setCameraActive(true);
+        setCameraRecoveryNeeded(false);
+        if (ocrWorkerRef.current) {
+          setOcrStatus("Looking for a student number...");
+          startOcrLoopRef.current();
+        }
+      } catch {
+        setCameraActive(false);
+        setCameraRecoveryNeeded(true);
+        setOcrStatus("Camera could not resume. Restart the camera to continue.");
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        pauseScanner();
+      } else {
+        void resumeScanner();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", pauseScanner);
+    window.addEventListener("pageshow", resumeScanner);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", pauseScanner);
+      window.removeEventListener("pageshow", resumeScanner);
+    };
   }, [stopOcrLoop]);
 
   const pushScannerHistoryGuard = useCallback(() => {
@@ -684,11 +755,14 @@ export function WebScannerApp() {
   }
 
   async function startCamera(room: RoomWithSession) {
+    stopOcrLoop();
+    releaseCameraStream();
     selectedRoomRef.current = room;
     setSelectedRoom(room);
     setStatusMessage("");
     setOcrStatus("Starting camera...");
     setCameraActive(true);
+    setCameraRecoveryNeeded(false);
     setScanHold(false);
     resetForNextScan();
 
@@ -703,6 +777,24 @@ export function WebScannerApp() {
       });
       streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0] as TorchMediaTrack | undefined;
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          if (!selectedRoomRef.current) {
+            return;
+          }
+          stopOcrLoop();
+          streamRef.current = null;
+          if (videoRef.current) {
+            videoRef.current.srcObject = null;
+          }
+          setCameraActive(false);
+          setCameraRecoveryNeeded(true);
+          setTorchSupported(false);
+          setTorchEnabled(false);
+          setTorchMessage("");
+          setOcrStatus("Camera stopped. Restart the camera to continue.");
+        };
+      }
       const supportsTorch = trackSupportsTorch(videoTrack);
       setTorchSupported(supportsTorch);
       setTorchEnabled(false);
@@ -935,6 +1027,9 @@ export function WebScannerApp() {
 
   function startOcrLoop() {
     stopOcrLoop();
+    if (document.visibilityState === "hidden") {
+      return;
+    }
     const generation = scanLoopGenerationRef.current;
 
     const scheduleNextScan = (delayMs: number) => {
@@ -965,6 +1060,8 @@ export function WebScannerApp() {
 
     scheduleNextScan(0);
   }
+
+  startOcrLoopRef.current = startOcrLoop;
 
   if (!user) {
     return (
@@ -1208,6 +1305,16 @@ export function WebScannerApp() {
             </div>
           ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
+          {cameraRecoveryNeeded ? (
+            <button
+              className="secondary"
+              type="button"
+              onClick={() => startCamera(selectedRoom)}
+              disabled={busy}
+            >
+              Restart Camera
+            </button>
+          ) : null}
           {cameraActive && !ocrWorkerRef.current && statusMessage ? (
             <button
               className="secondary"
