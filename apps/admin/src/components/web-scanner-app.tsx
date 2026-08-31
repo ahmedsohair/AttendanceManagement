@@ -290,6 +290,7 @@ export function WebScannerApp() {
   const [statusMessage, setStatusMessage] = useState("");
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [sessionRestoring, setSessionRestoring] = useState(true);
   const [busy, setBusy] = useState(false);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [lookupPending, setLookupPending] = useState(false);
@@ -485,6 +486,40 @@ export function WebScannerApp() {
       setTorchMessage("");
     }
   }, [requestJson]);
+
+  useEffect(() => {
+    let active = true;
+
+    const restoreInvigilatorSession = async () => {
+      try {
+        const payload = await requestJson<{ user: User }>(
+          "session-restore",
+          "/api/auth/me",
+          undefined,
+          8000
+        );
+        if (!active || payload.user.role !== "invigilator") {
+          return;
+        }
+
+        userRef.current = payload.user;
+        setUser(payload.user);
+        await loadRooms();
+      } catch {
+        // No valid invigilator session is the normal signed-out state.
+      } finally {
+        if (active) {
+          setSessionRestoring(false);
+        }
+      }
+    };
+
+    void restoreInvigilatorSession();
+    return () => {
+      active = false;
+      cancelRequests("session-restore", "rooms");
+    };
+  }, [cancelRequests, loadRooms, requestJson]);
 
   useEffect(() => {
     componentActiveRef.current = true;
@@ -1145,6 +1180,18 @@ export function WebScannerApp() {
   }
 
   startOcrLoopRef.current = startOcrLoop;
+
+  if (sessionRestoring) {
+    return (
+      <div className="web-scan-shell">
+        <section className="web-scan-card">
+          <ExamPulseLogo className="web-brand-logo" />
+          <h1>Preparing Scanner</h1>
+          <p className="subtle">Checking your secure invigilator session...</p>
+        </section>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
