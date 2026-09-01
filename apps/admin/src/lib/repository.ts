@@ -1243,11 +1243,6 @@ export async function deleteExamSession(sessionId: string) {
   }
 }
 
-function normalizeComment(comment?: string) {
-  const trimmed = comment?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
 function mapSupabaseRoom(row: Record<string, unknown>): Room {
   return {
     id: String(row.id),
@@ -1323,25 +1318,6 @@ function mapSupabaseIncident(row: Record<string, unknown>): Incident {
     details,
     createdAt: String(row.created_at)
   };
-}
-
-async function insertSupabaseIncident(incident: Incident) {
-  const supabase = getSupabaseAdmin();
-  const incidentInsert = await supabase.from("incidents").insert({
-    id: incident.id,
-    exam_session_id: incident.examSessionId,
-    student_id: incident.studentId ?? null,
-    room_id: incident.roomId ?? null,
-    expected_room_id: incident.expectedRoomId ?? null,
-    user_id: incident.userId ?? null,
-    incident_type: incident.incidentType,
-    details: incident.details,
-    created_at: incident.createdAt
-  });
-
-  if (incidentInsert.error) {
-    throw new Error(incidentInsert.error.message);
-  }
 }
 
 export async function lookupStudentFast(request: LookupRequest): Promise<LookupResult> {
@@ -1810,139 +1786,33 @@ export async function readAdminAuditStoreFast(
 }
 
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
-  const result = await lookupStudentFast({
-    examSessionId: request.examSessionId,
-    roomId: request.roomId,
-    studentId: request.studentId
-  });
-  const createdAt = nowIso();
-
-  if (result.status === "student_not_found") {
-    const incident: Incident = {
-      id: nextId(),
-      examSessionId: request.examSessionId,
-      roomId: request.roomId,
-      studentId: request.studentId,
-      userId: request.userId,
-      incidentType: "student_not_found",
-      details: {
-        source: request.source,
-        comment: normalizeComment(request.comment)
-      },
-      createdAt
-    };
-
-    await insertSupabaseIncident(incident);
-    return { incident, result };
-  }
-
-  if (result.status === "already_marked") {
-    const incident: Incident = {
-      id: nextId(),
-      examSessionId: request.examSessionId,
-      roomId: request.roomId,
-      expectedRoomId: result.attendance.expectedRoomId,
-      studentId: request.studentId,
-      userId: request.userId,
-      incidentType: "duplicate_attempt",
-      details: {
-        originalAttendanceId: result.attendance.id,
-        source: request.source,
-        comment: normalizeComment(request.comment)
-      },
-      createdAt
-    };
-
-    await insertSupabaseIncident(incident);
-    return { incident, result };
-  }
-
-  if (result.status === "wrong_room" && request.action === "redirect_only") {
-    const incident: Incident = {
-      id: nextId(),
-      examSessionId: request.examSessionId,
-      roomId: request.roomId,
-      expectedRoomId: result.expectedRoom.id,
-      studentId: request.studentId,
-      userId: request.userId,
-      incidentType: "wrong_room_redirected",
-      details: {
-        zone: result.allocation.zone,
-        expectedRoomCode: result.expectedRoom.code,
-        comment: normalizeComment(request.comment)
-      },
-      createdAt
-    };
-
-    await insertSupabaseIncident(incident);
-    return { incident, result };
-  }
-
-  if (result.status === "wrong_room" && !request.overrideWrongRoom) {
-    throw new Error("Wrong-room attendance requires overrideWrongRoom=true.");
-  }
-
-  const allocation = result.allocation;
-  const event: AttendanceEvent = {
-    id: nextId(),
-    examSessionId: request.examSessionId,
-    studentId: request.studentId,
-    markedByUserId: request.userId,
-    markedInRoomId: request.roomId,
-    expectedRoomId: allocation.roomId,
-    source: request.source,
-    overrideType: result.status === "wrong_room" ? "wrong_room_present" : "none",
-    roomMismatch: result.status === "wrong_room",
-    comment: normalizeComment(request.comment),
-    deviceId: request.deviceId,
-    createdAt
-  };
-
   const supabase = getSupabaseAdmin();
-  const attendanceInsert = await supabase.from("attendance_events").insert({
-    id: event.id,
-    exam_session_id: event.examSessionId,
-    student_id: event.studentId,
-    marked_by_user_id: event.markedByUserId,
-    marked_in_room_id: event.markedInRoomId,
-    expected_room_id: event.expectedRoomId,
-    source: event.source,
-    override_type: event.overrideType,
-    room_mismatch: event.roomMismatch,
-    comment: event.comment ?? null,
-    device_id: event.deviceId,
-    created_at: event.createdAt
+  const response = await supabase.rpc("mark_attendance_atomic", {
+    p_exam_session_id: request.examSessionId,
+    p_room_id: request.roomId,
+    p_student_id: request.studentId,
+    p_user_id: request.userId,
+    p_source: request.source,
+    p_device_id: request.deviceId,
+    p_action: request.action,
+    p_override_wrong_room: request.overrideWrongRoom ?? false,
+    p_comment: request.comment?.trim() || null
   });
 
-  if (attendanceInsert.error) {
-    if (attendanceInsert.error.code === "23505") {
-      throw new Error("Attendance already marked by another device.");
-    }
-    throw new Error(attendanceInsert.error.message);
+  if (response.error) {
+    throw new Error(response.error.message);
   }
 
-  if (result.status === "wrong_room") {
-    const incident: Incident = {
-      id: nextId(),
-      examSessionId: request.examSessionId,
-      roomId: request.roomId,
-      expectedRoomId: result.expectedRoom.id,
-      studentId: request.studentId,
-      userId: request.userId,
-      incidentType: "wrong_room_present_override",
-      details: {
-        zone: result.allocation.zone,
-        expectedRoomCode: result.expectedRoom.code,
-        comment: normalizeComment(request.comment)
-      },
-      createdAt
-    };
-
-    await insertSupabaseIncident(incident);
-    return { event, incident, result };
+  if (
+    !response.data ||
+    typeof response.data !== "object" ||
+    Array.isArray(response.data) ||
+    !("result" in response.data)
+  ) {
+    throw new Error("Atomic attendance operation returned an invalid response.");
   }
 
-  return { event, result };
+  return response.data;
 }
 
 export async function applyAttendanceMark(
