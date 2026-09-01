@@ -10,6 +10,7 @@ import type {
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
 import {
   ScannerRequestError,
+  createIdempotencyTracker,
   createRequestCoordinator
 } from "@/lib/scanner-requests.mjs";
 import {
@@ -134,6 +135,18 @@ function getDeviceId() {
   return nextId;
 }
 
+function createRequestId() {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -212,6 +225,7 @@ export function WebScannerApp() {
   const historyGuardActiveRef = useRef(false);
   const historyGuardIdRef = useRef("");
   const lastBackHandledAtRef = useRef(0);
+  const markIdempotencyRef = useRef<ReturnType<typeof createIdempotencyTracker> | null>(null);
   const lastCandidateRef = useRef<{ value: string; count: number; seenAt: number } | null>(
     null
   );
@@ -272,6 +286,10 @@ export function WebScannerApp() {
     });
   }
 
+  if (!markIdempotencyRef.current) {
+    markIdempotencyRef.current = createIdempotencyTracker(createRequestId);
+  }
+
   if (!ocrLoopRef.current) {
     ocrLoopRef.current = createSingleFlightLoop({
       delayMs: 900,
@@ -310,6 +328,7 @@ export function WebScannerApp() {
   }, []);
 
   const resetForNextScan = useCallback(() => {
+    markIdempotencyRef.current?.clear();
     setStudentId("");
     setComment("");
     setLastLookup(null);
@@ -794,15 +813,29 @@ export function WebScannerApp() {
 
     setBusy(true);
     try {
+      const deviceId = getDeviceId();
+      const action = overrides.action || "mark_present";
+      const nextComment = comment.trim() || undefined;
+      const fingerprint = JSON.stringify({
+        examSessionId: currentRoom.examSessionId,
+        roomId: currentRoom.id,
+        studentId: normalizedId,
+        source: lastSource,
+        deviceId,
+        action,
+        overrideWrongRoom: overrides.overrideWrongRoom ?? false,
+        comment: nextComment || null
+      });
       const requestBody: MarkAttendanceRequest = {
+        requestId: markIdempotencyRef.current!.get(fingerprint),
         examSessionId: currentRoom.examSessionId,
         roomId: currentRoom.id,
         studentId: normalizedId,
         source: lastSource,
         userId: currentUser.id,
-        deviceId: getDeviceId(),
-        action: "mark_present",
-        comment: comment.trim() || undefined,
+        deviceId,
+        action,
+        comment: nextComment,
         ...overrides
       };
 
@@ -846,6 +879,7 @@ export function WebScannerApp() {
           (payload.incident?.incidentType === "wrong_room_redirected" ? 1 : 0)
       }));
       setLocalRecentChips((current) => [chip, ...current].slice(0, 3));
+      markIdempotencyRef.current?.clear();
       window.setTimeout(resetForNextScan, 180);
       loadLiveState(currentRoom.id).catch(() => undefined);
     } catch (error) {

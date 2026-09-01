@@ -1788,6 +1788,7 @@ export async function readAdminAuditStoreFast(
 async function applySupabaseAttendanceMark(request: MarkAttendanceRequest) {
   const supabase = getSupabaseAdmin();
   const response = await supabase.rpc("mark_attendance_atomic", {
+    p_request_id: request.requestId || nextId(),
     p_exam_session_id: request.examSessionId,
     p_room_id: request.roomId,
     p_student_id: request.studentId,

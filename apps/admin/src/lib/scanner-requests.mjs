@@ -13,6 +13,27 @@ export class ScannerRequestError extends Error {
 }
 
 /**
+ * Keeps one idempotency key for retries of the same logical scanner action.
+ * @param {() => string} createId
+ */
+export function createIdempotencyTracker(createId) {
+  /** @type {{ fingerprint: string, requestId: string } | null} */
+  let pending = null;
+
+  return {
+    get(fingerprint) {
+      if (!pending || pending.fingerprint !== fingerprint) {
+        pending = { fingerprint, requestId: createId() };
+      }
+      return pending.requestId;
+    },
+    clear() {
+      pending = null;
+    }
+  };
+}
+
+/**
  * @param {{
  *   fetchImpl?: typeof fetch,
  *   onAuthExpired?: () => void,

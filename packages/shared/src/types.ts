@@ -132,6 +132,7 @@ export type LookupResult =
   | LookupResultWrongRoom;
 
 export interface MarkAttendanceRequest {
+  requestId?: string;
   examSessionId: string;
   roomId: string;
   studentId: string;

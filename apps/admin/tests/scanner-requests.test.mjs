@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ScannerRequestError,
+  createIdempotencyTracker,
   createRequestCoordinator
 } from "../src/lib/scanner-requests.mjs";
 
@@ -14,6 +15,17 @@ function deferred() {
   });
   return { promise, resolve, reject };
 }
+
+test("reuses an idempotency key only for the same logical action", () => {
+  let sequence = 0;
+  const tracker = createIdempotencyTracker(() => `request-${++sequence}`);
+
+  assert.equal(tracker.get("same-action"), "request-1");
+  assert.equal(tracker.get("same-action"), "request-1");
+  assert.equal(tracker.get("different-action"), "request-2");
+  tracker.clear();
+  assert.equal(tracker.get("different-action"), "request-3");
+});
 
 test("a newer request cancels the previous request with the same key", async () => {
   const first = deferred();

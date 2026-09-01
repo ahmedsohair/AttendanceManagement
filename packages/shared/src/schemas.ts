@@ -23,6 +23,7 @@ export const lookupRequestSchema = z.object({
 });
 
 export const markAttendanceRequestSchema = z.object({
+  requestId: z.string().uuid().optional(),
   examSessionId: z.string().min(1),
   roomId: z.string().min(1),
   studentId: z.string().min(1),
