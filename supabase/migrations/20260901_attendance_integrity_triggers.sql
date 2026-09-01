@@ -8,6 +8,7 @@ declare
   v_expected_session_id uuid;
   v_allocation_room_id uuid;
   v_is_mismatch boolean;
+  v_expected_override text;
 begin
   select exam_session_id into v_marked_session_id
   from public.rooms
@@ -39,13 +40,16 @@ begin
   end if;
 
   v_is_mismatch := new.marked_in_room_id <> new.expected_room_id;
+  v_expected_override := case
+    when v_is_mismatch then 'wrong_room_present'
+    else 'none'
+  end;
   if new.room_mismatch is distinct from v_is_mismatch then
     raise exception 'Attendance room_mismatch does not match the marked and expected rooms.'
       using errcode = '23514';
   end if;
 
-  if new.override_type is distinct from
-      case when v_is_mismatch then 'wrong_room_present' else 'none' end then
+  if new.override_type is distinct from v_expected_override then
     raise exception 'Attendance override_type is inconsistent with its room mismatch.'
       using errcode = '23514';
   end if;
