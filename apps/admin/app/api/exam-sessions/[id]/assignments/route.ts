@@ -38,7 +38,7 @@ export async function POST(
         }))
       : undefined;
 
-    await updateExamRoomAssignments({
+    const committedRoomAssignments = await updateExamRoomAssignments({
       examSessionId: id,
       expectedRoomAssignments,
       roomAssignments
@@ -49,7 +49,8 @@ export async function POST(
     revalidatePath("/invigilators");
 
     return NextResponse.json({
-      message: "Room assignments saved."
+      message: "Room assignments saved.",
+      roomAssignments: committedRoomAssignments
     });
   } catch (error) {
     const message =

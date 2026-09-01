@@ -30,6 +30,21 @@ function buildInitialAssignments(rooms: Room[], invigilators: User[]) {
   return assignments;
 }
 
+function buildAssignmentRecord(
+  rooms: Room[],
+  assignments: Array<{ roomId: string; invigilatorIds: string[] }>
+) {
+  const record = Object.fromEntries(rooms.map((room) => [room.id, [] as string[]]));
+
+  for (const assignment of assignments) {
+    if (assignment.roomId in record) {
+      record[assignment.roomId] = [...assignment.invigilatorIds];
+    }
+  }
+
+  return record;
+}
+
 async function readJsonResponse(response: Response) {
   const payload = (await response.json().catch(() => ({}))) as { message?: string };
 
@@ -132,7 +147,7 @@ export function ExamAssignmentWizard({
 
   async function saveAssignmentsRequest() {
     try {
-      await readJsonResponse(
+      const payload = (await readJsonResponse(
         await fetch(`/api/exam-sessions/${sessionId}/assignments`, {
           body: JSON.stringify({
             expectedRoomAssignments: rooms.map((room) => ({
@@ -149,8 +164,17 @@ export function ExamAssignmentWizard({
           },
           method: "POST"
         })
-      );
-      setSavedAssignments(assignments);
+      )) as {
+        roomAssignments?: Array<{ roomId: string; invigilatorIds: string[] }>;
+      };
+
+      if (!payload.roomAssignments) {
+        throw new Error("Assignments were saved but the committed snapshot was not returned.");
+      }
+
+      const committedAssignments = buildAssignmentRecord(rooms, payload.roomAssignments);
+      setAssignments(committedAssignments);
+      setSavedAssignments(committedAssignments);
       setDirty(false);
       setNotice({ tone: "ok", text: "Room assignments saved." });
     } catch (error) {

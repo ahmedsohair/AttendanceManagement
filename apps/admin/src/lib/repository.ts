@@ -838,147 +838,67 @@ export async function updateExamRoomAssignments(input: {
     }
 
     await writeStore(store);
-    return;
+    return sessionRooms.map((room) => ({
+      roomId: room.id,
+      invigilatorIds: Array.from(
+        assignmentsByUserId.entries()
+      )
+        .filter(([, roomIds]) => roomIds.has(room.id))
+        .map(([userId]) => userId)
+        .sort()
+    }));
   }
 
   const sessionId = assertUuid(examSessionId, "Exam session ID");
-  const supabase = getSupabaseAdmin();
-  const sessionResponse = await supabase
-    .from("exam_sessions")
-    .select("id, published, status")
-    .eq("id", sessionId)
-    .maybeSingle();
-
-  if (sessionResponse.error) {
-    throw new Error(sessionResponse.error.message);
+  if (!input.expectedRoomAssignments) {
+    throw new Error("The assignment page is missing its concurrency snapshot. Refresh and try again.");
   }
 
-  if (!sessionResponse.data) {
-    throw new Error("Session not found.");
-  }
-
-  const sessionStatus =
-    sessionResponse.data.status ?? (sessionResponse.data.published ? "active" : "draft");
-
-  if (sessionStatus === "closed") {
-    throw new Error("Closed exams are read-only. Room assignments cannot be changed.");
-  }
-
-  const roomsResponse = await supabase
-    .from("rooms")
-    .select("id")
-    .eq("exam_session_id", sessionId);
-
-  if (roomsResponse.error) {
-    throw new Error(roomsResponse.error.message);
-  }
-
-  const sessionRoomIds = (roomsResponse.data || []).map((room) => room.id);
-  const sessionRoomIdSet = new Set(sessionRoomIds);
-  const submittedRoomIdSet = new Set(input.roomAssignments.map((assignment) => assignment.roomId));
-
-  if (!sessionRoomIds.length) {
-    throw new Error("No rooms found for this exam.");
-  }
-
-  if (submittedRoomIdSet.size !== sessionRoomIdSet.size) {
-    throw new Error("Assignment payload must include every room in this exam.");
-  }
-
-  for (const roomId of submittedRoomIdSet) {
-    if (!sessionRoomIdSet.has(roomId)) {
-      throw new Error("Assignment payload includes a room outside this exam.");
-    }
-  }
-
-  const submittedInvigilatorIds = Array.from(
-    new Set(input.roomAssignments.flatMap((assignment) => assignment.invigilatorIds))
-  );
-  const invalidFormattedInvigilatorId = submittedInvigilatorIds.find(
-    (userId) => !uuidPattern.test(userId)
-  );
-
-  if (invalidFormattedInvigilatorId) {
-    throw new Error("Assignment payload includes an invalid invigilator ID.");
-  }
-
-  if (submittedInvigilatorIds.length) {
-    const usersResponse = await supabase
-      .from("users")
-      .select("id")
-      .eq("role", "invigilator")
-      .in("id", submittedInvigilatorIds);
-
-    if (usersResponse.error) {
-      throw new Error(usersResponse.error.message);
-    }
-
-    const validInvigilatorIds = new Set((usersResponse.data || []).map((user) => user.id));
-    const unknownInvigilatorId = submittedInvigilatorIds.find(
-      (userId) => !validInvigilatorIds.has(userId)
-    );
-
-    if (unknownInvigilatorId) {
-      throw new Error("Assignment payload includes an unknown invigilator.");
-    }
-  }
-
-  if (input.expectedRoomAssignments) {
-    const currentAssignmentsResponse = await supabase
-      .from("room_assignments")
-      .select("room_id, user_id")
-      .in("room_id", sessionRoomIds);
-
-    if (currentAssignmentsResponse.error) {
-      throw new Error(currentAssignmentsResponse.error.message);
-    }
-
-    const currentInvigilatorsByRoomId = new Map<string, string[]>();
-    for (const assignment of currentAssignmentsResponse.data || []) {
-      const current = currentInvigilatorsByRoomId.get(assignment.room_id) || [];
-      current.push(assignment.user_id);
-      currentInvigilatorsByRoomId.set(assignment.room_id, current);
-    }
-
-    const currentRoomAssignments = sessionRoomIds.map((roomId) => ({
-      roomId,
-      invigilatorIds: currentInvigilatorsByRoomId.get(roomId) || []
-    }));
-
-    if (!sameAssignmentSnapshot(input.expectedRoomAssignments, currentRoomAssignments)) {
-      throw new Error(
-        "Room assignments changed since this page loaded. Refresh before saving."
-      );
-    }
-  }
-
-  const rows = input.roomAssignments.flatMap((assignment) => {
-    return Array.from(new Set(assignment.invigilatorIds))
-      .map((userId) => ({
-        id: nextId(),
-        room_id: assignment.roomId,
-        user_id: userId
-      }));
+  const normalizeAssignments = (
+    assignments: Array<{ roomId: string; invigilatorIds: string[] }>
+  ) => assignments.map((assignment) => ({
+    roomId: assertUuid(assignment.roomId, "Room ID"),
+    invigilatorIds: Array.from(new Set(assignment.invigilatorIds)).map((userId) =>
+      assertUuid(userId, "Invigilator ID")
+    )
+  }));
+  const expectedAssignments = normalizeAssignments(input.expectedRoomAssignments);
+  const submittedAssignments = normalizeAssignments(input.roomAssignments);
+  const response = await getSupabaseAdmin().rpc("replace_room_assignments_atomic", {
+    p_exam_session_id: sessionId,
+    p_expected_assignments: expectedAssignments,
+    p_room_assignments: submittedAssignments
   });
 
-  const deleteResponse = await supabase
-    .from("room_assignments")
-    .delete()
-    .in("room_id", sessionRoomIds);
-
-  if (deleteResponse.error) {
-    throw new Error(deleteResponse.error.message);
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+  if (!response.data || typeof response.data !== "object" || Array.isArray(response.data)) {
+    throw new Error("Atomic room assignment returned an invalid response.");
   }
 
-  if (!rows.length) {
-    return;
+  const committed = response.data as Record<string, unknown>;
+  if (committed.examSessionId !== sessionId || !Array.isArray(committed.roomAssignments)) {
+    throw new Error("Committed room assignment snapshot is invalid.");
   }
 
-  const insertResponse = await supabase.from("room_assignments").insert(rows);
+  return (committed.roomAssignments as unknown[]).map((assignment) => {
+    if (!assignment || typeof assignment !== "object" || Array.isArray(assignment)) {
+      throw new Error("Committed room assignment snapshot is invalid.");
+    }
 
-  if (insertResponse.error) {
-    throw new Error(insertResponse.error.message);
-  }
+    const item = assignment as Record<string, unknown>;
+    if (typeof item.roomId !== "string" || !Array.isArray(item.invigilatorIds)) {
+      throw new Error("Committed room assignment snapshot is invalid.");
+    }
+
+    return {
+      roomId: assertUuid(item.roomId, "Committed room ID"),
+      invigilatorIds: item.invigilatorIds.map((userId) =>
+        assertUuid(String(userId), "Committed invigilator ID")
+      )
+    };
+  });
 }
 
 export async function importExamSession(payload: SessionImportPayload) {
