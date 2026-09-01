@@ -33,14 +33,20 @@ begin
   if p_student_id is null or btrim(p_student_id) = '' then
     raise exception 'Student number is required.' using errcode = '22023';
   end if;
-  if p_source not in ('ocr', 'manual') then
+  if char_length(btrim(p_student_id)) > 64 then
+    raise exception 'Student number is too long.' using errcode = '22023';
+  end if;
+  if p_source is null or p_source not in ('ocr', 'manual') then
     raise exception 'Invalid attendance source.' using errcode = '22023';
   end if;
-  if p_action not in ('mark_present', 'redirect_only') then
+  if p_action is null or p_action not in ('mark_present', 'redirect_only') then
     raise exception 'Invalid attendance action.' using errcode = '22023';
   end if;
   if p_device_id is null or btrim(p_device_id) = '' then
     raise exception 'Device identifier is required.' using errcode = '22023';
+  end if;
+  if char_length(btrim(p_device_id)) > 200 then
+    raise exception 'Device identifier is too long.' using errcode = '22023';
   end if;
   if v_comment is not null and char_length(v_comment) > 280 then
     raise exception 'Comment must be 280 characters or fewer.' using errcode = '22023';
@@ -48,7 +54,8 @@ begin
 
   select * into v_session
   from public.exam_sessions
-  where id = p_exam_session_id;
+  where id = p_exam_session_id
+  for share;
   if not found then
     raise exception 'Exam session not found.' using errcode = 'P0002';
   end if;
@@ -58,7 +65,8 @@ begin
 
   select * into v_marked_room
   from public.rooms
-  where id = p_room_id;
+  where id = p_room_id
+  for share;
   if not found then
     raise exception 'Room not found.' using errcode = 'P0002';
   end if;
@@ -68,17 +76,20 @@ begin
 
   select role into v_user_role
   from public.users
-  where id = p_user_id;
+  where id = p_user_id
+  for share;
   if not found or v_user_role not in ('admin', 'invigilator') then
     raise exception 'User is not authorized to mark attendance.' using errcode = '42501';
   end if;
-  if v_user_role = 'invigilator' and not exists (
-    select 1
+  if v_user_role = 'invigilator' then
+    perform 1
     from public.room_assignments
     where room_id = p_room_id
       and user_id = p_user_id
-  ) then
-    raise exception 'User is not assigned to this room.' using errcode = '42501';
+    for share;
+    if not found then
+      raise exception 'User is not assigned to this room.' using errcode = '42501';
+    end if;
   end if;
 
   select * into v_existing
@@ -140,7 +151,8 @@ begin
   select * into v_allocation
   from public.student_allocations
   where exam_session_id = p_exam_session_id
-    and student_id = btrim(p_student_id);
+    and student_id = btrim(p_student_id)
+  for share;
 
   if not found then
     insert into public.incidents (
@@ -174,7 +186,8 @@ begin
 
   select * into v_expected_room
   from public.rooms
-  where id = v_allocation.room_id;
+  where id = v_allocation.room_id
+  for share;
   if not found or v_expected_room.exam_session_id <> p_exam_session_id then
     raise exception 'Student allocation references an invalid room.' using errcode = '23514';
   end if;
