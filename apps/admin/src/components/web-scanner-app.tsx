@@ -12,6 +12,11 @@ import {
   ScannerRequestError,
   createRequestCoordinator
 } from "@/lib/scanner-requests.mjs";
+import {
+  describeOcrLoadError,
+  getOcrCanvasWidth,
+  supportsWasmSimd
+} from "@/lib/scanner-ocr-runtime.mjs";
 import { createSingleFlightLoop } from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -70,6 +75,11 @@ type TorchMediaTrack = MediaStreamTrack & {
   applyConstraints(constraints: MediaTrackConstraints & {
     advanced?: Array<MediaTrackConstraintSet & { torch?: boolean }>;
   }): Promise<void>;
+};
+
+type PreprocessingBuffers = {
+  gray: Uint8ClampedArray;
+  integral: Float64Array;
 };
 
 const deviceIdStorageKey = "ams-web-scanner-device-id";
@@ -160,7 +170,7 @@ async function createDigitOcrWorker(
     ortOptions: {
       backend: "wasm",
       numThreads: 1,
-      simd: true,
+      simd: supportsWasmSimd(),
       wasmPaths: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.26.0/dist/"
     }
   });
@@ -169,9 +179,22 @@ async function createDigitOcrWorker(
   return ocr as OcrWorker;
 }
 
-function preprocessLowLightImageData(imageData: ImageData) {
+function preprocessLowLightImageData(
+  imageData: ImageData,
+  existingBuffers?: PreprocessingBuffers | null
+) {
   const { data, width, height } = imageData;
-  const gray = new Uint8ClampedArray(width * height);
+  const grayLength = width * height;
+  const integralLength = (width + 1) * (height + 1);
+  const gray =
+    existingBuffers?.gray.length === grayLength
+      ? existingBuffers.gray
+      : new Uint8ClampedArray(grayLength);
+  const integral =
+    existingBuffers?.integral.length === integralLength
+      ? existingBuffers.integral
+      : new Float64Array(integralLength);
+  integral.fill(0);
   let min = 255;
   let max = 0;
 
@@ -194,7 +217,6 @@ function preprocessLowLightImageData(imageData: ImageData) {
     gray[index] = Math.max(0, Math.min(255, Math.round(normalized * 1.18 - 16)));
   }
 
-  const integral = new Float64Array((width + 1) * (height + 1));
   for (let y = 0; y < height; y += 1) {
     let rowSum = 0;
     for (let x = 0; x < width; x += 1) {
@@ -226,6 +248,8 @@ function preprocessLowLightImageData(imageData: ImageData) {
       data[dataIndex + 3] = 255;
     }
   }
+
+  return { gray, integral };
 }
 
 function trackSupportsTorch(track?: MediaStreamTrack | null) {
@@ -247,6 +271,7 @@ export function WebScannerApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
+  const preprocessingBuffersRef = useRef<PreprocessingBuffers | null>(null);
   const componentActiveRef = useRef(true);
   const startOcrLoopRef = useRef<() => void>(() => undefined);
   const runOcrScanRef = useRef<() => Promise<void>>(async () => undefined);
@@ -517,6 +542,11 @@ export function WebScannerApp() {
       stopOcrLoop();
       releaseCameraStream(false);
       ocrWorkerRef.current?.dispose().catch(() => undefined);
+      preprocessingBuffersRef.current = null;
+      if (canvasRef.current) {
+        canvasRef.current.width = 1;
+        canvasRef.current.height = 1;
+      }
     };
   }, [cancelAllRequests, releaseCameraStream, stopOcrLoop]);
 
@@ -959,9 +989,7 @@ export function WebScannerApp() {
         } catch (error) {
           setOcrStatus("");
           setStatusMessage(
-            error instanceof Error
-              ? error.message
-              : "Unable to load ONNX OCR models. Check the connection and try again."
+            describeOcrLoadError(error)
           );
           return;
         }
@@ -1059,7 +1087,7 @@ export function WebScannerApp() {
       return;
     }
 
-    const outputWidth = Math.min(760, Math.max(420, sourceWidth));
+    const outputWidth = getOcrCanvasWidth(sourceWidth);
     const outputHeight = Math.round(outputWidth * (sourceHeight / sourceWidth));
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -1076,7 +1104,10 @@ export function WebScannerApp() {
     );
 
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    preprocessLowLightImageData(imageData);
+    preprocessingBuffersRef.current = preprocessLowLightImageData(
+      imageData,
+      preprocessingBuffersRef.current
+    );
     context.putImageData(imageData, 0, 0);
 
     setOcrStatus("Reading red box with ONNX OCR...");
@@ -1163,9 +1194,7 @@ export function WebScannerApp() {
     } catch (error) {
       setOcrStatus("");
       setStatusMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to load ONNX OCR models. Continue with manual entry or try again."
+          describeOcrLoadError(error)
       );
     } finally {
       setOcrLoading(false);
