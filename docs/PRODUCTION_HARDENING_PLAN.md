@@ -280,11 +280,17 @@ Verification completed on staging on 1 September 2026:
 
 ### 3.3 Strengthen relational constraints
 
-- [ ] Ensure marked and expected rooms belong to the attendance event's exam.
-- [ ] Ensure the student has an allocation in the same exam.
-- [ ] Ensure `room_mismatch`, `override_type`, expected room, and marked room remain logically consistent.
-- [ ] Add checks or triggers for incident room/session consistency.
-- [ ] Validate existing production rows before enabling new constraints.
+- [x] Ensure marked and expected rooms belong to the attendance event's exam.
+- [x] Ensure the student has an allocation in the same exam.
+- [x] Ensure `room_mismatch`, `override_type`, expected room, and marked room remain logically consistent.
+- [x] Add checks or triggers for incident room/session consistency.
+- [x] Validate existing production rows before enabling new constraints.
+
+Verification completed on staging on 1 September 2026:
+
+- Read-only audits found zero relational-integrity violations in both staging and production; production was not modified.
+- Staging rejects cross-session rooms, missing allocations, incorrect expected rooms, inconsistent mismatch flags, malformed wrong-room incidents, and incidents without their required attendance records.
+- The full rollback-only atomic attendance, idempotency, and integrity-trigger suites pass with the triggers enabled.
 
 ### 3.4 Make imports atomic
 
