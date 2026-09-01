@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSingleFlightLoop } from "../src/lib/scanner-runtime.mjs";
+import {
+  createSingleFlightLoop,
+  getScannerBackAction
+} from "../src/lib/scanner-runtime.mjs";
 
 function waitFor(predicate, timeoutMs = 3000) {
   const startedAt = Date.now();
@@ -95,4 +98,27 @@ test("recovers after a prediction error", async () => {
 
   assert.deepEqual(errors, ["prediction failed"]);
   assert.equal(loop.state().active, false);
+});
+
+test("maps browser back to a safe scanner transition", () => {
+  assert.equal(
+    getScannerBackAction({ busy: true, lookupPending: false, scanPaused: true, hasRoom: true }),
+    "wait"
+  );
+  assert.equal(
+    getScannerBackAction({ busy: false, lookupPending: true, scanPaused: true, hasRoom: true }),
+    "wait"
+  );
+  assert.equal(
+    getScannerBackAction({ busy: false, lookupPending: false, scanPaused: true, hasRoom: true }),
+    "cancel-review"
+  );
+  assert.equal(
+    getScannerBackAction({ busy: false, lookupPending: false, scanPaused: false, hasRoom: true }),
+    "room-selection"
+  );
+  assert.equal(
+    getScannerBackAction({ busy: false, lookupPending: false, scanPaused: false, hasRoom: false }),
+    "stay-signed-in"
+  );
 });

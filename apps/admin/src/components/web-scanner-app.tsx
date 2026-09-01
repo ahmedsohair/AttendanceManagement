@@ -15,9 +15,13 @@ import {
 import {
   describeOcrLoadError,
   getOcrCanvasWidth,
+  preprocessLowLightImageData,
   supportsWasmSimd
 } from "@/lib/scanner-ocr-runtime.mjs";
-import { createSingleFlightLoop } from "@/lib/scanner-runtime.mjs";
+import {
+  createSingleFlightLoop,
+  getScannerBackAction
+} from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type RoomWithSession = Room & {
@@ -75,11 +79,6 @@ type TorchMediaTrack = MediaStreamTrack & {
   applyConstraints(constraints: MediaTrackConstraints & {
     advanced?: Array<MediaTrackConstraintSet & { torch?: boolean }>;
   }): Promise<void>;
-};
-
-type PreprocessingBuffers = {
-  gray: Uint8ClampedArray;
-  integral: Float64Array;
 };
 
 const deviceIdStorageKey = "ams-web-scanner-device-id";
@@ -179,79 +178,6 @@ async function createDigitOcrWorker(
   return ocr as OcrWorker;
 }
 
-function preprocessLowLightImageData(
-  imageData: ImageData,
-  existingBuffers?: PreprocessingBuffers | null
-) {
-  const { data, width, height } = imageData;
-  const grayLength = width * height;
-  const integralLength = (width + 1) * (height + 1);
-  const gray =
-    existingBuffers?.gray.length === grayLength
-      ? existingBuffers.gray
-      : new Uint8ClampedArray(grayLength);
-  const integral =
-    existingBuffers?.integral.length === integralLength
-      ? existingBuffers.integral
-      : new Float64Array(integralLength);
-  integral.fill(0);
-  let min = 255;
-  let max = 0;
-
-  for (let pixelIndex = 0, dataIndex = 0; pixelIndex < gray.length; pixelIndex += 1, dataIndex += 4) {
-    const value = Math.round(
-      data[dataIndex] * 0.299 + data[dataIndex + 1] * 0.587 + data[dataIndex + 2] * 0.114
-    );
-    gray[pixelIndex] = value;
-    if (value < min) {
-      min = value;
-    }
-    if (value > max) {
-      max = value;
-    }
-  }
-
-  const range = Math.max(20, max - min);
-  for (let index = 0; index < gray.length; index += 1) {
-    const normalized = ((gray[index] - min) / range) * 255;
-    gray[index] = Math.max(0, Math.min(255, Math.round(normalized * 1.18 - 16)));
-  }
-
-  for (let y = 0; y < height; y += 1) {
-    let rowSum = 0;
-    for (let x = 0; x < width; x += 1) {
-      rowSum += gray[y * width + x];
-      const integralIndex = (y + 1) * (width + 1) + x + 1;
-      integral[integralIndex] = integral[integralIndex - (width + 1)] + rowSum;
-    }
-  }
-
-  const radius = Math.max(8, Math.round(Math.min(width, height) / 28));
-  for (let y = 0, dataIndex = 0; y < height; y += 1) {
-    const y0 = Math.max(0, y - radius);
-    const y1 = Math.min(height - 1, y + radius);
-
-    for (let x = 0; x < width; x += 1, dataIndex += 4) {
-      const x0 = Math.max(0, x - radius);
-      const x1 = Math.min(width - 1, x + radius);
-      const area = (x1 - x0 + 1) * (y1 - y0 + 1);
-      const sum =
-        integral[(y1 + 1) * (width + 1) + x1 + 1] -
-        integral[y0 * (width + 1) + x1 + 1] -
-        integral[(y1 + 1) * (width + 1) + x0] +
-        integral[y0 * (width + 1) + x0];
-      const localMean = sum / area;
-      const value = gray[y * width + x] > localMean - 8 ? 255 : 0;
-      data[dataIndex] = value;
-      data[dataIndex + 1] = value;
-      data[dataIndex + 2] = value;
-      data[dataIndex + 3] = 255;
-    }
-  }
-
-  return { gray, integral };
-}
-
 function trackSupportsTorch(track?: MediaStreamTrack | null) {
   if (!track?.getCapabilities) {
     return false;
@@ -271,7 +197,7 @@ export function WebScannerApp() {
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
-  const preprocessingBuffersRef = useRef<PreprocessingBuffers | null>(null);
+  const preprocessingBuffersRef = useRef<ReturnType<typeof preprocessLowLightImageData> | null>(null);
   const componentActiveRef = useRef(true);
   const startOcrLoopRef = useRef<() => void>(() => undefined);
   const runOcrScanRef = useRef<() => Promise<void>>(async () => undefined);
@@ -700,20 +626,27 @@ export function WebScannerApp() {
       }
       lastBackHandledAtRef.current = now;
 
-      if (busyRef.current || lookupPendingRef.current) {
+      const action = getScannerBackAction({
+        busy: busyRef.current,
+        lookupPending: lookupPendingRef.current,
+        scanPaused: scanPausedRef.current,
+        hasRoom: Boolean(selectedRoomRef.current)
+      });
+
+      if (action === "wait") {
         pushScannerHistoryGuard();
         setStatusMessage("Please wait for the current action to finish.");
         return;
       }
 
-      if (scanPausedRef.current) {
+      if (action === "cancel-review") {
         resetForNextScan();
         pushScannerHistoryGuard();
         setStatusMessage("Scan cancelled. Continue with the next student.");
         return;
       }
 
-      if (selectedRoomRef.current) {
+      if (action === "room-selection") {
         stopCamera();
         pushScannerHistoryGuard();
         setStatusMessage("Returned to room selection.");

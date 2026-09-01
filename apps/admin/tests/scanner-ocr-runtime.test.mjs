@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   describeOcrLoadError,
   getOcrCanvasWidth,
+  preprocessLowLightImageData,
   supportsWasmSimd
 } from "../src/lib/scanner-ocr-runtime.mjs";
 
@@ -23,4 +24,21 @@ test("classifies actionable OCR initialization failures", () => {
 
 test("SIMD capability detection is safe and returns a boolean", () => {
   assert.equal(typeof supportsWasmSimd(), "boolean");
+});
+
+test("reuses preprocessing buffers across 200 frames", () => {
+  const frame = {
+    width: 64,
+    height: 24,
+    data: new Uint8ClampedArray(64 * 24 * 4).fill(128)
+  };
+  let buffers = preprocessLowLightImageData(frame);
+  const originalGray = buffers.gray;
+  const originalIntegral = buffers.integral;
+
+  for (let index = 1; index < 200; index += 1) {
+    buffers = preprocessLowLightImageData(frame, buffers);
+    assert.equal(buffers.gray, originalGray);
+    assert.equal(buffers.integral, originalIntegral);
+  }
 });

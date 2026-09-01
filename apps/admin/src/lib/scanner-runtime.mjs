@@ -73,3 +73,16 @@ export function createSingleFlightLoop({
 
   return { start, stop, state };
 }
+
+export function getScannerBackAction({ busy, lookupPending, scanPaused, hasRoom }) {
+  if (busy || lookupPending) {
+    return "wait";
+  }
+  if (scanPaused) {
+    return "cancel-review";
+  }
+  if (hasRoom) {
+    return "room-selection";
+  }
+  return "stay-signed-in";
+}
