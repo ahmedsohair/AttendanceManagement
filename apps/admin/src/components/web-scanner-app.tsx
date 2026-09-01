@@ -8,6 +8,7 @@ import type {
   User
 } from "@algo-attendance/shared";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
+import { createSingleFlightLoop } from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type RoomWithSession = Room & {
@@ -261,10 +262,9 @@ export function WebScannerApp() {
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
   const componentActiveRef = useRef(true);
-  const scanTimerRef = useRef<number | null>(null);
-  const ocrInFlightRef = useRef(false);
-  const scanLoopGenerationRef = useRef(0);
   const startOcrLoopRef = useRef<() => void>(() => undefined);
+  const runOcrScanRef = useRef<() => Promise<void>>(async () => undefined);
+  const ocrLoopRef = useRef<ReturnType<typeof createSingleFlightLoop> | null>(null);
   const requestControllersRef = useRef(new Map<string, AbortController>());
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
@@ -308,6 +308,16 @@ export function WebScannerApp() {
   const [torchMessage, setTorchMessage] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [scanHold, setScanHold] = useState(false);
+
+  if (!ocrLoopRef.current) {
+    ocrLoopRef.current = createSingleFlightLoop({
+      delayMs: 900,
+      task: () => runOcrScanRef.current(),
+      onError: (error: unknown) => {
+        setOcrStatus(error instanceof Error ? error.message : "OCR scan failed.");
+      }
+    });
+  }
 
   const roomStats = useMemo(
     () => ({
@@ -463,11 +473,7 @@ export function WebScannerApp() {
   }, [loadLiveState, selectedRoom]);
 
   const stopOcrLoop = useCallback(() => {
-    scanLoopGenerationRef.current += 1;
-    if (scanTimerRef.current !== null) {
-      window.clearTimeout(scanTimerRef.current);
-      scanTimerRef.current = null;
-    }
+    ocrLoopRef.current?.stop();
   }, []);
 
   const releaseCameraStream = useCallback((updateState = true) => {
@@ -1129,6 +1135,8 @@ export function WebScannerApp() {
     }
   }
 
+  runOcrScanRef.current = runOcrScan;
+
   async function loadOcrWorker() {
     if (ocrWorkerRef.current) {
       return ocrWorkerRef.current;
@@ -1187,35 +1195,7 @@ export function WebScannerApp() {
     if (document.visibilityState === "hidden") {
       return;
     }
-    const generation = scanLoopGenerationRef.current;
-
-    const scheduleNextScan = (delayMs: number) => {
-      if (generation !== scanLoopGenerationRef.current) {
-        return;
-      }
-
-      scanTimerRef.current = window.setTimeout(async () => {
-        scanTimerRef.current = null;
-        if (generation !== scanLoopGenerationRef.current) {
-          return;
-        }
-
-        if (!ocrInFlightRef.current) {
-          ocrInFlightRef.current = true;
-          try {
-            await runOcrScan();
-          } catch (error) {
-            setOcrStatus(error instanceof Error ? error.message : "OCR scan failed.");
-          } finally {
-            ocrInFlightRef.current = false;
-          }
-        }
-
-        scheduleNextScan(900);
-      }, delayMs);
-    };
-
-    scheduleNextScan(0);
+    ocrLoopRef.current?.start();
   }
 
   startOcrLoopRef.current = startOcrLoop;
