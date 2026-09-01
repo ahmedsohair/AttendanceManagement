@@ -56,14 +56,15 @@ export async function POST(request: Request) {
       startTime: form.get("startTime"),
       rows
     });
-    const { sessionId } = await importExamSession(payload);
+    const { sessionId, stats } = await importExamSession(payload);
     return NextResponse.json({
       sessionId,
       message: "Import successful.",
       stats: {
         files: files.length,
-        students: payload.rows.length,
-        rooms: new Set(payload.rows.map((row) => row.room.trim())).size
+        students: stats.students,
+        rooms: stats.rooms,
+        checksum: stats.checksum
       }
     });
   } catch (error) {

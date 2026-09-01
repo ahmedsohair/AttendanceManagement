@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   lookupStudent,
   markAttendance,
@@ -1003,11 +1004,19 @@ export async function importExamSession(payload: SessionImportPayload) {
     store.rooms.push(...normalized.rooms);
     store.studentAllocations.push(...normalized.allocations);
     await writeStore(store);
-    return { sessionId };
+    return {
+      sessionId,
+      stats: {
+        rooms: normalized.rooms.length,
+        students: normalized.allocations.length,
+        checksum: createHash("sha256")
+          .update(JSON.stringify({ rooms: normalized.rooms, allocations: normalized.allocations }))
+          .digest("hex")
+      }
+    };
   }
 
   const sessionId = nextId();
-  const createdAt = nowIso();
   const roomIdByCode = new Map<string, string>();
   const normalized = normalizeImportPayload(
     sessionId,
@@ -1025,53 +1034,59 @@ export async function importExamSession(payload: SessionImportPayload) {
     nextId
   );
   const supabase = getSupabaseAdmin();
-
-  const sessionResponse = await supabase.from("exam_sessions").insert({
-    id: sessionId,
-    name: payload.name,
-    exam_date: payload.examDate,
-    start_time: payload.startTime,
-    published: false,
-    status: "draft",
-    created_at: createdAt
+  const rooms = normalized.rooms.map((room) => ({
+    id: room.id,
+    code: room.code,
+    display_name: room.displayName,
+    capacity: room.capacity ?? null
+  }));
+  const allocations = normalized.allocations.map((allocation) => ({
+    id: allocation.id,
+    student_id: allocation.studentId,
+    student_name: allocation.studentName,
+    room_id: allocation.roomId,
+    zone: allocation.zone,
+    course_code: allocation.courseCode ?? null,
+    program: allocation.program ?? null
+  }));
+  const checksum = createHash("sha256")
+    .update(JSON.stringify({ rooms, allocations }))
+    .digest("hex");
+  const response = await supabase.rpc("import_exam_session_atomic", {
+    p_session_id: sessionId,
+    p_name: payload.name,
+    p_exam_date: payload.examDate,
+    p_start_time: payload.startTime,
+    p_rooms: rooms,
+    p_allocations: allocations,
+    p_import_checksum: checksum
   });
 
-  if (sessionResponse.error) {
-    throw new Error(sessionResponse.error.message);
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+  if (!response.data || typeof response.data !== "object" || Array.isArray(response.data)) {
+    throw new Error("Atomic exam import returned an invalid response.");
   }
 
-  const roomsResponse = await supabase.from("rooms").insert(
-    normalized.rooms.map((room) => ({
-      id: room.id,
-      exam_session_id: room.examSessionId,
-      code: room.code,
-      display_name: room.displayName,
-      capacity: room.capacity ?? null
-    }))
-  );
-
-  if (roomsResponse.error) {
-    throw new Error(roomsResponse.error.message);
+  const committed = response.data as Record<string, unknown>;
+  if (
+    committed.sessionId !== sessionId ||
+    committed.checksum !== checksum ||
+    committed.rooms !== rooms.length ||
+    committed.students !== allocations.length
+  ) {
+    throw new Error("Committed exam import summary does not match the normalized spreadsheet data.");
   }
 
-  const allocationsResponse = await supabase.from("student_allocations").insert(
-    normalized.allocations.map((allocation) => ({
-      id: allocation.id,
-      exam_session_id: allocation.examSessionId,
-      student_id: allocation.studentId,
-      student_name: allocation.studentName,
-      room_id: allocation.roomId,
-      zone: allocation.zone,
-      course_code: allocation.courseCode ?? null,
-      program: allocation.program ?? null
-    }))
-  );
-
-  if (allocationsResponse.error) {
-    throw new Error(allocationsResponse.error.message);
-  }
-
-  return { sessionId };
+  return {
+    sessionId,
+    stats: {
+      rooms: committed.rooms as number,
+      students: committed.students as number,
+      checksum
+    }
+  };
 }
 
 export async function publishExamSession(sessionId: string) {
