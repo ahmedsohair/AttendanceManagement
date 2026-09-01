@@ -17,6 +17,22 @@ if ([string]::IsNullOrWhiteSpace($env:SUPABASE_STAGING_DB_URL)) {
 }
 
 $databaseUrl = $env:SUPABASE_STAGING_DB_URL.Trim()
+if ($databaseUrl.Contains("[YOUR-PASSWORD]")) {
+  $securePassword = Read-Host "Staging database password" -AsSecureString
+  $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+  try {
+    $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
+    $databaseUrl = $databaseUrl.Replace(
+      "[YOUR-PASSWORD]",
+      [Uri]::EscapeDataString($plainPassword)
+    )
+  }
+  finally {
+    $plainPassword = $null
+    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
+  }
+}
+
 $databaseUri = $null
 if (-not [Uri]::TryCreate($databaseUrl, [UriKind]::Absolute, [ref]$databaseUri)) {
   throw "SUPABASE_STAGING_DB_URL is not a valid absolute PostgreSQL connection string."
