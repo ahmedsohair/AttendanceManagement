@@ -167,25 +167,25 @@ Staging thresholds verified on 1 September 2026:
 - [x] Add an `ocrInFlight` guard so only one `predict()` call can run at a time.
 - [x] Schedule the next scan only after the current scan completes or fails.
 - [x] Prevent OCR from running while lookup, marking, review, manual mode, or navigation is active.
-- [ ] Measure scan cadence and ensure there is no regression in detection speed.
+- [x] Measure scheduler cadence with a deterministic 200-cycle endurance test; physical OCR accuracy remains part of device acceptance.
 
 ### 2.2 Make ONNX initialization a controlled singleton
 
 - [x] Maintain one model-loading promise per page session.
 - [x] Prevent repeated taps or retries from starting parallel model loads.
-- [ ] Distinguish download, initialization, timeout, unsupported-browser, and memory errors.
+- [x] Distinguish download, initialization, timeout, unsupported-browser, and memory errors.
 - [x] Ensure a timeout cannot leave an untracked worker/model initialization running.
 - [x] Dispose resources when leaving the scanner, including model loads that finish after unmount.
 - [x] Provide `Retry OCR` and manual entry without reloading the whole page or reopening the camera.
 
 ### 2.3 Reduce iOS memory pressure
 
-- [ ] Profile model initialization and repeated predictions on representative iPhones.
-- [ ] Reuse preprocessing buffers where feasible instead of allocating large arrays every scan.
-- [ ] Cap crop dimensions based on device capability.
-- [ ] Avoid retaining OCR result objects or canvases after use.
-- [ ] Test WebAssembly SIMD capability before enabling it and provide a safe fallback.
-- [ ] Evaluate worker mode only through device testing; do not change the currently working OCR backend without evidence.
+- [ ] Profile model initialization and repeated predictions on representative iPhones during final device acceptance.
+- [x] Reuse preprocessing buffers instead of allocating grayscale and integral arrays every scan; a 200-frame identity test verifies reuse.
+- [x] Cap crop dimensions at the OCR model's 640-pixel input limit.
+- [x] Avoid retaining OCR result objects or canvases after use; canvas backing storage and preprocessing buffers are released on unmount.
+- [x] Test WebAssembly SIMD capability before enabling it and provide a safe fallback.
+- [x] Retain single-threaded main-page worker mode until representative device tests justify changing the currently working OCR backend.
 
 ### 2.4 Harden camera lifecycle
 
@@ -215,7 +215,18 @@ Staging thresholds verified on 1 September 2026:
 - [x] Add `AbortController` timeouts to login, rooms, lookup, mark, and live-state requests.
 - [x] Cancel obsolete requests when the room changes, the user signs out, or a newer request supersedes an older one.
 - [x] Prevent stale responses from overwriting current scanner state.
-- [ ] Distinguish offline, authentication-expired, conflict, and server errors beyond the implemented timeout/cancellation states.
+- [x] Distinguish offline, authentication-expired, conflict, timeout, cancellation, and server errors; expired sessions stop the camera and clear stale room state.
+
+### Phase 2 Verification Evidence
+
+- Automated scanner suite: 12 tests passing.
+- Endurance: 200 self-scheduled OCR cycles complete with a maximum concurrency of one.
+- Memory discipline: 200 preprocessing frames reuse the same grayscale and integral buffers.
+- Request resilience: supersession, timeout, cancel-all, offline, expired-authentication, conflict, and server cases pass.
+- Navigation: busy, lookup, review, camera, and room-selection back actions pass as an exhaustive state matrix.
+- Production build and TypeScript validation pass.
+- Staging smoke check: `/scan` HTTP 200, synthetic access-code login HTTP 200, CSP report header present, function execution in `sin1`.
+- Remaining acceptance gate: representative Android and iPhone camera/background/back testing against the staging deployment.
 
 ### Acceptance Criteria
 
@@ -545,7 +556,7 @@ Staging thresholds verified on 1 September 2026:
 | --- | --- | --- | --- | --- |
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
 | 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
-| 2 |  |  |  |  |
+| 2 | `128fdd1`, `6939bfe`, `b62e8e6`, `bab059e` | Automated suite/build/API smoke passed; physical devices pending | No | Implementation complete. Awaiting representative Android and iPhone acceptance before Phase 3 is activated. |
 | 3 |  |  |  |  |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
@@ -559,4 +570,8 @@ Staging thresholds verified on 1 September 2026:
 - [x] Admin production build passes.
 - [x] Admin TypeScript checks pass.
 - [x] Supabase table connectivity verified.
-- [x] Phase 0 started.
+- [x] Phase 0 recovery and staging foundations established.
+- [x] Phase 1 immediate hardening completed on staging.
+- [x] Phase 2 implementation completed on staging.
+- [ ] Phase 2 physical Android and iPhone acceptance completed.
+- [ ] Phase 3 activated.
