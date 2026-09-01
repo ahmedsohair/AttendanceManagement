@@ -573,5 +573,5 @@ Staging thresholds verified on 1 September 2026:
 - [x] Phase 0 recovery and staging foundations established.
 - [x] Phase 1 immediate hardening completed on staging.
 - [x] Phase 2 implementation completed on staging.
-- [ ] Phase 2 physical Android and iPhone acceptance completed.
-- [ ] Phase 3 activated.
+- [ ] Phase 2 physical Android and iPhone acceptance completed (explicitly deferred by the project owner on 1 September 2026).
+- [x] Phase 3 activated for staging-only development by project-owner exception; production remains unchanged.
