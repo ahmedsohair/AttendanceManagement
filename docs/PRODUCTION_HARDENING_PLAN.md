@@ -265,11 +265,18 @@ Verification completed on staging on 1 September 2026:
 
 ### 3.2 Add idempotency
 
-- [ ] Add a client-generated request ID to mark and redirect operations.
-- [ ] Store or otherwise enforce uniqueness of the request ID.
-- [ ] Return the original result when the same request is retried.
-- [ ] Distinguish a retry from a separate duplicate scan.
-- [ ] Verify timeout-after-commit scenarios do not create misleading failures.
+- [x] Add a client-generated request ID to mark and redirect operations.
+- [x] Store or otherwise enforce uniqueness of the request ID.
+- [x] Return the original result when the same request is retried.
+- [x] Distinguish a retry from a separate duplicate scan.
+- [x] Verify timeout-after-commit scenarios do not create misleading failures.
+
+Verification completed on staging on 1 September 2026:
+
+- Reusing the same request UUID returns the original response without adding attendance or incident rows.
+- Reusing a request UUID with a changed payload is rejected, while a new UUID for the same student is classified as a separate duplicate scan.
+- The web scanner retains its request UUID after timeout/error and clears it only after success or moving to the next student.
+- Rollback-only atomic and idempotency database tests pass; the deployed scanner and synthetic access-code login remain healthy.
 
 ### 3.3 Strengthen relational constraints
 
