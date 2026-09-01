@@ -91,4 +91,12 @@ if ($LASTEXITCODE -ne 0) {
   throw "Atomic exam-import staging tests failed."
 }
 
-Write-Host "Atomic attendance, idempotency, integrity-trigger, and exam-import staging tests passed; all test writes were rolled back."
+& docker run --rm --mount $testMount $postgresImage psql `
+  "--dbname=$databaseUrl" `
+  --variable ON_ERROR_STOP=1 `
+  --file /tests/atomic_room_assignments_staging.sql
+if ($LASTEXITCODE -ne 0) {
+  throw "Atomic room-assignment staging tests failed."
+}
+
+Write-Host "Atomic attendance, idempotency, integrity-trigger, exam-import, and room-assignment staging tests passed; all test writes were rolled back."
