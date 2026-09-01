@@ -244,7 +244,7 @@ Staging thresholds verified on 1 September 2026:
 
 ### 3.1 Create an atomic attendance RPC
 
-- [ ] Implement a PostgreSQL function that validates:
+- [x] Implement a PostgreSQL function that validates:
   - authenticated user and role
   - active exam status
   - room belongs to the exam
@@ -252,10 +252,16 @@ Staging thresholds verified on 1 September 2026:
   - student allocation exists in the exam
   - expected room belongs to the same exam
   - wrong-room override semantics
-- [ ] Insert attendance and any required incident in one transaction.
-- [ ] Preserve the unique `(exam_session_id, student_id)` constraint.
-- [ ] Return a structured result for marked, mismatch-marked, already-marked, redirected, and not-found outcomes.
-- [ ] Remove redundant application-layer database round trips after the RPC is verified.
+- [x] Insert attendance and any required incident in one transaction.
+- [x] Preserve the unique `(exam_session_id, student_id)` constraint.
+- [x] Return a structured result for marked, mismatch-marked, already-marked, redirected, and not-found outcomes.
+- [x] Remove redundant application-layer database round trips after the RPC is verified.
+
+Verification completed on staging on 1 September 2026:
+
+- Rollback-only database tests passed for correct-room marking, concurrent-safe duplicate handling, wrong-room redirect, explicit mismatch override, not-found incidents, unauthorized rooms, and closed sessions.
+- The admin production build and 12-test scanner suite pass with the repository using one `mark_attendance_atomic` RPC call.
+- The deployed staging scanner and synthetic access-code login return HTTP 200.
 
 ### 3.2 Add idempotency
 
