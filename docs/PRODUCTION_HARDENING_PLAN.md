@@ -309,11 +309,19 @@ Verification completed on staging on 1 September 2026:
 
 ### 3.5 Make room-assignment replacement atomic
 
-- [ ] Validate the complete room snapshot and invigilator IDs inside the transaction.
-- [ ] Check the optimistic concurrency snapshot/version.
-- [ ] Delete and insert assignments in one transaction.
-- [ ] Return the committed assignment snapshot to the UI.
-- [ ] Prevent a failed save from leaving rooms unassigned.
+- [x] Validate the complete room snapshot and invigilator IDs inside the transaction.
+- [x] Check the optimistic concurrency snapshot/version.
+- [x] Delete and insert assignments in one transaction.
+- [x] Return the committed assignment snapshot to the UI.
+- [x] Prevent a failed save from leaving rooms unassigned.
+
+Verification completed on staging on 1 September 2026:
+
+- The database validates a complete snapshot, session rooms, and invigilator roles while holding the exam-session lock.
+- A stale optimistic snapshot is rejected and leaves the previously committed assignments unchanged.
+- Assignment deletion and insertion occur in one transaction; validation or insert failure cannot leave rooms unassigned.
+- The RPC returns the committed, sorted snapshot, which the API returns and the assignment wizard adopts as its new concurrency baseline.
+- The rollback-only room-assignment tests, admin production build, and 13-test scanner regression suite pass.
 
 ### 3.6 Make access-code rotation consistent
 
@@ -583,7 +591,7 @@ Verification completed on staging on 1 September 2026:
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
 | 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
 | 2 | `128fdd1`, `6939bfe`, `b62e8e6`, `bab059e` | Automated suite/build/API smoke passed; physical devices pending | No | Implementation complete. Awaiting representative Android and iPhone acceptance before Phase 3 is activated. |
-| 3 |  |  |  |  |
+| 3 | `8e62a55` through `d63f47d` | Sections 3.1-3.5 database tests, admin build, and scanner regressions passed | No | Atomic attendance, idempotency, integrity, imports, and room assignments complete on staging. Sections 3.6-3.7 remain. |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
 | 6 |  |  |  |  |
