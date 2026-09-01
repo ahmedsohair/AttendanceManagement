@@ -68,7 +68,7 @@ begin
   select count(*) into v_before_incidents from public.incidents;
 
   v_payload := public.mark_attendance_atomic(
-    v_session_id, v_room_one, v_correct_student, v_invigilator_one,
+    gen_random_uuid(), v_session_id, v_room_one, v_correct_student, v_invigilator_one,
     'manual', 'phase-3-test', 'mark_present', false, 'Correct-room test'
   );
   if v_payload #>> '{event,studentId}' <> v_correct_student
@@ -77,7 +77,7 @@ begin
   end if;
 
   v_payload := public.mark_attendance_atomic(
-    v_session_id, v_room_one, v_correct_student, v_invigilator_one,
+    gen_random_uuid(), v_session_id, v_room_one, v_correct_student, v_invigilator_one,
     'manual', 'phase-3-test', 'mark_present', false, 'Duplicate test'
   );
   if v_payload #>> '{result,status}' <> 'already_marked'
@@ -86,7 +86,7 @@ begin
   end if;
 
   v_payload := public.mark_attendance_atomic(
-    v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
+    gen_random_uuid(), v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
     'manual', 'phase-3-test', 'redirect_only', false, 'Redirect test'
   );
   if v_payload #>> '{result,status}' <> 'wrong_room'
@@ -96,7 +96,7 @@ begin
 
   begin
     perform public.mark_attendance_atomic(
-      v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
+      gen_random_uuid(), v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
       'manual', 'phase-3-test', 'mark_present', false, 'Missing override test'
     );
     raise exception 'Wrong-room mark without override was accepted.';
@@ -105,7 +105,7 @@ begin
   end;
 
   v_payload := public.mark_attendance_atomic(
-    v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
+    gen_random_uuid(), v_session_id, v_room_one, v_wrong_student, v_invigilator_one,
     'manual', 'phase-3-test', 'mark_present', true, 'Override test'
   );
   if not (v_payload #>> '{event,roomMismatch}')::boolean
@@ -114,7 +114,7 @@ begin
   end if;
 
   v_payload := public.mark_attendance_atomic(
-    v_session_id, v_room_one, '9999901', v_invigilator_one,
+    gen_random_uuid(), v_session_id, v_room_one, '9999901', v_invigilator_one,
     'manual', 'phase-3-test', 'mark_present', false, 'Not-found test'
   );
   if v_payload #>> '{result,status}' <> 'student_not_found'
@@ -124,7 +124,7 @@ begin
 
   begin
     perform public.mark_attendance_atomic(
-      v_session_id, v_room_two, v_wrong_student, v_invigilator_one,
+      gen_random_uuid(), v_session_id, v_room_two, v_wrong_student, v_invigilator_one,
       'manual', 'phase-3-test', 'mark_present', false, 'Unauthorized room test'
     );
     raise exception 'Unassigned-room mark was accepted.';
@@ -134,7 +134,7 @@ begin
 
   begin
     perform public.mark_attendance_atomic(
-      v_closed_session_id, v_room_one, v_correct_student, v_invigilator_one,
+      gen_random_uuid(), v_closed_session_id, v_room_one, v_correct_student, v_invigilator_one,
       'manual', 'phase-3-test', 'mark_present', false, 'Closed-session test'
     );
     raise exception 'Closed-session mark was accepted.';
