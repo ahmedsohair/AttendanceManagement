@@ -4,7 +4,6 @@ import nodemailer from "nodemailer";
 import type { ExamSession, Room, User } from "@algo-attendance/shared";
 
 type InstructionEmailInput = {
-  accessCode: string;
   appBaseUrl: string;
   invigilator: User;
   rooms: Room[];
@@ -89,7 +88,6 @@ async function buildInvigilatorGuideAttachment(): Promise<EmailAttachment> {
 }
 
 function buildInstructionText({
-  accessCode,
   appBaseUrl,
   invigilator,
   rooms,
@@ -107,8 +105,8 @@ function buildInstructionText({
     "Assigned room(s):",
     buildRoomList(rooms),
     "",
-    "Your ExamPulse access code is:",
-    accessCode,
+    "Access code:",
+    "Use your existing ExamPulse access code. If you no longer have it, contact the exam administrator before the exam.",
     "",
     `Open the scanner here: ${scannerUrl(appBaseUrl)}`,
     "",
@@ -155,9 +153,9 @@ function buildInstructionHtml(input: InstructionEmailInput) {
             <div style="font-weight:700;margin-bottom:8px">Assigned room(s)</div>
             <ul style="margin:0;padding-left:20px;line-height:1.7">${rooms}</ul>
           </div>
-          <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:14px;padding:18px;text-align:center;margin-bottom:22px">
-            <div style="font-size:13px;font-weight:700;color:#be123c;letter-spacing:.12em;text-transform:uppercase">Your access code</div>
-            <div style="font-size:28px;font-weight:800;letter-spacing:.08em;margin-top:8px">${escapeHtml(input.accessCode)}</div>
+          <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:14px;padding:18px;margin-bottom:22px">
+            <div style="font-size:13px;font-weight:700;color:#be123c;letter-spacing:.12em;text-transform:uppercase">Access code</div>
+            <div style="font-size:15px;line-height:1.55;margin-top:8px">Use your existing ExamPulse access code. If you no longer have it, contact the exam administrator before the exam.</div>
           </div>
           <p style="text-align:center;margin:0 0 24px">
             <a href="${escapeHtml(scanner)}" style="display:inline-block;background:#e4002b;color:#ffffff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Open ExamPulse Scanner</a>

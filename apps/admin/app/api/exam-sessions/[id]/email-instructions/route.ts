@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { sendInvigilatorInstructionEmail } from "@/lib/invigilator-instruction-email";
-import { resetInvigilatorAccessCode } from "@/lib/repository";
 import { readStore } from "@/lib/store";
 
 function getAppBaseUrl(request: Request) {
@@ -49,9 +48,7 @@ export async function POST(
 
     for (const item of assignedInvigilators) {
       try {
-        const { accessCode } = await resetInvigilatorAccessCode(item.user.id);
         await sendInvigilatorInstructionEmail({
-          accessCode,
           appBaseUrl,
           invigilator: item.user,
           rooms: item.rooms,

@@ -286,7 +286,7 @@ export function ExamAssignmentWizard({
     }
 
     const confirmed = window.confirm(
-      "Email assigned invigilators now? This will generate fresh access codes, so any previous codes for those invigilators will stop working."
+      "Email assignment details to the assigned invigilators now? Their existing access codes will remain unchanged."
     );
 
     if (!confirmed) {
