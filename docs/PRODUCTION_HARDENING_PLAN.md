@@ -294,11 +294,18 @@ Verification completed on staging on 1 September 2026:
 
 ### 3.4 Make imports atomic
 
-- [ ] Move exam session, room, and allocation creation into one transaction/RPC.
-- [ ] Roll back the entire import on duplicate students, invalid rooms, or allocation failure.
-- [ ] Return committed row counts from the database, not only parsed client counts.
-- [ ] Add an import checksum or summary for reconciliation.
-- [ ] Keep spreadsheet parsing outside the database but commit normalized rows atomically.
+- [x] Move exam session, room, and allocation creation into one transaction/RPC.
+- [x] Roll back the entire import on duplicate students, invalid rooms, or allocation failure.
+- [x] Return committed row counts from the database, not only parsed client counts.
+- [x] Add an import checksum or summary for reconciliation.
+- [x] Keep spreadsheet parsing outside the database but commit normalized rows atomically.
+
+Verification completed on staging on 1 September 2026:
+
+- Valid normalized imports commit the session, rooms, and allocations together and return database-confirmed counts.
+- Duplicate students, unknown allocation rooms, invalid payload shapes, and a forced room-ID conflict are rejected without leaving a partial exam session.
+- The API compares the committed counts and SHA-256 checksum with the normalized spreadsheet payload before reporting success.
+- The admin production build passes with the repository using one `import_exam_session_atomic` RPC call.
 
 ### 3.5 Make room-assignment replacement atomic
 
