@@ -8,6 +8,10 @@ import type {
   User
 } from "@algo-attendance/shared";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
+import {
+  ScannerRequestError,
+  createRequestCoordinator
+} from "@/lib/scanner-requests.mjs";
 import { createSingleFlightLoop } from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
@@ -71,16 +75,6 @@ type TorchMediaTrack = MediaStreamTrack & {
 const deviceIdStorageKey = "ams-web-scanner-device-id";
 const onnxModelTimeoutMs = 45000;
 
-class ScannerRequestError extends Error {
-  constructor(
-    message: string,
-    readonly kind: "cancelled" | "timeout"
-  ) {
-    super(message);
-    this.name = "ScannerRequestError";
-  }
-}
-
 function normalizeAccessCode(input: string) {
   const compact = input.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const withoutPrefix = compact.startsWith("AMS") ? compact.slice(3) : compact;
@@ -129,14 +123,6 @@ function getDeviceId() {
       : `web-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   window.localStorage.setItem(deviceIdStorageKey, nextId);
   return nextId;
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as T & { message?: string };
-  if (!response.ok) {
-    throw new Error(payload.message || "Request failed.");
-  }
-  return payload;
 }
 
 async function withTimeout<T>(
@@ -265,7 +251,8 @@ export function WebScannerApp() {
   const startOcrLoopRef = useRef<() => void>(() => undefined);
   const runOcrScanRef = useRef<() => Promise<void>>(async () => undefined);
   const ocrLoopRef = useRef<ReturnType<typeof createSingleFlightLoop> | null>(null);
-  const requestControllersRef = useRef(new Map<string, AbortController>());
+  const authExpiryHandlerRef = useRef<() => void>(() => undefined);
+  const requestCoordinatorRef = useRef<ReturnType<typeof createRequestCoordinator> | null>(null);
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
@@ -309,6 +296,31 @@ export function WebScannerApp() {
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [scanHold, setScanHold] = useState(false);
 
+  authExpiryHandlerRef.current = () => {
+    ocrLoopRef.current?.stop();
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    userRef.current = null;
+    selectedRoomRef.current = null;
+    setUser(null);
+    setRooms([]);
+    setSelectedRoom(null);
+    setLiveState(null);
+    setCameraActive(false);
+    setTorchEnabled(false);
+    setTorchSupported(false);
+    setStatusMessage("Your invigilator session has expired. Sign in again to continue.");
+  };
+
+  if (!requestCoordinatorRef.current) {
+    requestCoordinatorRef.current = createRequestCoordinator({
+      onAuthExpired: () => authExpiryHandlerRef.current()
+    });
+  }
+
   if (!ocrLoopRef.current) {
     ocrLoopRef.current = createSingleFlightLoop({
       delayMs: 900,
@@ -335,45 +347,15 @@ export function WebScannerApp() {
     init?: RequestInit,
     timeoutMs = 10000
   ): Promise<T> => {
-    requestControllersRef.current.get(key)?.abort();
-    const controller = new AbortController();
-    requestControllersRef.current.set(key, controller);
-    let timedOut = false;
-    const timeoutId = window.setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, timeoutMs);
-
-    try {
-      return await readJson<T>(await fetch(input, { ...init, signal: controller.signal }));
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new ScannerRequestError(
-          timedOut
-            ? "The request timed out. Check the connection and try again."
-            : "Request cancelled.",
-          timedOut ? "timeout" : "cancelled"
-        );
-      }
-      throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
-      if (requestControllersRef.current.get(key) === controller) {
-        requestControllersRef.current.delete(key);
-      }
-    }
+    return requestCoordinatorRef.current!.requestJson<T>(key, input, init, timeoutMs);
   }, []);
 
   const cancelRequests = useCallback((...keys: string[]) => {
-    for (const key of keys) {
-      requestControllersRef.current.get(key)?.abort();
-      requestControllersRef.current.delete(key);
-    }
+    requestCoordinatorRef.current?.cancel(...keys);
   }, []);
 
   const cancelAllRequests = useCallback(() => {
-    requestControllersRef.current.forEach((controller) => controller.abort());
-    requestControllersRef.current.clear();
+    requestCoordinatorRef.current?.cancelAll();
   }, []);
 
   const resetForNextScan = useCallback(() => {
