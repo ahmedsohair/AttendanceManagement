@@ -101,6 +101,17 @@ with integrity_counts as (
             and attendance.override_type = 'wrong_room_present'
         )
     ) as incident_override_missing_attendance
+    ,(
+      select count(*)
+      from public.incidents incident
+      where incident.incident_type = 'duplicate_attempt'
+        and not exists (
+          select 1
+          from public.attendance_events attendance
+          where attendance.exam_session_id = incident.exam_session_id
+            and attendance.student_id = incident.student_id
+        )
+    ) as incident_duplicate_missing_attendance
 )
 select jsonb_build_object(
   'attendanceRoomSession', attendance_room_session,
@@ -112,6 +123,7 @@ select jsonb_build_object(
   'incidentWrongRoomShape', incident_wrong_room_shape,
   'incidentWrongRoomAllocation', incident_wrong_room_allocation,
   'incidentOverrideMissingAttendance', incident_override_missing_attendance,
+  'incidentDuplicateMissingAttendance', incident_duplicate_missing_attendance,
   'total',
     attendance_room_session
     + attendance_missing_allocation
@@ -122,6 +134,7 @@ select jsonb_build_object(
     + incident_wrong_room_shape
     + incident_wrong_room_allocation
     + incident_override_missing_attendance
+    + incident_duplicate_missing_attendance
 )
 from integrity_counts;
 
