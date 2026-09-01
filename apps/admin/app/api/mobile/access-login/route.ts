@@ -45,7 +45,8 @@ export async function POST(request: Request) {
       const user = store.users.find(
         (candidate) =>
           candidate.role === "invigilator" &&
-          candidate.accessCodeHash === accessCodeHash
+          (candidate.accessCodeHash === accessCodeHash ||
+            candidate.pendingAccessCodeHash === accessCodeHash)
       );
 
       if (!user) {
@@ -59,7 +60,9 @@ export async function POST(request: Request) {
     const userResponse = await supabase
       .from("users")
       .select("id, email, full_name, role")
-      .eq("access_code_hash", accessCodeHash)
+      .or(
+        `access_code_hash.eq.${accessCodeHash},pending_access_code_hash.eq.${accessCodeHash}`
+      )
       .maybeSingle();
 
     if (userResponse.error) {

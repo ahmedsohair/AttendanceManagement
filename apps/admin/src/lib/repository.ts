@@ -286,7 +286,9 @@ export async function createInvigilator(input: {
       fullName: input.fullName,
       role: "invigilator",
       assignedRoomIds: requestedAssignedRoomIds,
-      accessCodeHash
+      accessCodeHash,
+      accessCodeCreatedAt: nowIso(),
+      accessCodeActivatedAt: nowIso()
     });
 
     await writeStore(store);
@@ -353,7 +355,9 @@ export async function createInvigilator(input: {
       email: normalizedEmail,
       full_name: input.fullName,
       role: "invigilator",
-      access_code_hash: accessCodeHash
+      access_code_hash: accessCodeHash,
+      access_code_created_at: nowIso(),
+      access_code_activated_at: nowIso()
     });
 
     if (insertUserResponse.error) {
@@ -367,7 +371,9 @@ export async function createInvigilator(input: {
         email: normalizedEmail,
         full_name: input.fullName,
         role: "invigilator",
-        access_code_hash: accessCodeHash
+        access_code_hash: accessCodeHash,
+        access_code_created_at: nowIso(),
+        access_code_activated_at: nowIso()
       })
       .eq("id", authUserId);
 
@@ -382,7 +388,9 @@ export async function createInvigilator(input: {
         email: normalizedEmail,
         full_name: input.fullName,
         role: "invigilator",
-        access_code_hash: accessCodeHash
+        access_code_hash: accessCodeHash,
+        access_code_created_at: nowIso(),
+        access_code_activated_at: nowIso()
       },
       { onConflict: "id" }
     );
@@ -454,7 +462,7 @@ export async function createInvigilator(input: {
   return { accessCode };
 }
 
-export async function resetInvigilatorAccessCode(userIdInput: string) {
+export async function stageInvigilatorAccessCode(userIdInput: string) {
   const accessCode = generateAccessCode();
   const accessCodeHash = hashAccessCode(accessCode);
 
@@ -466,25 +474,72 @@ export async function resetInvigilatorAccessCode(userIdInput: string) {
       throw new Error("Invigilator not found.");
     }
 
-    user.accessCodeHash = accessCodeHash;
+    user.pendingAccessCodeHash = accessCodeHash;
+    user.accessCodeCreatedAt = nowIso();
     await writeStore(store);
-    return { accessCode };
+    return { accessCode, status: "pending" as const };
+  }
+
+  const userId = assertUuid(userIdInput, "Invigilator ID");
+  const response = await getSupabaseAdmin().rpc("stage_invigilator_access_code", {
+    p_user_id: userId,
+    p_access_code_hash: accessCodeHash
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  return { accessCode, status: "pending" as const };
+}
+
+export async function activateInvigilatorAccessCode(
+  userIdInput: string,
+  accessCodeInput: string
+) {
+  const accessCode = accessCodeInput.trim();
+  const accessCodeHash = hashAccessCode(accessCode);
+
+  if (!accessCode || !accessCodeHash) {
+    throw new Error("A pending access code is required.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === userIdInput);
+
+    if (!user || user.role !== "invigilator") {
+      throw new Error("Invigilator not found.");
+    }
+    if (user.pendingAccessCodeHash !== accessCodeHash) {
+      throw new Error("Pending access code does not match.");
+    }
+
+    user.accessCodeRevokedAt = user.accessCodeHash ? nowIso() : user.accessCodeRevokedAt;
+    user.accessCodeHash = accessCodeHash;
+    user.pendingAccessCodeHash = undefined;
+    user.accessCodeActivatedAt = nowIso();
+    user.accessCodeEmailedAt = undefined;
+    await writeStore(store);
+    return { status: "active" as const };
   }
 
   const userId = assertUuid(userIdInput, "Invigilator ID");
   const supabase = getSupabaseAdmin();
   const userResponse = await supabase
     .from("users")
-    .select("id, role")
+    .select("id, role, pending_access_code_hash")
     .eq("id", userId)
     .maybeSingle();
 
   if (userResponse.error) {
     throw new Error(userResponse.error.message);
   }
-
   if (!userResponse.data || userResponse.data.role !== "invigilator") {
     throw new Error("Invigilator not found.");
+  }
+  if (userResponse.data.pending_access_code_hash !== accessCodeHash) {
+    throw new Error("Pending access code does not match.");
   }
 
   const authResponse = await supabase.auth.admin.updateUserById(userId, {
@@ -495,16 +550,47 @@ export async function resetInvigilatorAccessCode(userIdInput: string) {
     throw new Error(authResponse.error.message);
   }
 
-  const updateResponse = await supabase
-    .from("users")
-    .update({ access_code_hash: accessCodeHash })
-    .eq("id", userId);
+  const activationResponse = await supabase.rpc("activate_invigilator_access_code", {
+    p_user_id: userId,
+    p_access_code_hash: accessCodeHash
+  });
 
-  if (updateResponse.error) {
-    throw new Error(updateResponse.error.message);
+  if (activationResponse.error) {
+    throw new Error(
+      `Authentication was updated but activation needs to be retried: ${activationResponse.error.message}`
+    );
   }
 
-  return { accessCode };
+  return { status: "active" as const };
+}
+
+export async function recordInvigilatorAccessCodeEmailed(
+  userIdInput: string,
+  accessCodeInput: string
+) {
+  const accessCodeHash = hashAccessCode(accessCodeInput.trim());
+  if (!accessCodeHash) {
+    throw new Error("Access code is required.");
+  }
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const user = store.users.find((candidate) => candidate.id === userIdInput);
+    if (!user || user.role !== "invigilator" || user.accessCodeHash !== accessCodeHash) {
+      throw new Error("Active access code does not match.");
+    }
+    user.accessCodeEmailedAt = nowIso();
+    await writeStore(store);
+    return;
+  }
+
+  const response = await getSupabaseAdmin().rpc("record_invigilator_access_code_emailed", {
+    p_user_id: assertUuid(userIdInput, "Invigilator ID"),
+    p_access_code_hash: accessCodeHash
+  });
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
 }
 
 export async function updateInvigilatorDetails(input: {

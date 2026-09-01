@@ -14,6 +14,7 @@ async function readJsonResponse(response: Response) {
   const payload = (await response.json().catch(() => ({}))) as {
     accessCode?: string;
     message?: string;
+    status?: "pending" | "active";
   };
 
   if (!response.ok) {
@@ -31,7 +32,11 @@ export function InvigilatorCodePanel({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isActivating, setIsActivating] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
+  const [codeStatus, setCodeStatus] = useState<"pending" | "active">(
+    initialAccessCode ? "active" : "pending"
+  );
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDetailsElement | null>(null);
 
@@ -74,6 +79,7 @@ export function InvigilatorCodePanel({
       );
 
       setAccessCode(payload.accessCode || "");
+      setCodeStatus("pending");
       setNotice(payload.message || "New access code generated.");
     } catch (generateError) {
       setError(
@@ -86,9 +92,51 @@ export function InvigilatorCodePanel({
     }
   }
 
+  async function activateCode() {
+    if (!accessCode) {
+      setError("Generate a code before activating it.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "Activate this new code? The previous code will stop working for new sign-ins. Existing signed-in scanner sessions will remain active."
+      )
+    ) {
+      return;
+    }
+
+    setIsActivating(true);
+    setNotice("");
+    setError("");
+
+    try {
+      const payload = await readJsonResponse(
+        await fetch(`/api/invigilators/${invigilator.id}/access-code`, {
+          body: JSON.stringify({ accessCode }),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT"
+        })
+      );
+      setCodeStatus("active");
+      setNotice(payload.message || "New access code activated.");
+    } catch (activationError) {
+      setError(
+        activationError instanceof Error
+          ? activationError.message
+          : "Unable to activate access code."
+      );
+    } finally {
+      setIsActivating(false);
+    }
+  }
+
   async function emailCode() {
     if (!accessCode) {
       setError("Generate a code before emailing.");
+      return;
+    }
+    if (codeStatus !== "active") {
+      setError("Activate this code before emailing it.");
       return;
     }
 
@@ -102,7 +150,8 @@ export function InvigilatorCodePanel({
           body: JSON.stringify({
             accessCode,
             email: invigilator.email,
-            fullName: invigilator.fullName
+            fullName: invigilator.fullName,
+            userId: invigilator.id
           }),
           headers: {
             "Content-Type": "application/json"
@@ -137,11 +186,15 @@ export function InvigilatorCodePanel({
         {accessCode ? (
           <div className="access-code-box compact-code-box">
             <div>
-              <div className="kicker">New Code</div>
+              <div className="kicker">
+                {codeStatus === "active" ? "Active New Code" : "Pending New Code"}
+              </div>
               <div className="access-code-value">{accessCode}</div>
             </div>
             <div className="subtle">
-              Share this now. Existing codes cannot be viewed later.
+              {codeStatus === "active"
+                ? "This code is active. Existing signed-in scanner sessions remain active."
+                : "The current code still works. Activate this code only when you are ready to replace it."}
             </div>
             <div className="inline-actions">
               <CopyButton
@@ -149,7 +202,16 @@ export function InvigilatorCodePanel({
                 label="Copy"
                 value={accessCode}
               />
-              <button type="button" onClick={emailCode} disabled={isEmailing}>
+              {codeStatus === "pending" ? (
+                <button type="button" onClick={activateCode} disabled={isActivating}>
+                  {isActivating ? "Activating..." : "Activate Code"}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={emailCode}
+                disabled={isEmailing || codeStatus !== "active"}
+              >
                 {isEmailing ? "Emailing..." : "Email Code"}
               </button>
             </div>

@@ -10,6 +10,7 @@ import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-em
 import {
   createInvigilator as createInvigilatorRecord,
   deleteInvigilator,
+  recordInvigilatorAccessCodeEmailed,
   updateInvigilatorDetails
 } from "@/lib/repository";
 import { readStore } from "@/lib/store";
@@ -22,6 +23,7 @@ type AccessCodeFlash = {
   accessCode: string;
   codeEmail: string;
   codeUserId?: string;
+  standalone?: boolean;
 };
 
 async function setAccessCodeFlash(flash: AccessCodeFlash) {
@@ -56,6 +58,7 @@ async function submitInvigilator(formData: FormData) {
   const submittedFullName = String(formData.get("fullName") || "").trim();
   const fullName = submittedFullName || email.split("@")[0] || "Invigilator";
   let accessCode = "";
+  let userId = "";
 
   try {
     await requireAdminPageUser();
@@ -70,13 +73,23 @@ async function submitInvigilator(formData: FormData) {
       assignedRoomIds: []
     });
     accessCode = result.accessCode;
+    const store = await readStore();
+    userId = store.users.find((user) => user.email.toLowerCase() === email)?.id || "";
+    if (!userId) {
+      throw new Error("Invigilator was created but could not be reloaded.");
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create invigilator.";
     redirect(`/invigilators?error=${encodeURIComponent(message)}`);
   }
 
   revalidatePath("/invigilators");
-  await setAccessCodeFlash({ accessCode, codeEmail: email });
+  await setAccessCodeFlash({
+    accessCode,
+    codeEmail: email,
+    codeUserId: userId,
+    standalone: true
+  });
   redirect(
     `/invigilators?message=${encodeURIComponent(
       "Invigilator created. Share this access code with them."
@@ -123,8 +136,8 @@ async function submitAccessCodeEmail(formData: FormData) {
   try {
     await requireAdminPageUser();
 
-    if (!accessCode || !email) {
-      throw new Error("Access code and email are required.");
+    if (!accessCode || !email || !userId) {
+      throw new Error("Invigilator, access code, and email are required.");
     }
 
     await sendInvigilatorAccessCodeEmail({
@@ -133,6 +146,7 @@ async function submitAccessCodeEmail(formData: FormData) {
       email,
       fullName
     });
+    await recordInvigilatorAccessCodeEmailed(userId, accessCode);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to email access code.";
@@ -198,7 +212,7 @@ export default async function InvigilatorsPage({
         <h2 className="section-title">Add Invigilator</h2>
         {params.message ? <p className="pill ok toast-message">{params.message}</p> : null}
         {params.error ? <p className="pill warn toast-message">{params.error}</p> : null}
-        {accessCodeFlash?.accessCode && !accessCodeFlash.codeUserId ? (
+        {accessCodeFlash?.accessCode && accessCodeFlash.standalone ? (
           <div className="access-code-box">
             <div>
               <div className="kicker">Share This Code</div>
@@ -214,6 +228,7 @@ export default async function InvigilatorsPage({
                 <form action={submitAccessCodeEmail}>
                   <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
                   <input name="email" type="hidden" value={accessCodeFlash.codeEmail} />
+                  <input name="userId" type="hidden" value={accessCodeFlash.codeUserId || ""} />
                   <button type="submit">Email Code</button>
                 </form>
               </div>
@@ -261,6 +276,7 @@ export default async function InvigilatorsPage({
                   <div className="staff-actions">
                     <InvigilatorCodePanel
                       initialAccessCode={
+                        !accessCodeFlash?.standalone &&
                         accessCodeFlash?.codeUserId === invigilator.id
                           ? accessCodeFlash.accessCode
                           : undefined
@@ -318,6 +334,7 @@ export default async function InvigilatorsPage({
                 <div className="assignment-details mobile-details">
                   <InvigilatorCodePanel
                     initialAccessCode={
+                      !accessCodeFlash?.standalone &&
                       accessCodeFlash?.codeUserId === invigilator.id
                         ? accessCodeFlash.accessCode
                         : undefined

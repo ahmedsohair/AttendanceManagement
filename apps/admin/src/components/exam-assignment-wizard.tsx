@@ -78,6 +78,7 @@ export function ExamAssignmentWizard({
   const [createdAccess, setCreatedAccess] = useState<{
     accessCode: string;
     email: string;
+    userId: string;
   } | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -228,7 +229,8 @@ export function ExamAssignmentWizard({
         }));
         setCreatedAccess({
           accessCode: payload.accessCode,
-          email: payload.user.email
+          email: payload.user.email,
+          userId: payload.user.id
         });
         setNewEmail("");
         setNewName("");
@@ -328,7 +330,8 @@ export function ExamAssignmentWizard({
           await fetch("/api/invigilators/email-code", {
             body: JSON.stringify({
               accessCode: createdAccess.accessCode,
-              email: createdAccess.email
+              email: createdAccess.email,
+              userId: createdAccess.userId
             }),
             headers: {
               "Content-Type": "application/json"

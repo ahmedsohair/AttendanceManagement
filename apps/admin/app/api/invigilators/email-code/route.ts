@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-email";
+import { recordInvigilatorAccessCodeEmailed } from "@/lib/repository";
 
 function getAppBaseUrl(request: Request) {
   return (
@@ -17,14 +18,16 @@ export async function POST(request: Request) {
       accessCode?: string;
       email?: string;
       fullName?: string;
+      userId?: string;
     };
     const accessCode = String(body.accessCode || "").trim();
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.fullName || "").trim();
+    const userId = String(body.userId || "").trim();
 
-    if (!accessCode || !email) {
+    if (!accessCode || !email || !userId) {
       return NextResponse.json(
-        { message: "Access code and email are required." },
+        { message: "Invigilator, access code, and email are required." },
         { status: 400 }
       );
     }
@@ -35,6 +38,7 @@ export async function POST(request: Request) {
       email,
       fullName
     });
+    await recordInvigilatorAccessCodeEmailed(userId, accessCode);
 
     return NextResponse.json({ message: "Access code emailed." });
   } catch (error) {

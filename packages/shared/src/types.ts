@@ -16,6 +16,11 @@ export interface User {
   role: UserRole;
   assignedRoomIds: string[];
   accessCodeHash?: string;
+  pendingAccessCodeHash?: string;
+  accessCodeCreatedAt?: string;
+  accessCodeActivatedAt?: string;
+  accessCodeEmailedAt?: string;
+  accessCodeRevokedAt?: string;
 }
 
 export interface ExamSession {
