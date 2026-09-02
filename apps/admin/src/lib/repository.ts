@@ -280,8 +280,9 @@ export async function createInvigilator(input: {
       throw new Error("An invigilator with this email already exists.");
     }
 
+    const userId = nextId();
     store.users.push({
-      id: nextId(),
+      id: userId,
       email: normalizedEmail,
       fullName: input.fullName,
       role: "invigilator",
@@ -292,7 +293,7 @@ export async function createInvigilator(input: {
     });
 
     await writeStore(store);
-    return { accessCode };
+    return { accessCode, userId };
   }
 
   const supabase = getSupabaseAdmin();
@@ -459,7 +460,7 @@ export async function createInvigilator(input: {
     }
   }
 
-  return { accessCode };
+  return { accessCode, userId: authUserId };
 }
 
 export async function stageInvigilatorAccessCode(userIdInput: string) {

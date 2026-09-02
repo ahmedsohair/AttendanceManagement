@@ -121,6 +121,22 @@ export type ExamSessionPage = {
   totalPages: number;
 };
 
+export type InvigilatorListSort = "name_asc" | "name_desc";
+
+export type InvigilatorPage = {
+  rows: Array<{
+    id: string;
+    email: string;
+    fullName: string;
+    role: "invigilator";
+    assignedRoomIds: string[];
+  }>;
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 type AttendanceAuditInput = {
   examSessionFilter: string;
   query: string;
@@ -192,6 +208,20 @@ type ExamSessionPageInput = {
 type ExamSessionRpcRow = SessionRow & {
   status: ExamSessionListStatus;
   room_count: number | string;
+  total_count: number | string;
+};
+
+type InvigilatorPageInput = {
+  query: string;
+  sort: InvigilatorListSort;
+  page: number;
+  pageSize?: number;
+};
+
+type InvigilatorRpcRow = {
+  id: string;
+  email: string;
+  full_name: string;
   total_count: number | string;
 };
 
@@ -732,6 +762,83 @@ export async function getExamSessionPage(
     rows: rpcRows.map((row) => ({
       ...toExamSession(row),
       roomCount: Number(row.room_count)
+    })),
+    totalCount,
+    page,
+    pageSize,
+    totalPages
+  };
+}
+
+export async function getInvigilatorPage(
+  input: InvigilatorPageInput
+): Promise<InvigilatorPage> {
+  const pageSize = Math.min(Math.max(input.pageSize || 30, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const query = input.query.trim().toLowerCase();
+    const filtered = store.users
+      .filter((user) => user.role === "invigilator")
+      .filter(
+        (user) =>
+          !query ||
+          user.fullName.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query)
+      )
+      .sort((left, right) => {
+        const comparison = left.fullName.localeCompare(right.fullName);
+        return input.sort === "name_desc" ? -comparison : comparison;
+      });
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    const offset = (page - 1) * pageSize;
+    return {
+      rows: filtered.slice(offset, offset + pageSize).map((user) => ({
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: "invigilator" as const,
+        assignedRoomIds: user.assignedRoomIds
+      })),
+      totalCount,
+      page,
+      pageSize,
+      totalPages
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const fetchPage = async (page: number) => {
+    const response = await supabase.rpc("get_invigilator_page", {
+      p_query: input.query || null,
+      p_sort: input.sort,
+      p_page: page,
+      p_page_size: pageSize
+    });
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    return (response.data || []) as InvigilatorRpcRow[];
+  };
+
+  let rpcRows = await fetchPage(requestedPage);
+  if (!rpcRows.length && requestedPage > 1) {
+    rpcRows = await fetchPage(1);
+  }
+
+  const totalCount = rpcRows.length ? Number(rpcRows[0].total_count) : 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = rpcRows.length && requestedPage <= totalPages ? requestedPage : 1;
+  return {
+    rows: rpcRows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      fullName: row.full_name,
+      role: "invigilator" as const,
+      assignedRoomIds: []
     })),
     totalCount,
     page,

@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { CopyButton } from "@/components/copy-button";
 import { EditIcon, TrashIcon } from "@/components/action-icons";
 import { InvigilatorCodePanel } from "@/components/invigilator-code-panel";
+import { getInvigilatorPage, type InvigilatorListSort } from "@/lib/admin-queries";
 import { requireAdminPageUser } from "@/lib/auth";
 import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-email";
 import {
@@ -14,7 +16,6 @@ import {
   recordInvigilatorAccessCodeEmailed,
   updateInvigilatorDetails
 } from "@/lib/repository";
-import { readStore } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { sendTrackedAccessCodeEmail } from "@/lib/tracked-access-code-email";
 
@@ -76,11 +77,7 @@ async function submitInvigilator(formData: FormData) {
       assignedRoomIds: []
     });
     accessCode = result.accessCode;
-    const store = await readStore();
-    userId = store.users.find((user) => user.email.toLowerCase() === email)?.id || "";
-    if (!userId) {
-      throw new Error("Invigilator was created but could not be reloaded.");
-    }
+    userId = result.userId;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create invigilator.";
     redirect(`/invigilators?error=${encodeURIComponent(message)}`);
@@ -191,33 +188,51 @@ async function submitInvigilatorDelete(formData: FormData) {
   redirect("/invigilators?message=Invigilator%20deleted.");
 }
 
+type InvigilatorSearchParams = {
+  message?: string;
+  error?: string;
+  q?: string;
+  sort?: string;
+  page?: string;
+};
+
+function normalizePage(value?: string) {
+  const page = Number.parseInt(value || "1", 10);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function pageHref(params: InvigilatorSearchParams, page: number) {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.sort) query.set("sort", params.sort);
+  if (page > 1) query.set("page", String(page));
+  const serialized = query.toString();
+  return serialized ? `/invigilators?${serialized}` : "/invigilators";
+}
+
 export default async function InvigilatorsPage({
   searchParams
 }: {
-  searchParams?: Promise<{
-    message?: string;
-    error?: string;
-    q?: string;
-  }>;
+  searchParams?: Promise<InvigilatorSearchParams>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
   const accessCodeFlash = await getAccessCodeFlash();
-  const staffSearch = (params.q || "").trim().toLowerCase();
-  const store = await readStore();
-  const invigilators = store.users
-    .filter((user) => user.role === "invigilator")
-    .filter((user) => {
-      if (!staffSearch) {
-        return true;
-      }
-
-      return (
-        user.fullName.toLowerCase().includes(staffSearch) ||
-        user.email.toLowerCase().includes(staffSearch)
-      );
-    })
-    .sort((left, right) => left.fullName.localeCompare(right.fullName));
+  const staffSearch = (params.q || "").trim();
+  const sort: InvigilatorListSort = params.sort === "name_desc" ? "name_desc" : "name_asc";
+  const invigilatorPage = await getInvigilatorPage({
+    query: staffSearch,
+    sort,
+    page: normalizePage(params.page)
+  });
+  const invigilators = invigilatorPage.rows;
+  const firstRow = invigilatorPage.totalCount
+    ? (invigilatorPage.page - 1) * invigilatorPage.pageSize + 1
+    : 0;
+  const lastRow = Math.min(
+    invigilatorPage.page * invigilatorPage.pageSize,
+    invigilatorPage.totalCount
+  );
 
   return (
     <div className="layout-two">
@@ -266,17 +281,22 @@ export default async function InvigilatorsPage({
         <div className="inline-actions" style={{ justifyContent: "space-between" }}>
           <div>
             <div className="kicker">Current Staff</div>
-            <h2 className="section-title">Invigilators</h2>
+            <h2 className="section-title">Invigilators ({invigilatorPage.totalCount})</h2>
           </div>
           <form className="search-form" action="/invigilators" method="get">
             <input
               name="q"
               placeholder="Search staff"
-              defaultValue={params.q || ""}
+              defaultValue={staffSearch}
             />
+            <select name="sort" defaultValue={sort}>
+              <option value="name_asc">Name A-Z</option>
+              <option value="name_desc">Name Z-A</option>
+            </select>
             <button className="secondary" type="submit">
-              Search
+              Apply
             </button>
+            <Link className="button secondary" href="/invigilators">Clear</Link>
           </form>
         </div>
         <div className="detail-list">
@@ -408,6 +428,38 @@ export default async function InvigilatorsPage({
             </div>
           )}
         </div>
+        <nav className="pagination-bar" aria-label="Invigilator pages">
+          <span className="pagination-summary">
+            {invigilatorPage.totalCount
+              ? `${firstRow}-${lastRow} of ${invigilatorPage.totalCount}`
+              : "0 invigilators"}
+          </span>
+          <div className="inline-actions">
+            {invigilatorPage.page > 1 ? (
+              <Link
+                className="button secondary"
+                href={pageHref(params, invigilatorPage.page - 1)}
+              >
+                Previous
+              </Link>
+            ) : (
+              <span className="button secondary disabled" aria-disabled="true">Previous</span>
+            )}
+            <span className="pagination-summary">
+              Page {invigilatorPage.page} of {invigilatorPage.totalPages}
+            </span>
+            {invigilatorPage.page < invigilatorPage.totalPages ? (
+              <Link
+                className="button secondary"
+                href={pageHref(params, invigilatorPage.page + 1)}
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="button secondary disabled" aria-disabled="true">Next</span>
+            )}
+          </div>
+        </nav>
       </div>
     </div>
   );
