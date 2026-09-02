@@ -415,32 +415,39 @@ Implementation and verification:
 
 ### 5.1 Stop rotating codes during ordinary email sends
 
-- [ ] Display and email the currently active code where policy permits, or explicitly generate/activate a new code as a separate admin action.
-- [ ] Do not regenerate every assigned invigilator's code when resending instructions.
-- [ ] Require confirmation before any action that invalidates an existing code.
+- [x] Display and email the currently active code where policy permits, or explicitly generate/activate a new code as a separate admin action.
+- [x] Do not regenerate every assigned invigilator's code when resending instructions.
+- [x] Require confirmation before any action that invalidates an existing code.
 
 ### 5.2 Add email delivery records
 
-- [ ] Store recipient, exam, template version, provider message ID, requested time, accepted time, delivery status, and failure reason.
-- [ ] Process Resend delivery/bounce/complaint webhooks with signature verification.
-- [ ] Show accepted, delivered, bounced, complained, and unknown states in the admin interface.
-- [ ] Do not label provider acceptance as confirmed inbox delivery.
+- [x] Store recipient, exam, template version, provider message ID, requested time, accepted time, delivery status, and failure reason.
+- [x] Process Resend delivery/bounce/complaint webhooks with signature verification.
+- [x] Show accepted, delivered, bounced, complained, and unknown states in the admin interface.
+- [x] Do not label provider acceptance as confirmed inbox delivery.
 
 ### 5.3 Make bulk email asynchronous and retryable
 
-- [ ] Replace the sequential request loop with a bounded background job or queue.
-- [ ] Return immediately with a job ID and progress state.
-- [ ] Retry transient provider failures without regenerating codes.
-- [ ] Allow retrying selected failed recipients.
-- [ ] Prevent duplicate sends through an idempotent job key.
+- [x] Replace the sequential request loop with a bounded background job or queue.
+- [x] Return immediately with a job ID and progress state.
+- [x] Retry transient provider failures without regenerating codes.
+- [x] Allow retrying selected failed recipients.
+- [x] Prevent duplicate sends through an idempotent job key.
 
 ### 5.4 Protect email reputation
 
-- [ ] Monitor SPF, DKIM, and DMARC status.
+- [x] Monitor SPF, DKIM, and DMARC status.
 - [ ] Move DMARC from monitoring toward enforcement after reviewing reports.
-- [ ] Track bounce and complaint rates.
-- [ ] Keep a plain-text fallback and concise HTML template.
-- [ ] Provide a copyable manual fallback from the admin portal.
+- [x] Track bounce and complaint rates.
+- [x] Keep a plain-text fallback and concise HTML template.
+- [x] Provide a copyable manual fallback from the admin portal.
+
+Staging verification completed on 3 September 2026:
+
+- Access-code email was accepted by Resend and received by the test Hotmail mailbox.
+- The signed Resend webhook recorded the provider delivery event in `email_webhook_events` and advanced the corresponding `email_deliveries` record to `delivered`.
+- Both access-code email entry points use the same tracked, idempotent delivery service and distinguish provider acceptance from confirmed delivery.
+- SPF and DKIM are verified for `exampulse.xyz`; DMARC remains deliberately in monitoring mode while the new domain establishes sending history.
 
 ### Acceptance Criteria
 
@@ -640,3 +647,5 @@ Implementation and verification:
 - [x] Phase 3 activated for staging-only development by project-owner exception; production remains unchanged.
 - [x] Phase 3 transactional database correctness completed and verified on staging; production remains unchanged.
 - [x] Phase 4 network-resilience implementation completed and verified on staging; physical device outage acceptance remains deferred.
+- [x] Phase 5 email reliability implementation and end-to-end staging delivery tracking completed.
+- [ ] Phase 5 DMARC enforcement completed after sufficient monitoring data is reviewed (intentionally deferred while the sending domain is new).
