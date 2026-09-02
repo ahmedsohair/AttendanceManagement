@@ -295,9 +295,9 @@ export function WebScannerApp() {
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [scanHold, setScanHold] = useState(false);
   const [outboxItems, setOutboxItems] = useState<ScannerOutboxItem[]>([]);
-  const [backendState, setBackendState] = useState<"online" | "offline" | "unreachable" | "syncing">(
-    "online"
-  );
+  const [backendState, setBackendState] = useState<
+    "checking" | "online" | "offline" | "unreachable" | "syncing"
+  >("checking");
 
   authExpiryHandlerRef.current = () => {
     ocrLoopRef.current?.stop();
@@ -347,6 +347,14 @@ export function WebScannerApp() {
     }),
     [liveState, optimisticStats]
   );
+  const outboxCounts = useMemo(() => summarizeOutbox(outboxItems), [outboxItems]);
+  const backendLabel = {
+    checking: "Checking backend",
+    online: "Backend connected",
+    offline: "Device offline",
+    unreachable: "Backend unreachable",
+    syncing: "Synchronizing"
+  }[backendState];
 
   const requestJson = useCallback(async <T,>(
     key: string,
@@ -374,8 +382,12 @@ export function WebScannerApp() {
 
   const refreshOutbox = useCallback(async () => {
     const items = await getOutbox().list() as ScannerOutboxItem[];
-    setOutboxItems(items);
-    return items;
+    const currentUserId = userRef.current?.id;
+    const visibleItems = currentUserId
+      ? items.filter((item) => item.userId === currentUserId)
+      : [];
+    setOutboxItems(visibleItems);
+    return visibleItems;
   }, [getOutbox]);
 
   const resetForNextScan = useCallback(() => {
@@ -473,15 +485,17 @@ export function WebScannerApp() {
     }
 
     outboxFlushActiveRef.current = true;
-    setBackendState("syncing");
     let retryBlocked = false;
+    let madeRequest = false;
     try {
       while (userRef.current && navigator.onLine) {
-        const item = await getOutbox().claimNext() as ScannerOutboxItem | null;
+        const item = await getOutbox().claimNext(userRef.current.id) as ScannerOutboxItem | null;
         if (!item) {
           break;
         }
 
+        madeRequest = true;
+        setBackendState("syncing");
         try {
           await requestJson<MarkResponse>(
             `outbox-${item.id}`,
@@ -517,7 +531,7 @@ export function WebScannerApp() {
     } finally {
       outboxFlushActiveRef.current = false;
       await refreshOutbox().catch(() => undefined);
-      if (navigator.onLine && !retryBlocked) {
+      if (navigator.onLine && madeRequest && !retryBlocked) {
         setBackendState("online");
       }
     }
@@ -525,12 +539,12 @@ export function WebScannerApp() {
 
   useEffect(() => {
     const handleOnline = () => {
-      setBackendState("syncing");
+      setBackendState("checking");
       void flushOutbox();
     };
     const handleOffline = () => setBackendState("offline");
 
-    setBackendState(navigator.onLine ? "online" : "offline");
+    setBackendState(navigator.onLine ? "checking" : "offline");
     refreshOutbox().catch(() => undefined);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -546,6 +560,23 @@ export function WebScannerApp() {
       window.clearInterval(intervalId);
     };
   }, [flushOutbox, refreshOutbox]);
+
+  const retryOutboxItem = useCallback(async (id: string) => {
+    await getOutbox().retry(id);
+    await refreshOutbox();
+    void flushOutbox();
+  }, [flushOutbox, getOutbox, refreshOutbox]);
+
+  const acknowledgeOutboxItem = useCallback(async (item: ScannerOutboxItem) => {
+    const confirmed = window.confirm(
+      `Remove the unresolved attendance for ${item.studentId} from this device? Only continue after checking the admin attendance record.`
+    );
+    if (!confirmed) {
+      return;
+    }
+    await getOutbox().complete(item.id);
+    await refreshOutbox();
+  }, [getOutbox, refreshOutbox]);
 
   useEffect(() => {
     if (user) {
@@ -586,9 +617,10 @@ export function WebScannerApp() {
       return undefined;
     }
 
-    loadLiveState(selectedRoom.id).catch((error) =>
-      setStatusMessage(error instanceof Error ? error.message : "Unable to load room state.")
-    );
+    loadLiveState(selectedRoom.id).catch((error) => {
+      setBackendState(navigator.onLine ? "unreachable" : "offline");
+      setStatusMessage(error instanceof Error ? error.message : "Unable to load room state.");
+    });
     const intervalId = window.setInterval(() => {
       loadLiveState(selectedRoom.id).catch(() => undefined);
     }, 5000);
@@ -1538,10 +1570,18 @@ export function WebScannerApp() {
           </button>
         </div>
 
-        <div className="web-status-strip">
-          <span>Connected</span>
+        <div className={`web-status-strip state-${backendState}`}>
+          <span>{backendLabel}</span>
           <span>Room {selectedRoom.code}</span>
-          <span>Last sync {lastSyncAt || "pending"}</span>
+          <span>Last sync {lastSyncAt || "not yet"}</span>
+          {outboxCounts.total ? (
+            <span>
+              Queue {outboxCounts.pending} pending
+              {outboxCounts.syncing ? `, ${outboxCounts.syncing} syncing` : ""}
+              {outboxCounts.failed ? `, ${outboxCounts.failed} failed` : ""}
+              {outboxCounts.conflict ? `, ${outboxCounts.conflict} conflict` : ""}
+            </span>
+          ) : null}
         </div>
 
         <div className="web-ocr-status web-ocr-status-top">
@@ -1619,6 +1659,51 @@ export function WebScannerApp() {
                 </span>
               ))}
             </div>
+          ) : null}
+          {outboxCounts.total ? (
+            <details className="scanner-outbox-panel">
+              <summary>
+                Attendance sync queue
+                <span>{outboxCounts.total} item{outboxCounts.total === 1 ? "" : "s"}</span>
+              </summary>
+              <div className="scanner-outbox-list">
+                {outboxItems.map((item) => (
+                  <div className={`scanner-outbox-item state-${item.status}`} key={item.id}>
+                    <div>
+                      <strong>{item.studentId}</strong>
+                      <span>
+                        {item.status === "pending"
+                          ? "Pending synchronization"
+                          : item.status === "syncing"
+                            ? "Synchronizing"
+                            : item.status === "conflict"
+                              ? "Conflict needs review"
+                              : "Could not synchronize"}
+                      </span>
+                      {item.lastError ? <small>{item.lastError}</small> : null}
+                    </div>
+                    {item.status === "failed" || item.status === "conflict" ? (
+                      <div className="scanner-outbox-actions">
+                        <button
+                          className="secondary compact"
+                          type="button"
+                          onClick={() => retryOutboxItem(item.id)}
+                        >
+                          Retry
+                        </button>
+                        <button
+                          className="secondary compact"
+                          type="button"
+                          onClick={() => acknowledgeOutboxItem(item)}
+                        >
+                          Acknowledge
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </details>
           ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
           {cameraRecoveryNeeded ? (

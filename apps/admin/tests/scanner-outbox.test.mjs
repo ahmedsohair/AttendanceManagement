@@ -4,6 +4,7 @@ import {
   classifyOutboxError,
   createPendingOutboxItem,
   getRetryDelayMs,
+  isOutboxItemClaimable,
   summarizeOutbox
 } from "../src/lib/scanner-outbox.mjs";
 
@@ -16,6 +17,13 @@ test("new queue items are immediately due using a numeric timestamp", () => {
   assert.equal(item.status, "pending");
   assert.equal(item.nextAttemptAt, 123456);
   assert.equal(typeof item.nextAttemptAt, "number");
+});
+
+test("only the originating invigilator can claim queued work", () => {
+  const pending = { userId: "user-1", status: "pending", nextAttemptAt: 100, leaseUntil: 0 };
+  assert.equal(isOutboxItemClaimable(pending, 100, "user-1"), true);
+  assert.equal(isOutboxItemClaimable(pending, 100, "user-2"), false);
+  assert.equal(isOutboxItemClaimable(pending, 99, "user-1"), false);
 });
 
 test("uses bounded exponential retry delays with jitter", () => {

@@ -81,6 +81,16 @@ export function createPendingOutboxItem(operation, currentTime) {
   };
 }
 
+export function isOutboxItemClaimable(item, currentTime, userId) {
+  if (item.userId !== userId) {
+    return false;
+  }
+  return (
+    (item.status === "pending" && item.nextAttemptAt <= currentTime) ||
+    (item.status === "syncing" && item.leaseUntil <= currentTime)
+  );
+}
+
 export function createScannerOutbox({ indexedDb = globalThis.indexedDB, now = Date.now } = {}) {
   let databasePromise;
   const getDatabase = () => {
@@ -103,17 +113,14 @@ export function createScannerOutbox({ indexedDb = globalThis.indexedDB, now = Da
     return items.sort((left, right) => left.queuedAt.localeCompare(right.queuedAt));
   }
 
-  async function claimNext() {
+  async function claimNext(userId) {
     const database = await getDatabase();
     const transaction = database.transaction(storeName, "readwrite");
     const objectStore = transaction.objectStore(storeName);
     const items = await requestResult(objectStore.getAll());
     const currentTime = now();
     const candidate = items
-      .filter((item) =>
-        (item.status === "pending" && item.nextAttemptAt <= currentTime) ||
-        (item.status === "syncing" && item.leaseUntil <= currentTime)
-      )
+      .filter((item) => isOutboxItemClaimable(item, currentTime, userId))
       .sort((left, right) => left.queuedAt.localeCompare(right.queuedAt))[0];
 
     if (candidate) {

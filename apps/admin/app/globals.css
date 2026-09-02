@@ -1350,6 +1350,20 @@ button.icon-button.danger:hover {
   font-weight: 800;
 }
 
+.web-status-strip.state-online span:first-child {
+  background: rgba(22, 163, 74, 0.78);
+}
+
+.web-status-strip.state-checking span:first-child,
+.web-status-strip.state-syncing span:first-child {
+  background: rgba(2, 107, 198, 0.78);
+}
+
+.web-status-strip.state-offline span:first-child,
+.web-status-strip.state-unreachable span:first-child {
+  background: rgba(194, 65, 12, 0.86);
+}
+
 .web-torch-button {
   flex: 0 0 auto;
 }
@@ -1460,6 +1474,71 @@ button.icon-button.danger:hover {
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+
+.scanner-outbox-panel {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px;
+  background: rgba(17, 17, 17, 0.76);
+  color: white;
+}
+
+.scanner-outbox-panel summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.scanner-outbox-list {
+  display: grid;
+  gap: 8px;
+  max-height: 210px;
+  overflow-y: auto;
+  padding: 0 10px 10px;
+}
+
+.scanner-outbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scanner-outbox-item > div:first-child {
+  display: grid;
+  min-width: 0;
+}
+
+.scanner-outbox-item span,
+.scanner-outbox-item small {
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.scanner-outbox-item small {
+  overflow-wrap: anywhere;
+}
+
+.scanner-outbox-item.state-failed,
+.scanner-outbox-item.state-conflict {
+  border: 1px solid rgba(248, 113, 113, 0.58);
+}
+
+.scanner-outbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scanner-outbox-actions button {
+  min-height: 38px;
+  padding: 7px 10px;
+  font-size: 12px;
 }
 
 .recent-chip-row {
