@@ -23,6 +23,12 @@ type EmailAttachment = {
   filename: string;
 };
 
+export type EmailProviderResult = {
+  acceptedAt: string;
+  provider: "resend" | "smtp";
+  providerMessageId: string | null;
+};
+
 const scannerPath = "/scan";
 const supportEmail = "ahmed.sohair.khan@rmit.edu.au";
 const invigilatorGuidePath = path.join(
@@ -239,12 +245,18 @@ async function sendEmail({
       throw new Error(payload.message || payload.name || "Resend email delivery failed.");
     }
 
-    return response.json();
+    const payload = (await response.json()) as { id?: string };
+
+    return {
+      acceptedAt: new Date().toISOString(),
+      provider: "resend",
+      providerMessageId: payload.id?.trim() || null
+    } satisfies EmailProviderResult;
   }
 
   const transporter = createSmtpTransporter();
 
-  return transporter.sendMail({
+  const result = await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     replyTo: process.env.EMAIL_REPLY_TO || supportEmail,
     to,
@@ -257,6 +269,12 @@ async function sendEmail({
       filename: attachment.filename
     }))
   });
+
+  return {
+    acceptedAt: new Date().toISOString(),
+    provider: "smtp",
+    providerMessageId: result.messageId?.trim() || null
+  } satisfies EmailProviderResult;
 }
 
 export async function sendInvigilatorInstructionEmail(input: InstructionEmailInput) {
