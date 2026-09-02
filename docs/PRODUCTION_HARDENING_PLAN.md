@@ -325,11 +325,21 @@ Verification completed on staging on 1 September 2026:
 
 ### 3.6 Make access-code rotation consistent
 
-- [ ] Separate code generation from code activation.
-- [ ] Update authentication and application records with compensating rollback or a staged activation flow.
-- [ ] Never invalidate a working code merely because an email failed.
-- [ ] Decide whether code rotation should revoke existing sessions and implement that policy explicitly.
-- [ ] Record code-created, activated, emailed, and revoked timestamps without storing plaintext codes.
+- [x] Separate code generation from code activation.
+- [x] Update authentication and application records with compensating rollback or a staged activation flow.
+- [x] Never invalidate a working code merely because an email failed.
+- [x] Decide whether code rotation should revoke existing sessions and implement that policy explicitly.
+- [x] Record code-created, activated, emailed, and revoked timestamps without storing plaintext codes.
+
+Verification completed on staging on 2 September 2026:
+
+- Assignment-instruction emails no longer generate or rotate access codes; delivery failure therefore cannot invalidate a working credential.
+- Replacement generation stores only a pending SHA-256 hash, and activation is a separate confirmed admin action.
+- Authentication is updated before the pending hash is atomically promoted; the pending hash remains an API recovery path if final promotion must be retried.
+- Code email is available only after activation and records its successful send timestamp.
+- Existing authenticated scanner sessions intentionally remain active after rotation; the previous code stops working for new sign-ins.
+- Rollback-only tests prove staging, failed activation, successful activation, email timestamping, and pending cancellation behavior without storing plaintext codes.
+- The admin production build, 13-test scanner regression suite, deployed scanner, and original synthetic-code login pass.
 
 ### 3.7 Enforce exam state transitions
 
@@ -591,7 +601,7 @@ Verification completed on staging on 1 September 2026:
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
 | 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
 | 2 | `128fdd1`, `6939bfe`, `b62e8e6`, `bab059e` | Automated suite/build/API smoke passed; physical devices pending | No | Implementation complete. Awaiting representative Android and iPhone acceptance before Phase 3 is activated. |
-| 3 | `8e62a55` through `d63f47d` | Sections 3.1-3.5 database tests, admin build, and scanner regressions passed | No | Atomic attendance, idempotency, integrity, imports, and room assignments complete on staging. Sections 3.6-3.7 remain. |
+| 3 | `8e62a55` through `70a4b91` | Sections 3.1-3.6 database tests, admin build, scanner regressions, and deployed login smoke passed | No | Atomic attendance, idempotency, integrity, imports, room assignments, and staged access-code rotation complete on staging. Section 3.7 remains. |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
 | 6 |  |  |  |  |
