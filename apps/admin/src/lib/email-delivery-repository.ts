@@ -149,6 +149,36 @@ export async function createAssignmentEmailJob(input: {
   return { ...result, completedAt: null } satisfies EmailJobSummary;
 }
 
+export async function createAccessCodeEmailJob(input: {
+  idempotencyKey: string;
+  requestedBy: string;
+  templateVersion: string;
+  userId: string;
+}) {
+  const response = await getSupabaseAdmin().rpc("create_access_code_email_job", {
+    p_idempotency_key: input.idempotencyKey,
+    p_requested_by: input.requestedBy,
+    p_template_version: input.templateVersion,
+    p_user_id: input.userId
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  const result = response.data as {
+    acceptedCount: number;
+    created: boolean;
+    failedCount: number;
+    jobId: string;
+    processedCount: number;
+    status: EmailJobStatus;
+    totalCount: number;
+  };
+
+  return { ...result, completedAt: null } satisfies EmailJobSummary;
+}
+
 export async function getEmailJob(jobId: string) {
   const response = await getSupabaseAdmin()
     .from("email_jobs")

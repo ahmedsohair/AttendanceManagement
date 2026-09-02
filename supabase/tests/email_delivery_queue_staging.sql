@@ -14,6 +14,7 @@ declare
   v_response jsonb;
   v_claimed integer;
   v_claimed_ids uuid[];
+  v_access_job_id uuid;
 begin
   insert into public.users (id, email, full_name, role)
   values
@@ -128,6 +129,37 @@ begin
         where provider_event_id = 'event-delivered-' || v_job_id::text) <> 1 then
     raise exception 'Webhook event idempotency failed.';
   end if;
+
+  v_response := public.create_access_code_email_job(
+    v_invigilator_one, v_admin_id, 'access-code-v1',
+    'staging-access-email-' || v_invigilator_one::text
+  );
+  v_access_job_id := (v_response ->> 'jobId')::uuid;
+  if (v_response ->> 'created')::boolean is not true
+    or (select template_data ? 'accessCode' from public.email_deliveries
+        where job_id = v_access_job_id) is true
+    or (select status from public.email_deliveries where job_id = v_access_job_id) <> 'queued' then
+    raise exception 'Access-code email job persisted a secret or has an invalid state.';
+  end if;
+
+  v_response := public.create_access_code_email_job(
+    v_invigilator_one, v_admin_id, 'access-code-v1',
+    'staging-access-email-' || v_invigilator_one::text
+  );
+  if (v_response ->> 'created')::boolean is not false
+    or (v_response ->> 'jobId')::uuid <> v_access_job_id then
+    raise exception 'Access-code email job idempotency failed.';
+  end if;
+
+  begin
+    perform public.create_access_code_email_job(
+      v_invigilator_two, v_admin_id, 'access-code-v1',
+      'staging-access-email-' || v_invigilator_one::text
+    );
+    raise exception 'Access-code idempotency key was reused for another recipient.';
+  exception
+    when unique_violation then null;
+  end;
 end;
 $$;
 

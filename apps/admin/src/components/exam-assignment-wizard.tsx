@@ -465,7 +465,8 @@ export function ExamAssignmentWizard({
               userId: createdAccess.userId
             }),
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Idempotency-Key": crypto.randomUUID()
             },
             method: "POST"
           })

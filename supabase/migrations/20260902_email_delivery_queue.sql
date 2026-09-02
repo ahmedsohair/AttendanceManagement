@@ -243,6 +243,83 @@ begin
 end;
 $$;
 
+create or replace function public.create_access_code_email_job(
+  p_user_id uuid,
+  p_requested_by uuid,
+  p_template_version text,
+  p_idempotency_key text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_job public.email_jobs%rowtype;
+  v_invigilator public.users%rowtype;
+  v_created boolean := false;
+begin
+  if nullif(btrim(p_template_version), '') is null
+    or nullif(btrim(p_idempotency_key), '') is null then
+    raise exception 'Template version and idempotency key are required.' using errcode = '22023';
+  end if;
+  select * into v_invigilator
+  from public.users
+  where id = p_user_id and role = 'invigilator';
+  if not found then
+    raise exception 'Invigilator not found.' using errcode = 'P0002';
+  end if;
+  if not exists (
+    select 1 from public.users where id = p_requested_by and role = 'admin'
+  ) then
+    raise exception 'Requesting administrator not found.' using errcode = '42501';
+  end if;
+
+  insert into public.email_jobs (
+    job_type, idempotency_key, template_version, requested_by
+  ) values (
+    'access_code_single', btrim(p_idempotency_key), btrim(p_template_version), p_requested_by
+  )
+  on conflict (idempotency_key) do nothing
+  returning * into v_job;
+  v_created := found;
+
+  if not v_created then
+    select * into strict v_job
+    from public.email_jobs
+    where idempotency_key = btrim(p_idempotency_key);
+
+    if v_job.job_type <> 'access_code_single'
+      or v_job.template_version <> btrim(p_template_version)
+      or not exists (
+        select 1 from public.email_deliveries
+        where job_id = v_job.id and user_id = p_user_id
+      ) then
+      raise exception 'Idempotency key is already used for a different email job.'
+        using errcode = '23505';
+    end if;
+  else
+    insert into public.email_deliveries (
+      job_id, user_id, recipient_email, template_type, template_version, template_data
+    ) values (
+      v_job.id, v_invigilator.id, lower(btrim(v_invigilator.email)), 'access_code',
+      btrim(p_template_version), jsonb_build_object('fullName', v_invigilator.full_name)
+    );
+    select * into v_job from public.refresh_email_job_status(v_job.id);
+  end if;
+
+  return jsonb_build_object(
+    'jobId', v_job.id::text,
+    'created', v_created,
+    'status', v_job.status,
+    'totalCount', v_job.total_count,
+    'processedCount', v_job.processed_count,
+    'acceptedCount', v_job.accepted_count,
+    'failedCount', v_job.failed_count
+  );
+end;
+$$;
+
 create or replace function public.claim_email_deliveries(
   p_job_id uuid,
   p_worker_id text,
@@ -491,6 +568,7 @@ revoke all on table public.email_deliveries from public, anon, authenticated;
 revoke all on table public.email_webhook_events from public, anon, authenticated;
 revoke all on function public.refresh_email_job_status(uuid) from public, anon, authenticated;
 revoke all on function public.create_assignment_email_job(uuid, uuid, text, text) from public, anon, authenticated;
+revoke all on function public.create_access_code_email_job(uuid, uuid, text, text) from public, anon, authenticated;
 revoke all on function public.claim_email_deliveries(uuid, text, integer, integer) from public, anon, authenticated;
 revoke all on function public.complete_email_delivery_attempt(uuid, text, text, text, text, text, integer) from public, anon, authenticated;
 revoke all on function public.record_email_provider_event(text, text, text, text, jsonb) from public, anon, authenticated;
@@ -501,6 +579,7 @@ grant select, insert, update, delete on table public.email_deliveries to service
 grant select, insert, update, delete on table public.email_webhook_events to service_role;
 grant execute on function public.refresh_email_job_status(uuid) to service_role;
 grant execute on function public.create_assignment_email_job(uuid, uuid, text, text) to service_role;
+grant execute on function public.create_access_code_email_job(uuid, uuid, text, text) to service_role;
 grant execute on function public.claim_email_deliveries(uuid, text, integer, integer) to service_role;
 grant execute on function public.complete_email_delivery_attempt(uuid, text, text, text, text, text, integer) to service_role;
 grant execute on function public.record_email_provider_event(text, text, text, text, jsonb) to service_role;
