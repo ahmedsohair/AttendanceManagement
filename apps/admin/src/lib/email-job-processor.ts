@@ -18,6 +18,21 @@ type AssignmentTemplateData = {
   session: ExamSession;
 };
 
+const defaultSendIntervalMs = 600;
+
+function sendIntervalMs() {
+  const configured = Number(process.env.EMAIL_SEND_INTERVAL_MS);
+  if (!Number.isFinite(configured)) {
+    return defaultSendIntervalMs;
+  }
+
+  return Math.min(Math.max(Math.round(configured), 250), 5000);
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 function readAssignmentTemplate(delivery: ClaimedEmailDelivery): AssignmentTemplateData {
   const value = delivery.templateData as Partial<AssignmentTemplateData> | null;
   if (
@@ -109,15 +124,20 @@ export async function processEmailJobBatch(input: {
     limit: input.batchSize || 3,
     workerId: input.workerId
   });
-  const results = await Promise.all(
-    deliveries.map((delivery) =>
-      processDelivery({
+  const results: Awaited<ReturnType<typeof processDelivery>>[] = [];
+  for (const [index, delivery] of deliveries.entries()) {
+    if (index > 0) {
+      await wait(sendIntervalMs());
+    }
+
+    results.push(
+      await processDelivery({
         appBaseUrl: input.appBaseUrl,
         delivery,
         workerId: input.workerId
       })
-    )
-  );
+    );
+  }
   const job = await getEmailJob(input.jobId);
 
   if (!job) {
