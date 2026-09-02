@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:scanner": "node --test tests/scanner-runtime.test.mjs tests/scanner-requests.test.mjs tests/scanner-ocr-runtime.test.mjs"
+    "test:scanner": "node --test tests/scanner-runtime.test.mjs tests/scanner-requests.test.mjs tests/scanner-ocr-runtime.test.mjs tests/scanner-outbox.test.mjs"
   },
   "dependencies": {
     "@algo-attendance/shared": "0.1.0",
