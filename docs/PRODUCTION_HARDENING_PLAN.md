@@ -375,20 +375,30 @@ Implementation and verification:
 
 ### 4.1 Build a web scanner outbox
 
-- [ ] Persist pending attendance operations in IndexedDB before sending.
-- [ ] Include idempotency key, exam, room, student, source, comment, override, device, user, and queued timestamp.
-- [ ] Remove an item only after a confirmed server result.
-- [ ] Retry only retryable failures with bounded exponential backoff.
-- [ ] Pause retry on authentication, validation, closed-exam, or permission errors.
-- [ ] Display pending, syncing, failed, and conflict counts clearly.
-- [ ] Provide an admin/invigilator recovery view for unresolved items.
+- [x] Persist pending attendance operations in IndexedDB before sending.
+- [x] Include idempotency key, exam, room, student, source, comment, override, device, user, and queued timestamp.
+- [x] Remove an item only after a confirmed server result.
+- [x] Retry only retryable failures with bounded exponential backoff.
+- [x] Pause retry on authentication, validation, closed-exam, or permission errors.
+- [x] Display pending, syncing, failed, and conflict counts clearly.
+- [x] Provide an admin/invigilator recovery view for unresolved items.
 
 ### 4.2 Communicate connectivity honestly
 
-- [ ] Replace the static `Connected` label with measured online/API state.
-- [ ] Show last successful server synchronization time.
-- [ ] Do not equate browser network status with backend reachability.
-- [ ] Display an explicit offline-marked/pending state instead of `Attendance marked` until durable persistence is guaranteed.
+- [x] Replace the static `Connected` label with measured online/API state.
+- [x] Show last successful server synchronization time.
+- [x] Do not equate browser network status with backend reachability.
+- [x] Display an explicit offline-marked/pending state instead of `Attendance marked` until durable persistence is guaranteed.
+
+Implementation and verification:
+
+- Every mark or redirect is written to IndexedDB before delivery with its stable request ID and complete audit metadata.
+- Atomic IndexedDB leases prevent two tabs or flush loops from claiming the same item; queued work is scoped to its originating invigilator.
+- Retryable network, timeout, throttling, and server failures use bounded exponential backoff. Authentication, validation, permission, and inactive-exam responses remain visible for manual recovery instead of retrying indefinitely.
+- The scanner reports checking, connected, offline, unreachable, and synchronizing states separately and shows the last confirmed backend synchronization time.
+- The recovery panel exposes queue counts, per-item errors, explicit retry, and guarded acknowledgement after the operator verifies the admin record.
+- Nineteen scanner tests cover IndexedDB persistence across recreated outbox instances, exclusive simultaneous claims, outage/reconnection synchronization, stable idempotency keys, and retained closed-exam conflicts.
+- The admin production build and TypeScript checks pass. Physical Android and iPhone outage testing remains deferred with the wider device acceptance pass.
 
 ### Acceptance Criteria
 
@@ -611,7 +621,7 @@ Implementation and verification:
 | 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
 | 2 | `128fdd1`, `6939bfe`, `b62e8e6`, `bab059e` | Automated suite/build/API smoke passed; physical devices pending | No | Implementation complete. Awaiting representative Android and iPhone acceptance before Phase 3 is activated. |
 | 3 | `8e62a55` through `fd4842e` | Sections 3.1-3.7 database tests, admin build, scanner regressions, and deployed login smoke passed | No | Atomic attendance, idempotency, integrity, imports, room assignments, staged access-code rotation, and enforced exam lifecycle complete on staging. |
-| 4 |  |  |  |  |
+| 4 | `ab2ce7b` through `b35cd3a` | Automated IndexedDB persistence, simultaneous-claim, outage/reconnect, conflict, scanner regression, type, build, deployed scanner, and login checks passed; physical devices pending | No | Durable scanner outbox, safe retry classification, truthful connectivity state, and in-scanner recovery controls complete on staging. |
 | 5 |  |  |  |  |
 | 6 |  |  |  |  |
 | 7 |  |  |  |  |
@@ -629,3 +639,4 @@ Implementation and verification:
 - [ ] Phase 2 physical Android and iPhone acceptance completed (explicitly deferred by the project owner on 1 September 2026).
 - [x] Phase 3 activated for staging-only development by project-owner exception; production remains unchanged.
 - [x] Phase 3 transactional database correctness completed and verified on staging; production remains unchanged.
+- [x] Phase 4 network-resilience implementation completed and verified on staging; physical device outage acceptance remains deferred.
