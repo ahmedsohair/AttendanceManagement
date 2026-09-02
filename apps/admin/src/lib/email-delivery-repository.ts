@@ -32,6 +32,7 @@ export type ClaimedEmailDelivery = {
   jobId: string;
   recipientEmail: string;
   templateType: "assignment" | "access_code";
+  templateData: unknown;
   templateVersion: string;
   userId: string | null;
 };
@@ -54,6 +55,7 @@ type EmailDeliveryRow = {
   job_id: string;
   recipient_email: string;
   template_type: "assignment" | "access_code";
+  template_data: unknown;
   template_version: string;
   user_id: string | null;
 };
@@ -79,6 +81,7 @@ function mapDelivery(row: EmailDeliveryRow): ClaimedEmailDelivery {
     jobId: row.job_id,
     recipientEmail: row.recipient_email,
     templateType: row.template_type,
+    templateData: row.template_data,
     templateVersion: row.template_version,
     userId: row.user_id
   };

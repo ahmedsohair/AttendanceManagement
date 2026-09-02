@@ -25,6 +25,7 @@ create table if not exists public.email_deliveries (
   recipient_email text not null,
   template_type text not null check (template_type in ('assignment', 'access_code')),
   template_version text not null,
+  template_data jsonb not null,
   provider text check (provider in ('resend', 'smtp')),
   provider_message_id text,
   status text not null default 'queued'
@@ -43,6 +44,14 @@ create table if not exists public.email_deliveries (
   updated_at timestamptz not null default now(),
   unique (job_id, recipient_email)
 );
+
+alter table public.email_deliveries
+  add column if not exists template_data jsonb;
+update public.email_deliveries
+set template_data = '{}'::jsonb
+where template_data is null;
+alter table public.email_deliveries
+  alter column template_data set not null;
 
 create table if not exists public.email_webhook_events (
   id uuid primary key default gen_random_uuid(),
@@ -170,13 +179,45 @@ begin
     end if;
   else
     insert into public.email_deliveries (
-      job_id, exam_session_id, user_id, recipient_email, template_type, template_version
+      job_id, exam_session_id, user_id, recipient_email, template_type, template_version,
+      template_data
     )
     select distinct
       v_job.id, p_exam_session_id, invigilator.id, lower(btrim(invigilator.email)),
-      'assignment', btrim(p_template_version)
+      'assignment', btrim(p_template_version),
+      jsonb_build_object(
+        'fullName', invigilator.full_name,
+        'session', jsonb_build_object(
+          'id', session.id,
+          'name', session.name,
+          'examDate', session.exam_date,
+          'startTime', session.start_time,
+          'published', session.published,
+          'status', session.status,
+          'createdAt', session.created_at
+        ),
+        'rooms', (
+          select coalesce(
+            jsonb_agg(
+              jsonb_build_object(
+                'id', assigned_room.id,
+                'examSessionId', assigned_room.exam_session_id,
+                'code', assigned_room.code,
+                'displayName', assigned_room.display_name,
+                'capacity', assigned_room.capacity
+              ) order by assigned_room.code
+            ),
+            '[]'::jsonb
+          )
+          from public.room_assignments assigned
+          join public.rooms assigned_room on assigned_room.id = assigned.room_id
+          where assigned.user_id = invigilator.id
+            and assigned_room.exam_session_id = p_exam_session_id
+        )
+      )
     from public.room_assignments assignment
     join public.rooms room on room.id = assignment.room_id
+    join public.exam_sessions session on session.id = room.exam_session_id
     join public.users invigilator
       on invigilator.id = assignment.user_id and invigilator.role = 'invigilator'
     where room.exam_session_id = p_exam_session_id

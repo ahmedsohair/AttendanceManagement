@@ -45,6 +45,11 @@ begin
     or (select count(*) from public.email_deliveries where job_id = v_job_id) <> 2 then
     raise exception 'Email job did not snapshot each invigilator exactly once.';
   end if;
+  if (select jsonb_array_length(template_data -> 'rooms')
+      from public.email_deliveries
+      where job_id = v_job_id and user_id = v_invigilator_one) <> 2 then
+    raise exception 'Email job did not preserve the assigned-room snapshot.';
+  end if;
 
   v_response := public.create_assignment_email_job(
     v_session_id, v_admin_id, 'assignment-v1', 'staging-email-job-' || v_session_id::text
