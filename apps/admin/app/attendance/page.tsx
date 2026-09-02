@@ -1,112 +1,85 @@
 import Link from "next/link";
 import { getExamSessionStatus } from "@algo-attendance/shared";
-import { requireAdminPageUser } from "@/lib/auth";
+import {
+  getAttendanceAuditPage,
+  type AttendanceAuditSort,
+  type AttendanceAuditStatus
+} from "@/lib/admin-queries";
 import { formatAuditTime } from "@/lib/audit-time";
-import { readAdminAuditStoreFast } from "@/lib/repository";
+import { requireAdminPageUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+type AttendanceSearchParams = {
+  q?: string;
+  room?: string;
+  examSessionId?: string;
+  status?: string;
+  sort?: string;
+  page?: string;
+};
+
+function normalizeStatus(value?: string): AttendanceAuditStatus {
+  return value === "standard" || value === "mismatch" || value === "commented"
+    ? value
+    : "";
+}
+
+function normalizeSort(value?: string): AttendanceAuditSort {
+  return value === "oldest" ? "oldest" : "newest";
+}
+
+function normalizePage(value?: string) {
+  const page = Number.parseInt(value || "1", 10);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function pageHref(params: AttendanceSearchParams, page: number) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key !== "page" && value) query.set(key, value);
+  }
+  if (page > 1) query.set("page", String(page));
+  const serialized = query.toString();
+  return serialized ? `/attendance?${serialized}` : "/attendance";
+}
 
 export default async function AttendancePage({
   searchParams
 }: {
-  searchParams?: Promise<{
-    q?: string;
-    room?: string;
-    examSessionId?: string;
-    status?: string;
-    sort?: string;
-  }>;
+  searchParams?: Promise<AttendanceSearchParams>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
-  const query = (params.q || "").trim().toLowerCase();
+  const query = (params.q || "").trim();
   const roomFilter = (params.room || "").trim();
   const examSessionFilter = (params.examSessionId || "active").trim();
-  const statusFilter = (params.status || "").trim();
-  const sort = params.sort === "oldest" ? "oldest" : "newest";
-  const store = await readAdminAuditStoreFast(examSessionFilter, {
-    includeAttendance: true
+  const statusFilter = normalizeStatus(params.status);
+  const sort = normalizeSort(params.sort);
+  const auditPage = await getAttendanceAuditPage({
+    examSessionFilter,
+    query,
+    roomId: roomFilter,
+    status: statusFilter,
+    sort,
+    page: normalizePage(params.page)
   });
-  const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
-  const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
-  const userMap = new Map(store.users.map((user) => [user.id, user]));
-  const allocationMap = new Map(
-    store.studentAllocations.map((allocation) => [
-      `${allocation.examSessionId}:${allocation.studentId}`,
-      allocation
-    ])
+  const sessionMap = new Map(
+    auditPage.sessions.map((session) => [session.id, session])
   );
-  const activeSessionIds = new Set(
-    store.examSessions
-      .filter((session) => getExamSessionStatus(session) === "active")
-      .map((session) => session.id)
-  );
-  const selectedSessionIds =
-    examSessionFilter === "all"
-      ? new Set(store.examSessions.map((session) => session.id))
-      : examSessionFilter === "active"
-        ? activeSessionIds
-        : new Set([examSessionFilter]);
-  const roomOptions = store.rooms
-    .filter((room) =>
-      examSessionFilter === "all" ? true : selectedSessionIds.has(room.examSessionId)
-    )
-    .sort((left, right) => left.code.localeCompare(right.code));
   const selectedSessionLabel =
     examSessionFilter === "all"
       ? "All exams"
       : examSessionFilter === "active"
         ? "Active exams"
-        : sessionMap.get(examSessionFilter)?.name || "Selected exam";
-
-  const attendance = [...store.attendanceEvents]
-    .filter((event) => {
-      const allocation = allocationMap.get(`${event.examSessionId}:${event.studentId}`);
-      if (!selectedSessionIds.has(event.examSessionId)) {
-        return false;
-      }
-
-      if (query) {
-        const markedBy = userMap.get(event.markedByUserId);
-        const searchable = [
-          event.studentId,
-          allocation?.studentName || "",
-          sessionMap.get(event.examSessionId)?.name || "",
-          markedBy?.fullName || "",
-          markedBy?.email || "",
-          event.comment || ""
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        if (!searchable.includes(query)) {
-          return false;
-        }
-      }
-
-      if (roomFilter && event.markedInRoomId !== roomFilter) {
-        return false;
-      }
-
-      if (statusFilter === "mismatch" && !event.roomMismatch) {
-        return false;
-      }
-
-      if (statusFilter === "commented" && !event.comment) {
-        return false;
-      }
-
-      if (statusFilter === "standard" && event.roomMismatch) {
-        return false;
-      }
-
-      return true;
-    })
-    .sort((left, right) =>
-      sort === "oldest"
-        ? left.createdAt.localeCompare(right.createdAt)
-        : right.createdAt.localeCompare(left.createdAt)
-    );
+        : sessionMap.get(examSessionFilter)?.name || "Active exams";
+  const firstRow = auditPage.totalCount
+    ? (auditPage.page - 1) * auditPage.pageSize + 1
+    : 0;
+  const lastRow = Math.min(
+    auditPage.page * auditPage.pageSize,
+    auditPage.totalCount
+  );
 
   return (
     <div className="card wide-card">
@@ -127,20 +100,16 @@ export default async function AttendancePage({
           <select name="examSessionId" defaultValue={examSessionFilter}>
             <option value="active">Active exams only</option>
             <option value="all">All exams</option>
-            {store.examSessions.map((session) => {
-              const status = getExamSessionStatus(session);
-
-              return (
-                <option key={session.id} value={session.id}>
-                  {session.name} ({status})
-                </option>
-              );
-            })}
+            {auditPage.sessions.map((session) => (
+              <option key={session.id} value={session.id}>
+                {session.name} ({getExamSessionStatus(session)})
+              </option>
+            ))}
           </select>
-          <input name="q" placeholder="Search student/name/comment" defaultValue={params.q || ""} />
+          <input name="q" placeholder="Search student/name/comment" defaultValue={query} />
           <select name="room" defaultValue={roomFilter}>
             <option value="">All rooms</option>
-            {roomOptions.map((room) => (
+            {auditPage.rooms.map((room) => (
               <option key={room.id} value={room.id}>
                 {room.code}
               </option>
@@ -161,77 +130,96 @@ export default async function AttendancePage({
         </form>
       </div>
       <div className="table-scroll">
-      <table className="table compact-table">
-        <thead>
-          <tr>
-            <th>Student ID</th>
-            <th>Student Name</th>
-            <th>Exam</th>
-            <th>Marked In</th>
-            <th>Expected Room</th>
-            <th>Marked By</th>
-            <th>Source</th>
-            <th>Comment</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {attendance.length ? (
-            attendance.map((event) => {
-              const allocation = allocationMap.get(`${event.examSessionId}:${event.studentId}`);
-
-              return (
-              <tr key={event.id} className="clickable-row">
-                <td className="data-mono">
-                  <Link className="inline-link" href={`/sessions/${event.examSessionId}?q=${event.studentId}`}>
-                    {event.studentId}
-                  </Link>
-                </td>
-                <td>{allocation?.studentName || "-"}</td>
-                <td>
-                  <Link href={`/sessions/${event.examSessionId}`}>
-                    {sessionMap.get(event.examSessionId)?.name || event.examSessionId}
-                  </Link>
-                </td>
-                <td>{roomMap.get(event.markedInRoomId)?.code || event.markedInRoomId}</td>
-                <td>{roomMap.get(event.expectedRoomId)?.code || event.expectedRoomId}</td>
-                <td>
-                  {userMap.get(event.markedByUserId) ? (
-                    <>
-                      <strong>{userMap.get(event.markedByUserId)?.fullName}</strong>
-                      <br />
-                      <span className="subtle">
-                        {userMap.get(event.markedByUserId)?.email}
-                      </span>
-                    </>
-                  ) : (
-                    event.markedByUserId
-                  )}
-                </td>
-                <td>
-                  {event.roomMismatch ? (
-                    <span className="pill warn">{event.source} | mismatch</span>
-                  ) : (
-                    <span className="pill ok">{event.source}</span>
-                  )}
-                </td>
-                <td>{event.comment || "-"}</td>
-                <td className="data-mono" title={event.createdAt}>
-                  {formatAuditTime(event.createdAt)}
+        <table className="table compact-table">
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Student Name</th>
+              <th>Exam</th>
+              <th>Marked In</th>
+              <th>Expected Room</th>
+              <th>Marked By</th>
+              <th>Source</th>
+              <th>Comment</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditPage.rows.length ? (
+              auditPage.rows.map((event) => (
+                <tr key={event.id} className="clickable-row">
+                  <td className="data-mono">
+                    <Link
+                      className="inline-link"
+                      href={`/sessions/${event.examSessionId}?q=${encodeURIComponent(event.studentId)}`}
+                    >
+                      {event.studentId}
+                    </Link>
+                  </td>
+                  <td>{event.studentName || "-"}</td>
+                  <td>
+                    <Link href={`/sessions/${event.examSessionId}`}>{event.examName}</Link>
+                  </td>
+                  <td>{event.markedInRoomCode}</td>
+                  <td>{event.expectedRoomCode}</td>
+                  <td>
+                    <strong>{event.markedByName}</strong>
+                    {event.markedByEmail ? (
+                      <>
+                        <br />
+                        <span className="subtle">{event.markedByEmail}</span>
+                      </>
+                    ) : null}
+                  </td>
+                  <td>
+                    {event.roomMismatch ? (
+                      <span className="pill warn">{event.source} | mismatch</span>
+                    ) : (
+                      <span className="pill ok">{event.source}</span>
+                    )}
+                  </td>
+                  <td>{event.comment || "-"}</td>
+                  <td className="data-mono" title={event.createdAt}>
+                    {formatAuditTime(event.createdAt)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={9} className="subtle">
+                  No attendance entries match the current filters.
                 </td>
               </tr>
-              );
-            })
-          ) : (
-            <tr>
-              <td colSpan={9} className="subtle">
-                No attendance entries match the current filters.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            )}
+          </tbody>
+        </table>
       </div>
+      <nav className="pagination-bar" aria-label="Attendance pages">
+        <span className="pagination-summary">
+          {auditPage.totalCount
+            ? `${firstRow}-${lastRow} of ${auditPage.totalCount}`
+            : "0 records"}
+        </span>
+        <div className="inline-actions">
+          {auditPage.page > 1 ? (
+            <Link className="button secondary" href={pageHref(params, auditPage.page - 1)}>
+              Previous
+            </Link>
+          ) : (
+            <span className="button secondary disabled" aria-disabled="true">Previous</span>
+          )}
+          <span className="pagination-summary">
+            Page {auditPage.page} of {auditPage.totalPages}
+          </span>
+          {auditPage.page < auditPage.totalPages ? (
+            <Link className="button secondary" href={pageHref(params, auditPage.page + 1)}>
+              Next
+            </Link>
+          ) : (
+            <span className="button secondary disabled" aria-disabled="true">Next</span>
+          )}
+        </div>
+      </nav>
     </div>
   );
 }

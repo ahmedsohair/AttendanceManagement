@@ -4,7 +4,8 @@ import {
   isActiveExamSession,
   isClosedExamSession,
   isDraftExamSession,
-  type ExamSession
+  type ExamSession,
+  type Room
 } from "@algo-attendance/shared";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { readStore } from "./store";
@@ -39,6 +40,75 @@ export type DashboardData = SessionsOverview & {
     tone: "warn" | "ok" | "neutral";
   }>;
 };
+
+export type AttendanceAuditStatus = "" | "standard" | "mismatch" | "commented";
+export type AttendanceAuditSort = "newest" | "oldest";
+
+export type AttendanceAuditRow = {
+  id: string;
+  examSessionId: string;
+  studentId: string;
+  studentName: string;
+  examName: string;
+  markedInRoomId: string;
+  markedInRoomCode: string;
+  expectedRoomId: string;
+  expectedRoomCode: string;
+  markedByUserId: string;
+  markedByName: string;
+  markedByEmail: string;
+  source: "ocr" | "manual";
+  overrideType: "none" | "wrong_room_present";
+  roomMismatch: boolean;
+  comment?: string;
+  deviceId: string;
+  createdAt: string;
+};
+
+export type AttendanceAuditPage = {
+  rows: AttendanceAuditRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sessions: ExamSession[];
+  rooms: Room[];
+};
+
+type AttendanceAuditInput = {
+  examSessionFilter: string;
+  query: string;
+  roomId: string;
+  status: AttendanceAuditStatus;
+  sort: AttendanceAuditSort;
+  page: number;
+  pageSize?: number;
+};
+
+type AttendanceAuditRpcRow = {
+  id: string;
+  exam_session_id: string;
+  student_id: string;
+  student_name: string | null;
+  exam_name: string;
+  marked_in_room_id: string;
+  marked_in_room_code: string;
+  expected_room_id: string;
+  expected_room_code: string;
+  marked_by_user_id: string;
+  marked_by_name: string;
+  marked_by_email: string;
+  source: "ocr" | "manual";
+  override_type: "none" | "wrong_room_present";
+  room_mismatch: boolean;
+  comment: string | null;
+  device_id: string;
+  created_at: string;
+  total_count: number | string;
+};
+
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function toExamSession(row: SessionRow): ExamSession {
   return {
@@ -77,6 +147,235 @@ function countRooms(rows: Array<{ exam_session_id: string }>) {
   }
 
   return counts;
+}
+
+function normalizeAttendancePage(value: number) {
+  return Number.isSafeInteger(value) && value > 0 ? value : 1;
+}
+
+function normalizeExamSessionFilter(value: string) {
+  const filter = value.trim();
+  return filter === "active" || filter === "all" || uuidPattern.test(filter)
+    ? filter
+    : "active";
+}
+
+function mapAttendanceAuditRow(row: AttendanceAuditRpcRow): AttendanceAuditRow {
+  return {
+    id: row.id,
+    examSessionId: row.exam_session_id,
+    studentId: row.student_id,
+    studentName: row.student_name || "",
+    examName: row.exam_name,
+    markedInRoomId: row.marked_in_room_id,
+    markedInRoomCode: row.marked_in_room_code,
+    expectedRoomId: row.expected_room_id,
+    expectedRoomCode: row.expected_room_code,
+    markedByUserId: row.marked_by_user_id,
+    markedByName: row.marked_by_name,
+    markedByEmail: row.marked_by_email,
+    source: row.source,
+    overrideType: row.override_type,
+    roomMismatch: row.room_mismatch,
+    comment: row.comment || undefined,
+    deviceId: row.device_id,
+    createdAt: row.created_at
+  };
+}
+
+function getSelectedSessionIds(sessions: ExamSession[], filter: string) {
+  if (filter === "all") {
+    return sessions.map((session) => session.id);
+  }
+  if (filter === "active") {
+    return sessions.filter(isActiveExamSession).map((session) => session.id);
+  }
+  return uuidPattern.test(filter) ? [filter] : [];
+}
+
+async function getLocalAttendanceAuditPage(
+  input: AttendanceAuditInput
+): Promise<AttendanceAuditPage> {
+  const store = await readStore();
+  const examSessionFilter = normalizeExamSessionFilter(input.examSessionFilter);
+  const pageSize = Math.min(Math.max(input.pageSize || 50, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+  const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
+  const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
+  const allocationMap = new Map(
+    store.studentAllocations.map((allocation) => [
+      `${allocation.examSessionId}:${allocation.studentId}`,
+      allocation
+    ])
+  );
+  const selectedSessionIds = new Set(
+    getSelectedSessionIds(store.examSessions, examSessionFilter)
+  );
+  const query = input.query.trim().toLowerCase();
+  const filtered = store.attendanceEvents
+    .filter((event) => {
+      if (!selectedSessionIds.has(event.examSessionId)) return false;
+      if (input.roomId && event.markedInRoomId !== input.roomId) return false;
+      if (input.status === "standard" && event.roomMismatch) return false;
+      if (input.status === "mismatch" && !event.roomMismatch) return false;
+      if (input.status === "commented" && !event.comment?.trim()) return false;
+      if (!query) return true;
+
+      const allocation = allocationMap.get(`${event.examSessionId}:${event.studentId}`);
+      const marker = userMap.get(event.markedByUserId);
+      return [
+        event.studentId,
+        allocation?.studentName,
+        sessionMap.get(event.examSessionId)?.name,
+        marker?.fullName,
+        marker?.email,
+        event.comment
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    })
+    .sort((left, right) =>
+      input.sort === "oldest"
+        ? left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
+        : right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id)
+    );
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const offset = (page - 1) * pageSize;
+  const rows = filtered.slice(offset, offset + pageSize).map((event) => {
+    const allocation = allocationMap.get(`${event.examSessionId}:${event.studentId}`);
+    const marker = userMap.get(event.markedByUserId);
+    return {
+      id: event.id,
+      examSessionId: event.examSessionId,
+      studentId: event.studentId,
+      studentName: allocation?.studentName || "",
+      examName: sessionMap.get(event.examSessionId)?.name || event.examSessionId,
+      markedInRoomId: event.markedInRoomId,
+      markedInRoomCode: roomMap.get(event.markedInRoomId)?.code || event.markedInRoomId,
+      expectedRoomId: event.expectedRoomId,
+      expectedRoomCode: roomMap.get(event.expectedRoomId)?.code || event.expectedRoomId,
+      markedByUserId: event.markedByUserId,
+      markedByName: marker?.fullName || event.markedByUserId,
+      markedByEmail: marker?.email || "",
+      source: event.source,
+      overrideType: event.overrideType,
+      roomMismatch: event.roomMismatch,
+      comment: event.comment,
+      deviceId: event.deviceId,
+      createdAt: event.createdAt
+    } satisfies AttendanceAuditRow;
+  });
+
+  return {
+    rows,
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    sessions: sortSessions(store.examSessions),
+    rooms: store.rooms
+      .filter((room) => selectedSessionIds.has(room.examSessionId))
+      .sort((left, right) => left.code.localeCompare(right.code))
+  };
+}
+
+export async function getAttendanceAuditPage(
+  input: AttendanceAuditInput
+): Promise<AttendanceAuditPage> {
+  if (!isSupabaseConfigured()) {
+    return getLocalAttendanceAuditPage(input);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const examSessionFilter = normalizeExamSessionFilter(input.examSessionFilter);
+  const pageSize = Math.min(Math.max(input.pageSize || 50, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+  const sessionsResponse = await supabase
+    .from("exam_sessions")
+    .select("id, name, exam_date, start_time, published, status, created_at")
+    .order("exam_date", { ascending: false })
+    .order("start_time", { ascending: false });
+  let sessionRows: SessionRow[];
+  if (sessionsResponse.error?.message.includes("status")) {
+    const legacySessionsResponse = await supabase
+      .from("exam_sessions")
+      .select("id, name, exam_date, start_time, published, created_at")
+      .order("exam_date", { ascending: false })
+      .order("start_time", { ascending: false });
+    if (legacySessionsResponse.error) {
+      throw new Error(legacySessionsResponse.error.message);
+    }
+    sessionRows = (legacySessionsResponse.data || []) as SessionRow[];
+  } else if (sessionsResponse.error) {
+    throw new Error(sessionsResponse.error.message);
+  } else {
+    sessionRows = (sessionsResponse.data || []) as SessionRow[];
+  }
+
+  const sessions = sessionRows.map(toExamSession);
+  const selectedSessionIds = getSelectedSessionIds(sessions, examSessionFilter);
+  const roomsPromise = selectedSessionIds.length
+    ? supabase
+        .from("rooms")
+        .select("id, exam_session_id, code, display_name, capacity")
+        .in("exam_session_id", selectedSessionIds)
+        .order("code")
+    : Promise.resolve({ data: [], error: null });
+
+  const fetchPage = async (page: number) => {
+    const response = await supabase.rpc("get_attendance_audit_page", {
+      p_exam_session_filter: examSessionFilter,
+      p_query: input.query || null,
+      p_room_id: uuidPattern.test(input.roomId) ? input.roomId : null,
+      p_status: input.status || null,
+      p_sort: input.sort,
+      p_page: page,
+      p_page_size: pageSize
+    });
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    return (response.data || []) as AttendanceAuditRpcRow[];
+  };
+
+  let [rpcRows, roomsResponse] = await Promise.all([
+    fetchPage(requestedPage),
+    roomsPromise
+  ]);
+  if (roomsResponse.error) {
+    throw new Error(roomsResponse.error.message);
+  }
+  if (!rpcRows.length && requestedPage > 1) {
+    rpcRows = await fetchPage(1);
+  }
+
+  const totalCount = rpcRows.length ? Number(rpcRows[0].total_count) : 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = rpcRows.length && requestedPage <= totalPages ? requestedPage : 1;
+
+  return {
+    rows: rpcRows.map(mapAttendanceAuditRow),
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    sessions,
+    rooms: (roomsResponse.data || []).map((room) => ({
+      id: String(room.id),
+      examSessionId: String(room.exam_session_id),
+      code: String(room.code),
+      displayName: String(room.display_name),
+      capacity:
+        room.capacity === null || room.capacity === undefined
+          ? undefined
+          : Number(room.capacity)
+    }))
+  };
 }
 
 export async function getSessionsOverview(): Promise<SessionsOverview> {

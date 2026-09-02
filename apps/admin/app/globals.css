@@ -1177,6 +1177,32 @@ button.icon-button.danger:hover {
   min-width: 150px;
 }
 
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.pagination-summary {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.button.disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .pagination-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .progress-cell {
   display: grid;
   gap: 6px;
