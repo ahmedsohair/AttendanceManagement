@@ -189,14 +189,16 @@ export function InvigilatorCodePanel({
           <div className="access-code-box compact-code-box">
             <div>
               <div className="kicker">
-                {codeStatus === "active" ? "Active New Code" : "Pending New Code"}
+                {codeStatus === "active"
+                  ? "Newly Activated Code"
+                  : "Pending Replacement Code"}
               </div>
               <div className="access-code-value">{accessCode}</div>
             </div>
             <div className="subtle">
               {codeStatus === "active"
-                ? "This code is active. Existing signed-in scanner sessions remain active."
-                : "The current code still works. Activate this code only when you are ready to replace it."}
+                ? "This code is active and available only on this page. Copy or email it now; it cannot be recovered later."
+                : "The current code still works, but it is securely hashed and cannot be viewed or resent. Activate this replacement only when you are ready to invalidate the current code."}
             </div>
             <div className="inline-actions">
               <CopyButton
@@ -209,23 +211,26 @@ export function InvigilatorCodePanel({
                   {isActivating ? "Activating..." : "Activate Code"}
                 </button>
               ) : null}
-              <button
-                type="button"
-                onClick={emailCode}
-                disabled={isEmailing || codeStatus !== "active"}
-              >
-                {isEmailing ? "Emailing..." : "Email Code"}
-              </button>
+              {codeStatus === "active" ? (
+                <button type="button" onClick={emailCode} disabled={isEmailing}>
+                  {isEmailing ? "Emailing..." : "Email Code"}
+                </button>
+              ) : null}
             </div>
           </div>
         ) : (
           <div className="subtle">
-            Existing access codes are stored securely and cannot be viewed. Generate a
-            new code if this invigilator needs access.
+            The current code may still work, but active codes are stored only as secure
+            hashes and cannot be viewed or emailed again. Generate a replacement if the
+            invigilator no longer has their code.
           </div>
         )}
         <button type="button" onClick={generateCode} disabled={isGenerating}>
-          {isGenerating ? "Generating..." : "Generate New Code"}
+          {isGenerating
+            ? "Generating..."
+            : accessCode
+              ? "Generate Different Replacement"
+              : "Generate Replacement Code"}
         </button>
         {notice ? <p className="pill ok toast-message">{notice}</p> : null}
         {error ? <p className="pill warn toast-message">{error}</p> : null}
