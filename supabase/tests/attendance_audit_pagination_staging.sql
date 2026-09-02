@@ -9,6 +9,7 @@ declare
   v_room_one uuid := gen_random_uuid();
   v_room_two uuid := gen_random_uuid();
   v_closed_room uuid := gen_random_uuid();
+  v_test_token text := 'page-token-' || gen_random_uuid()::text;
   v_count bigint;
   v_first_student text;
 begin
@@ -31,10 +32,10 @@ begin
   insert into public.student_allocations
     (exam_session_id, student_id, student_name, room_id, zone)
   values
-    (v_active_session_id, 'PAG-001', 'Alpha Student', v_room_one, 'A'),
-    (v_active_session_id, 'PAG-002', 'Beta Student', v_room_one, 'A'),
-    (v_active_session_id, 'PAG-003', 'Gamma Student', v_room_two, 'B'),
-    (v_closed_session_id, 'PAG-004', 'Closed Student', v_closed_room, 'C');
+    (v_active_session_id, 'PAG-001', v_test_token || ' Alpha Student', v_room_one, 'A'),
+    (v_active_session_id, 'PAG-002', v_test_token || ' Beta Student', v_room_one, 'A'),
+    (v_active_session_id, 'PAG-003', v_test_token || ' Gamma Student', v_room_two, 'B'),
+    (v_closed_session_id, 'PAG-004', v_test_token || ' Closed Student', v_closed_room, 'C');
 
   insert into public.attendance_events
     (exam_session_id, student_id, marked_by_user_id, marked_in_room_id,
@@ -50,7 +51,7 @@ begin
      v_closed_room, 'ocr', 'none', false, null, 'pagination-test', now());
 
   select total_count, student_id into strict v_count, v_first_student
-  from public.get_attendance_audit_page('active', null, null, null, 'newest', 1, 2)
+  from public.get_attendance_audit_page('active', v_test_token, null, null, 'newest', 1, 2)
   order by created_at desc, id desc
   limit 1;
   if v_count <> 3 or v_first_student <> 'PAG-003' then
@@ -58,13 +59,13 @@ begin
   end if;
 
   select count(*) into v_count
-  from public.get_attendance_audit_page('active', null, null, null, 'newest', 2, 2);
+  from public.get_attendance_audit_page('active', v_test_token, null, null, 'newest', 2, 2);
   if v_count <> 1 then
     raise exception 'Second attendance page has an unexpected row count.';
   end if;
 
   select count(*) into v_count
-  from public.get_attendance_audit_page('all', 'closed student', null, null, 'newest', 1, 50);
+  from public.get_attendance_audit_page('all', v_test_token || ' closed student', null, null, 'newest', 1, 50);
   if v_count <> 1 then
     raise exception 'Cross-exam student-name search failed.';
   end if;
