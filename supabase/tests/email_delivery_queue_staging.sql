@@ -61,6 +61,17 @@ begin
     raise exception 'Email job idempotency failed.';
   end if;
 
+  v_response := public.create_assignment_email_job(
+    v_session_id, v_admin_id, 'assignment-v1',
+    'staging-email-job-second-request-' || v_session_id::text
+  );
+  if (v_response ->> 'created')::boolean is not false
+    or (v_response ->> 'jobId')::uuid <> v_job_id
+    or (select count(*) from public.email_jobs
+        where exam_session_id = v_session_id and job_type = 'assignment_bulk') <> 1 then
+    raise exception 'A second request created a duplicate active assignment email job.';
+  end if;
+
   select count(*), array_agg(id) into v_claimed, v_claimed_ids
   from public.claim_email_deliveries(v_job_id, 'worker-one', 1, 60);
   if v_claimed <> 1 then

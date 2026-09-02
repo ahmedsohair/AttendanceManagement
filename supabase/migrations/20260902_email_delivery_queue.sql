@@ -70,6 +70,11 @@ create unique index if not exists idx_email_deliveries_provider_message
   where provider_message_id is not null;
 create index if not exists idx_email_jobs_exam_created
   on public.email_jobs(exam_session_id, created_at desc);
+create unique index if not exists idx_email_jobs_one_active_assignment
+  on public.email_jobs(exam_session_id, job_type)
+  where exam_session_id is not null
+    and job_type = 'assignment_bulk'
+    and status in ('queued', 'processing');
 create index if not exists idx_email_deliveries_job_status
   on public.email_deliveries(job_id, status, next_attempt_at);
 create index if not exists idx_email_deliveries_recipient
@@ -153,6 +158,29 @@ begin
     select 1 from public.users where id = p_requested_by and role = 'admin'
   ) then
     raise exception 'Requesting administrator not found.' using errcode = '42501';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(p_exam_session_id::text || ':assignment_bulk', 0)
+  );
+  select * into v_job
+  from public.email_jobs
+  where exam_session_id = p_exam_session_id
+    and job_type = 'assignment_bulk'
+    and status in ('queued', 'processing')
+  order by created_at
+  limit 1;
+
+  if found then
+    return jsonb_build_object(
+      'jobId', v_job.id::text,
+      'created', false,
+      'status', v_job.status,
+      'totalCount', v_job.total_count,
+      'processedCount', v_job.processed_count,
+      'acceptedCount', v_job.accepted_count,
+      'failedCount', v_job.failed_count
+    );
   end if;
 
   insert into public.email_jobs (
