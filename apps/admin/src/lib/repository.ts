@@ -1102,6 +1102,9 @@ export async function publishExamSession(sessionId: string) {
     if (!session) {
       throw new Error("Session not found.");
     }
+    if ((session.status || (session.published ? "active" : "draft")) !== "draft") {
+      throw new Error("Only draft exams can be published.");
+    }
 
     const sessionRooms = store.rooms.filter((room) => room.examSessionId === sessionId);
     const assignedRoomIds = new Set(store.users.flatMap((user) => user.assignedRoomIds));
@@ -1109,6 +1112,21 @@ export async function publishExamSession(sessionId: string) {
 
     if (!sessionRooms.length) {
       throw new Error("This exam has no rooms to publish.");
+    }
+
+    const unallocatedRooms = sessionRooms.filter(
+      (room) =>
+        !store.studentAllocations.some(
+          (allocation) =>
+            allocation.examSessionId === sessionId && allocation.roomId === room.id
+        )
+    );
+    if (unallocatedRooms.length) {
+      throw new Error(
+        `Allocate students before publishing. Room(s) without students: ${unallocatedRooms
+          .map((room) => room.code)
+          .join(", ")}.`
+      );
     }
 
     if (unassignedRooms.length) {
@@ -1126,59 +1144,13 @@ export async function publishExamSession(sessionId: string) {
     return;
   }
 
-  const supabase = getSupabaseAdmin();
   const sessionUuid = assertUuid(sessionId, "Exam session ID");
-  const roomsResponse = await supabase
-    .from("rooms")
-    .select("id, code")
-    .eq("exam_session_id", sessionUuid);
-
-  if (roomsResponse.error) {
-    throw new Error(roomsResponse.error.message);
-  }
-
-  const rooms = roomsResponse.data || [];
-
-  if (!rooms.length) {
-    throw new Error("This exam has no rooms to publish.");
-  }
-
-  const assignmentsResponse = await supabase
-    .from("room_assignments")
-    .select("room_id")
-    .in(
-      "room_id",
-      rooms.map((room) => room.id)
-    );
-
-  if (assignmentsResponse.error) {
-    throw new Error(assignmentsResponse.error.message);
-  }
-
-  const assignedRoomIds = new Set((assignmentsResponse.data || []).map((row) => row.room_id));
-  const unassignedRooms = rooms.filter((room) => !assignedRoomIds.has(room.id));
-
-  if (unassignedRooms.length) {
-    throw new Error(
-      `Assign invigilators before publishing. Unassigned room(s): ${unassignedRooms
-        .map((room) => room.code)
-        .join(", ")}.`
-    );
-  }
-
-  const publishResponse = await supabase
-    .from("exam_sessions")
-    .update({ published: true, status: "active" })
-    .eq("id", sessionUuid)
-    .select("id")
-    .maybeSingle();
-
-  if (publishResponse.error) {
-    throw new Error(publishResponse.error.message);
-  }
-
-  if (!publishResponse.data) {
-    throw new Error("Session not found.");
+  const response = await getSupabaseAdmin().rpc("transition_exam_session", {
+    p_exam_session_id: sessionUuid,
+    p_target_status: "active"
+  });
+  if (response.error) {
+    throw new Error(response.error.message);
   }
 }
 
@@ -1189,6 +1161,9 @@ export async function closeExamSession(sessionId: string) {
     if (!session) {
       throw new Error("Session not found.");
     }
+    if ((session.status || (session.published ? "active" : "draft")) !== "active") {
+      throw new Error("Only active exams can be closed.");
+    }
 
     session.published = false;
     session.status = "closed";
@@ -1196,20 +1171,12 @@ export async function closeExamSession(sessionId: string) {
     return;
   }
 
-  const supabase = getSupabaseAdmin();
-  const closeResponse = await supabase
-    .from("exam_sessions")
-    .update({ published: false, status: "closed" })
-    .eq("id", sessionId)
-    .select("id")
-    .maybeSingle();
-
-  if (closeResponse.error) {
-    throw new Error(closeResponse.error.message);
-  }
-
-  if (!closeResponse.data) {
-    throw new Error("Session not found.");
+  const response = await getSupabaseAdmin().rpc("transition_exam_session", {
+    p_exam_session_id: assertUuid(sessionId, "Exam session ID"),
+    p_target_status: "closed"
+  });
+  if (response.error) {
+    throw new Error(response.error.message);
   }
 }
 
@@ -1219,6 +1186,17 @@ export async function deleteExamSession(sessionId: string) {
     const session = store.examSessions.find((item) => item.id === sessionId);
     if (!session) {
       throw new Error("Session not found.");
+    }
+    if ((session.status || (session.published ? "active" : "draft")) !== "draft") {
+      throw new Error(
+        "Only draft exams can be permanently deleted. Close active exams and retain closed exams for audit history."
+      );
+    }
+    if (
+      store.attendanceEvents.some((event) => event.examSessionId === sessionId) ||
+      store.incidents.some((incident) => incident.examSessionId === sessionId)
+    ) {
+      throw new Error("Exams with attendance or incident history cannot be deleted.");
     }
 
     const roomIds = new Set(
@@ -1247,20 +1225,11 @@ export async function deleteExamSession(sessionId: string) {
     return;
   }
 
-  const supabase = getSupabaseAdmin();
-  const deleteResponse = await supabase
-    .from("exam_sessions")
-    .delete()
-    .eq("id", sessionId)
-    .select("id")
-    .maybeSingle();
-
-  if (deleteResponse.error) {
-    throw new Error(deleteResponse.error.message);
-  }
-
-  if (!deleteResponse.data) {
-    throw new Error("Session not found.");
+  const response = await getSupabaseAdmin().rpc("delete_draft_exam_session", {
+    p_exam_session_id: assertUuid(sessionId, "Exam session ID")
+  });
+  if (response.error) {
+    throw new Error(response.error.message);
   }
 }
 

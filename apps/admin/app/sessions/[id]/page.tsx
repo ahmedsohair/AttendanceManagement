@@ -113,15 +113,17 @@ export default async function SessionDetailPage({
               <DownloadIcon />
               <span>Export XLSX</span>
             </a>
-            <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
-              <ConfirmSubmitButton
-                className="button danger"
-                message="Delete this exam and all related rooms, allocations, attendance, and incidents? This cannot be undone."
-              >
-                <TrashIcon />
-                <span>Delete</span>
-              </ConfirmSubmitButton>
-            </form>
+            {sessionStatus === "draft" ? (
+              <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
+                <ConfirmSubmitButton
+                  className="button danger"
+                  message="Delete this draft exam and its imported rooms and allocations? This cannot be undone."
+                >
+                  <TrashIcon />
+                  <span>Delete Draft</span>
+                </ConfirmSubmitButton>
+              </form>
+            ) : null}
           </div>
         </div>
       </div>

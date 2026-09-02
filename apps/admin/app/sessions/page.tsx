@@ -102,10 +102,10 @@ export default async function SessionsPage() {
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
                         <ConfirmSubmitButton
                           className="button danger"
-                          message={`Delete ${session.name}? This cannot be undone.`}
+                          message={`Delete draft ${session.name}? This cannot be undone.`}
                         >
                           <TrashIcon />
-                          <span>Delete</span>
+                          <span>Delete Draft</span>
                         </ConfirmSubmitButton>
                       </form>
                     </div>
@@ -143,15 +143,6 @@ export default async function SessionsPage() {
                         <DownloadIcon />
                         <span>Export XLSX</span>
                       </a>
-                      <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
-                        <ConfirmSubmitButton
-                          className="button danger"
-                          message={`Delete ${session.name}? This cannot be undone.`}
-                        >
-                          <TrashIcon />
-                          <span>Delete</span>
-                        </ConfirmSubmitButton>
-                      </form>
                     </div>
                   </div>
                 </div>
