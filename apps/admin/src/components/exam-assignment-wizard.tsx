@@ -64,6 +64,30 @@ type EmailJob = {
   totalCount: number;
 };
 
+type EmailDelivery = {
+  acceptedAt: string | null;
+  attemptCount: number;
+  deliveredAt: string | null;
+  failureReason: string | null;
+  id: string;
+  provider: "resend" | "smtp" | null;
+  recipientEmail: string;
+  status:
+    | "queued"
+    | "sending"
+    | "accepted"
+    | "delivered"
+    | "bounced"
+    | "complained"
+    | "failed"
+    | "unknown";
+};
+
+type EmailReport = {
+  deliveries: EmailDelivery[];
+  job: EmailJob;
+};
+
 function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
@@ -101,6 +125,8 @@ export function ExamAssignmentWizard({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isEmailing, setIsEmailing] = useState(false);
   const [isEmailingCode, setIsEmailingCode] = useState(false);
+  const [emailReport, setEmailReport] = useState<EmailReport | null>(null);
+  const [selectedFailedDeliveries, setSelectedFailedDeliveries] = useState<string[]>([]);
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
   const isSetupMode = mode === "setup";
@@ -327,26 +353,7 @@ export function ExamAssignmentWizard({
           return;
         }
 
-        let job = payload.job;
-        setNotice({
-          tone: "ok",
-          text: `Sending 0 of ${job.totalCount} invigilator email(s)...`
-        });
-
-        while (job.status === "queued" || job.status === "processing") {
-          const batch = (await readJsonResponse(
-            await fetch(`/api/email-jobs/${job.jobId}/process`, { method: "POST" })
-          )) as { job: EmailJob; processed: number };
-          job = batch.job;
-          setNotice({
-            tone: job.failedCount ? "warn" : "ok",
-            text: `Processed ${job.processedCount} of ${job.totalCount} email(s)...`
-          });
-
-          if ((job.status === "queued" || job.status === "processing") && !batch.processed) {
-            await wait(2000);
-          }
-        }
+        const job = await processQueuedEmailJob(payload.job);
 
         setNotice({
           tone: job.failedCount ? "warn" : "ok",
@@ -354,10 +361,87 @@ export function ExamAssignmentWizard({
             ? `${job.acceptedCount} email(s) accepted; ${job.failedCount} failed.`
             : `${job.acceptedCount} invigilator email(s) accepted by the email provider.`
         });
+        await loadEmailReport(job.jobId);
       } catch (error) {
         setNotice({
           tone: "warn",
           text: error instanceof Error ? error.message : "Unable to email invigilators."
+        });
+      } finally {
+        setIsEmailing(false);
+      }
+    })();
+  }
+
+  async function processQueuedEmailJob(initialJob: EmailJob) {
+    let job = initialJob;
+    setNotice({
+      tone: "ok",
+      text: `Sending ${job.processedCount} of ${job.totalCount} invigilator email(s)...`
+    });
+
+    while (job.status === "queued" || job.status === "processing") {
+      const batch = (await readJsonResponse(
+        await fetch(`/api/email-jobs/${job.jobId}/process`, { method: "POST" })
+      )) as { job: EmailJob; processed: number };
+      job = batch.job;
+      setNotice({
+        tone: job.failedCount ? "warn" : "ok",
+        text: `Processed ${job.processedCount} of ${job.totalCount} email(s)...`
+      });
+
+      if ((job.status === "queued" || job.status === "processing") && !batch.processed) {
+        await wait(2000);
+      }
+    }
+
+    return job;
+  }
+
+  async function loadEmailReport(jobId: string) {
+    const report = (await readJsonResponse(
+      await fetch(`/api/email-jobs/${jobId}`, { cache: "no-store" })
+    )) as EmailReport;
+    setEmailReport(report);
+    setSelectedFailedDeliveries((current) =>
+      current.filter((deliveryId) =>
+        report.deliveries.some(
+          (delivery) => delivery.id === deliveryId && delivery.status === "failed"
+        )
+      )
+    );
+  }
+
+  function retrySelectedEmails() {
+    if (!emailReport || !selectedFailedDeliveries.length) {
+      return;
+    }
+
+    setIsEmailing(true);
+    void (async () => {
+      try {
+        await readJsonResponse(
+          await fetch(`/api/email-jobs/${emailReport.job.jobId}/retry`, {
+            body: JSON.stringify({ deliveryIds: selectedFailedDeliveries }),
+            headers: { "Content-Type": "application/json" },
+            method: "POST"
+          })
+        );
+        const refreshed = (await readJsonResponse(
+          await fetch(`/api/email-jobs/${emailReport.job.jobId}`, { cache: "no-store" })
+        )) as EmailReport;
+        const job = await processQueuedEmailJob(refreshed.job);
+        await loadEmailReport(job.jobId);
+        setNotice({
+          tone: job.failedCount ? "warn" : "ok",
+          text: job.failedCount
+            ? `${job.acceptedCount} email(s) accepted; ${job.failedCount} still failed.`
+            : `${job.acceptedCount} invigilator email(s) accepted by the email provider.`
+        });
+      } catch (error) {
+        setNotice({
+          tone: "warn",
+          text: error instanceof Error ? error.message : "Unable to retry emails."
         });
       } finally {
         setIsEmailing(false);
@@ -425,6 +509,90 @@ export function ExamAssignmentWizard({
       </div>
 
       {notice ? <p className={`pill ${notice.tone} toast-message`}>{notice.text}</p> : null}
+
+      {emailReport ? (
+        <div className="email-delivery-report">
+          <div className="assignment-panel-title">
+            <div>
+              <strong>Email delivery status</strong>
+              <span className="subtle">
+                Accepted means the provider received the email; only Delivered confirms
+                downstream delivery.
+              </span>
+            </div>
+            <div className="inline-actions">
+              <button
+                className="secondary compact-button"
+                disabled={isEmailing}
+                type="button"
+                onClick={() => void loadEmailReport(emailReport.job.jobId)}
+              >
+                Refresh Status
+              </button>
+              <button
+                className="secondary compact-button"
+                disabled={isEmailing || !selectedFailedDeliveries.length}
+                type="button"
+                onClick={retrySelectedEmails}
+              >
+                Retry Selected Failed
+              </button>
+            </div>
+          </div>
+          <div className="table-scroll">
+            <table className="table compact-table">
+              <thead>
+                <tr>
+                  <th aria-label="Select failed email" />
+                  <th>Recipient</th>
+                  <th>Status</th>
+                  <th>Attempts</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emailReport.deliveries.map((delivery) => {
+                  const retryable = delivery.status === "failed";
+                  const tone =
+                    delivery.status === "accepted" || delivery.status === "delivered"
+                      ? "ok"
+                      : delivery.status === "failed" ||
+                          delivery.status === "bounced" ||
+                          delivery.status === "complained"
+                        ? "danger"
+                        : "warn";
+
+                  return (
+                    <tr key={delivery.id}>
+                      <td>
+                        <input
+                          aria-label={`Retry ${delivery.recipientEmail}`}
+                          checked={selectedFailedDeliveries.includes(delivery.id)}
+                          disabled={!retryable || isEmailing}
+                          type="checkbox"
+                          onChange={(event) =>
+                            setSelectedFailedDeliveries((current) =>
+                              event.target.checked
+                                ? [...current, delivery.id]
+                                : current.filter((id) => id !== delivery.id)
+                            )
+                          }
+                        />
+                      </td>
+                      <td>{delivery.recipientEmail}</td>
+                      <td>
+                        <span className={`pill ${tone}`}>{delivery.status}</span>
+                      </td>
+                      <td>{delivery.attemptCount}</td>
+                      <td className="subtle">{delivery.failureReason || delivery.provider || "-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
 
       {createdAccess ? (
         <div className="access-code-box compact-code-box">

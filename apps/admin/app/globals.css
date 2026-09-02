@@ -1350,6 +1350,19 @@ button.icon-button.danger:hover {
   font-weight: 800;
 }
 
+.email-delivery-report {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 14px;
+}
+
+.email-delivery-report input[type="checkbox"] {
+  width: auto;
+}
+
 .web-status-strip.state-online span:first-child {
   background: rgba(22, 163, 74, 0.78);
 }
