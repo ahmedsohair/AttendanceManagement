@@ -106,6 +106,21 @@ export type IncidentAuditPage = {
   rooms: Room[];
 };
 
+export type ExamSessionListStatus = "active" | "draft" | "closed";
+export type ExamSessionListSort = "newest" | "oldest";
+
+export type ExamSessionListRow = ExamSession & {
+  roomCount: number;
+};
+
+export type ExamSessionPage = {
+  rows: ExamSessionListRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 type AttendanceAuditInput = {
   examSessionFilter: string;
   query: string;
@@ -163,6 +178,20 @@ type IncidentAuditRpcRow = {
   incident_type: IncidentType;
   details: Record<string, string | number | boolean | null | undefined> | null;
   created_at: string;
+  total_count: number | string;
+};
+
+type ExamSessionPageInput = {
+  status: ExamSessionListStatus;
+  query: string;
+  sort: ExamSessionListSort;
+  page: number;
+  pageSize?: number;
+};
+
+type ExamSessionRpcRow = SessionRow & {
+  status: ExamSessionListStatus;
+  room_count: number | string;
   total_count: number | string;
 };
 
@@ -633,6 +662,81 @@ export async function getIncidentAuditPage(
           ? undefined
           : Number(room.capacity)
     }))
+  };
+}
+
+export async function getExamSessionPage(
+  input: ExamSessionPageInput
+): Promise<ExamSessionPage> {
+  const pageSize = Math.min(Math.max(input.pageSize || 20, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const query = input.query.trim().toLowerCase();
+    const roomCounts = countRooms(
+      store.rooms.map((room) => ({ exam_session_id: room.examSessionId }))
+    );
+    const filtered = store.examSessions
+      .filter((session) => {
+        const status = session.status ?? (session.published ? "active" : "draft");
+        return status === input.status && (!query || session.name.toLowerCase().includes(query));
+      })
+      .sort((left, right) => {
+        const leftSchedule = `${left.examDate}T${left.startTime}`;
+        const rightSchedule = `${right.examDate}T${right.startTime}`;
+        return input.sort === "oldest"
+          ? leftSchedule.localeCompare(rightSchedule) || left.id.localeCompare(right.id)
+          : rightSchedule.localeCompare(leftSchedule) || right.id.localeCompare(left.id);
+      });
+    const totalCount = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const page = Math.min(requestedPage, totalPages);
+    const offset = (page - 1) * pageSize;
+    return {
+      rows: filtered.slice(offset, offset + pageSize).map((session) => ({
+        ...session,
+        roomCount: roomCounts.get(session.id) || 0
+      })),
+      totalCount,
+      page,
+      pageSize,
+      totalPages
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const fetchPage = async (page: number) => {
+    const response = await supabase.rpc("get_exam_session_page", {
+      p_status: input.status,
+      p_query: input.query || null,
+      p_sort: input.sort,
+      p_page: page,
+      p_page_size: pageSize
+    });
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    return (response.data || []) as ExamSessionRpcRow[];
+  };
+
+  let rpcRows = await fetchPage(requestedPage);
+  if (!rpcRows.length && requestedPage > 1) {
+    rpcRows = await fetchPage(1);
+  }
+
+  const totalCount = rpcRows.length ? Number(rpcRows[0].total_count) : 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = rpcRows.length && requestedPage <= totalPages ? requestedPage : 1;
+  return {
+    rows: rpcRows.map((row) => ({
+      ...toExamSession(row),
+      roomCount: Number(row.room_count)
+    })),
+    totalCount,
+    page,
+    pageSize,
+    totalPages
   };
 }
 
