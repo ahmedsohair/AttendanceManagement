@@ -3,6 +3,7 @@ import { lookupRequestSchema, lookupStudent, normalizeStudentId } from "@algo-at
 import { requireApiUserForRoom } from "@/lib/auth";
 import { lookupStudentFast } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
+import { getApiErrorStatus } from "@/lib/api-errors";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
@@ -22,10 +23,10 @@ export async function POST(request: Request) {
     const result = store ? lookupStudent(store, body) : await lookupStudentFast(body);
     return NextResponse.json({ result });
   } catch (error) {
-    status = 400;
+    status = getApiErrorStatus(error);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Lookup failed." },
-      { status: 400 }
+      { status }
     );
   } finally {
     logServerTiming("api.attendance.lookup", startedAt, { status });

@@ -6,6 +6,7 @@ import { listPublishedRoomsForUser } from "./selectors";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { getSupabaseServerClient } from "./supabase-server";
 import { nextId, readStore, writeStore } from "./store";
+import { ApiRequestError } from "./api-errors";
 
 function isRoleAllowed(userRole: UserRole, allowedRoles?: UserRole[]) {
   if (!allowedRoles?.length) {
@@ -179,11 +180,11 @@ export async function requireApiUserForRoom(
 
   const user = await resolveSupabaseRequestUser(request);
   if (!user) {
-    throw new Error("Not authenticated.");
+    throw new ApiRequestError("Not authenticated.", 401);
   }
 
   if (!isRoleAllowed(user.role, options.allowedRoles)) {
-    throw new Error("You do not have permission to access this resource.");
+    throw new ApiRequestError("You do not have permission to access this resource.", 403);
   }
 
   const supabase = getSupabaseAdmin();
@@ -198,11 +199,11 @@ export async function requireApiUserForRoom(
   }
 
   if (!roomResponse.data) {
-    throw new Error("Room not found.");
+    throw new ApiRequestError("Room not found.", 404);
   }
 
   if (roomResponse.data.exam_session_id !== options.examSessionId) {
-    throw new Error("Room does not belong to this exam session.");
+    throw new ApiRequestError("Room does not belong to this exam session.", 400);
   }
 
   if (user.role === "admin") {
@@ -232,9 +233,15 @@ export async function requireApiUserForRoom(
   }
 
   const session = sessionResponse.data;
-  const sessionIsActive = session?.status === "active" || session?.published === true;
-  if (!session || !sessionIsActive || !assignmentResponse.data) {
-    throw new Error("You do not have access to this room.");
+  if (!session) {
+    throw new ApiRequestError("Exam session not found.", 404);
+  }
+  const sessionIsActive = session.status === "active" || session.published === true;
+  if (!sessionIsActive) {
+    throw new ApiRequestError("Exam session is not active.", 409);
+  }
+  if (!assignmentResponse.data) {
+    throw new ApiRequestError("You do not have access to this room.", 403);
   }
 
   return { user };
@@ -263,11 +270,11 @@ export async function requireApiUserWithStore(
   }
 
   if (!user) {
-    throw new Error("Not authenticated.");
+    throw new ApiRequestError("Not authenticated.", 401);
   }
 
   if (!isRoleAllowed(user.role, options?.allowedRoles)) {
-    throw new Error("You do not have permission to access this resource.");
+    throw new ApiRequestError("You do not have permission to access this resource.", 403);
   }
 
   let store: DataStore | undefined;
@@ -276,11 +283,11 @@ export async function requireApiUserWithStore(
     store = await readStore();
     const requestedRoom = store.rooms.find((room) => room.id === options.roomId);
     if (!requestedRoom) {
-      throw new Error("Room not found.");
+      throw new ApiRequestError("Room not found.", 404);
     }
 
     if (options.examSessionId && requestedRoom.examSessionId !== options.examSessionId) {
-      throw new Error("Room does not belong to this exam session.");
+      throw new ApiRequestError("Room does not belong to this exam session.", 400);
     }
 
     const accessibleRooms = listPublishedRoomsForUser(store, user.id);
@@ -289,7 +296,7 @@ export async function requireApiUserWithStore(
       accessibleRooms.some((room) => room.id === options.roomId);
 
     if (!canAccessRoom) {
-      throw new Error("You do not have access to this room.");
+      throw new ApiRequestError("You do not have access to this room.", 403);
     }
   }
 

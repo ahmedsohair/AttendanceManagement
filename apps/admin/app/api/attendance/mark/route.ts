@@ -3,6 +3,7 @@ import { markAttendanceRequestSchema, normalizeStudentId } from "@algo-attendanc
 import { requireApiUserForRoom } from "@/lib/auth";
 import { applyAttendanceMark } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
+import { getApiErrorStatus } from "@/lib/api-errors";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
@@ -25,10 +26,10 @@ export async function POST(request: Request) {
     }, store);
     return NextResponse.json(response);
   } catch (error) {
-    status = 400;
+    status = getApiErrorStatus(error);
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to mark attendance." },
-      { status: 400 }
+      { status }
     );
   } finally {
     logServerTiming("api.attendance.mark", startedAt, { status });
