@@ -145,6 +145,7 @@ export function InvigilatorCodePanel({
     setError("");
 
     try {
+      const idempotencyKey = crypto.randomUUID();
       const payload = await readJsonResponse(
         await fetch("/api/invigilators/email-code", {
           body: JSON.stringify({
@@ -154,7 +155,8 @@ export function InvigilatorCodePanel({
             userId: invigilator.id
           }),
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey
           },
           method: "POST"
         })
