@@ -70,6 +70,17 @@ export function summarizeOutbox(items) {
   );
 }
 
+export function createPendingOutboxItem(operation, currentTime) {
+  return {
+    ...operation,
+    status: "pending",
+    attempts: 0,
+    nextAttemptAt: currentTime,
+    leaseUntil: 0,
+    lastError: null
+  };
+}
+
 export function createScannerOutbox({ indexedDb = globalThis.indexedDB, now = Date.now } = {}) {
   let databasePromise;
   const getDatabase = () => {
@@ -80,14 +91,7 @@ export function createScannerOutbox({ indexedDb = globalThis.indexedDB, now = Da
   async function enqueue(operation) {
     const database = await getDatabase();
     const transaction = database.transaction(storeName, "readwrite");
-    transaction.objectStore(storeName).put({
-      ...operation,
-      status: "pending",
-      attempts: 0,
-      nextAttemptAt: operation.queuedAt,
-      leaseUntil: 0,
-      lastError: null
-    });
+    transaction.objectStore(storeName).put(createPendingOutboxItem(operation, now()));
     await transactionDone(transaction);
   }
 

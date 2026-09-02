@@ -2,9 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   classifyOutboxError,
+  createPendingOutboxItem,
   getRetryDelayMs,
   summarizeOutbox
 } from "../src/lib/scanner-outbox.mjs";
+
+test("new queue items are immediately due using a numeric timestamp", () => {
+  const item = createPendingOutboxItem(
+    { id: "request-1", queuedAt: "2026-09-02T00:00:00.000Z" },
+    123456
+  );
+
+  assert.equal(item.status, "pending");
+  assert.equal(item.nextAttemptAt, 123456);
+  assert.equal(typeof item.nextAttemptAt, "number");
+});
 
 test("uses bounded exponential retry delays with jitter", () => {
   assert.equal(getRetryDelayMs(1, () => 0.5), 1000);
