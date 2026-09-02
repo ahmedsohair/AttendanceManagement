@@ -55,6 +55,19 @@ async function readJsonResponse(response: Response) {
   return payload;
 }
 
+type EmailJob = {
+  acceptedCount: number;
+  failedCount: number;
+  jobId: string;
+  processedCount: number;
+  status: "queued" | "processing" | "completed" | "partial" | "failed";
+  totalCount: number;
+};
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
 export function ExamAssignmentWizard({
   initialInvigilators,
   mode = "manage",
@@ -298,14 +311,48 @@ export function ExamAssignmentWizard({
     setIsEmailing(true);
     void (async () => {
       try {
-        const payload = await readJsonResponse(
+        const requestId = crypto.randomUUID();
+        const payload = (await readJsonResponse(
           await fetch(`/api/exam-sessions/${sessionId}/email-instructions`, {
+            headers: { "Idempotency-Key": requestId },
             method: "POST"
           })
-        );
+        )) as { job?: EmailJob; message?: string };
+
+        if (!payload.job) {
+          setNotice({
+            tone: "ok",
+            text: payload.message || "Invigilator emails sent."
+          });
+          return;
+        }
+
+        let job = payload.job;
         setNotice({
           tone: "ok",
-          text: payload.message || "Invigilator emails sent."
+          text: `Sending 0 of ${job.totalCount} invigilator email(s)...`
+        });
+
+        while (job.status === "queued" || job.status === "processing") {
+          const batch = (await readJsonResponse(
+            await fetch(`/api/email-jobs/${job.jobId}/process`, { method: "POST" })
+          )) as { job: EmailJob; processed: number };
+          job = batch.job;
+          setNotice({
+            tone: job.failedCount ? "warn" : "ok",
+            text: `Processed ${job.processedCount} of ${job.totalCount} email(s)...`
+          });
+
+          if ((job.status === "queued" || job.status === "processing") && !batch.processed) {
+            await wait(2000);
+          }
+        }
+
+        setNotice({
+          tone: job.failedCount ? "warn" : "ok",
+          text: job.failedCount
+            ? `${job.acceptedCount} email(s) accepted; ${job.failedCount} failed.`
+            : `${job.acceptedCount} invigilator email(s) accepted by the email provider.`
         });
       } catch (error) {
         setNotice({

@@ -29,6 +29,21 @@ export type EmailProviderResult = {
   providerMessageId: string | null;
 };
 
+export class EmailProviderError extends Error {
+  readonly retryAfterSeconds: number | null;
+  readonly transient: boolean;
+
+  constructor(
+    message: string,
+    options: { retryAfterSeconds?: number | null; transient?: boolean } = {}
+  ) {
+    super(message);
+    this.name = "EmailProviderError";
+    this.retryAfterSeconds = options.retryAfterSeconds ?? null;
+    this.transient = options.transient ?? false;
+  }
+}
+
 const scannerPath = "/scan";
 const supportEmail = "ahmed.sohair.khan@rmit.edu.au";
 const invigilatorGuidePath = path.join(
@@ -242,7 +257,15 @@ async function sendEmail({
         name?: string;
       };
 
-      throw new Error(payload.message || payload.name || "Resend email delivery failed.");
+      const retryAfter = Number(response.headers.get("retry-after"));
+      throw new EmailProviderError(
+        payload.message || payload.name || "Resend email delivery failed.",
+        {
+          retryAfterSeconds:
+            Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+          transient: response.status === 429 || response.status >= 500
+        }
+      );
     }
 
     const payload = (await response.json()) as { id?: string };
@@ -256,19 +279,35 @@ async function sendEmail({
 
   const transporter = createSmtpTransporter();
 
-  const result = await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
-    replyTo: process.env.EMAIL_REPLY_TO || supportEmail,
-    to,
-    subject,
-    text,
-    html,
-    attachments: attachments?.map((attachment) => ({
-      content: attachment.content,
-      contentType: attachment.contentType,
-      filename: attachment.filename
-    }))
-  });
+  let result;
+  try {
+    result = await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      replyTo: process.env.EMAIL_REPLY_TO || supportEmail,
+      to,
+      subject,
+      text,
+      html,
+      attachments: attachments?.map((attachment) => ({
+        content: attachment.content,
+        contentType: attachment.contentType,
+        filename: attachment.filename
+      }))
+    });
+  } catch (error) {
+    const smtpError = error as { code?: string; message?: string; responseCode?: number };
+    const transientCodes = new Set([
+      "EAI_AGAIN",
+      "ECONNECTION",
+      "ECONNRESET",
+      "ETIMEDOUT"
+    ]);
+    throw new EmailProviderError(smtpError.message || "SMTP email delivery failed.", {
+      transient:
+        transientCodes.has(smtpError.code || "") ||
+        (smtpError.responseCode !== undefined && smtpError.responseCode >= 400 && smtpError.responseCode < 500)
+    });
+  }
 
   return {
     acceptedAt: new Date().toISOString(),

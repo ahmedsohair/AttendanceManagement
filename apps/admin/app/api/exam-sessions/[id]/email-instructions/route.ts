@@ -1,7 +1,12 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
+import { createAssignmentEmailJob } from "@/lib/email-delivery-repository";
 import { sendInvigilatorInstructionEmail } from "@/lib/invigilator-instruction-email";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
+
+const assignmentTemplateVersion = "assignment-v2";
 
 function getAppBaseUrl(request: Request) {
   const configured = process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_BASE_URL;
@@ -17,8 +22,37 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireApiUser(request, { allowedRoles: ["admin"] });
+    const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id } = await params;
+
+    if (isSupabaseConfigured()) {
+      const suppliedIdempotencyKey = request.headers.get("idempotency-key")?.trim();
+      const idempotencyKey = suppliedIdempotencyKey || randomUUID();
+      if (idempotencyKey.length > 200) {
+        return NextResponse.json(
+          { message: "The email request identifier is invalid." },
+          { status: 400 }
+        );
+      }
+
+      const job = await createAssignmentEmailJob({
+        examSessionId: id,
+        idempotencyKey,
+        requestedBy: admin.id,
+        templateVersion: assignmentTemplateVersion
+      });
+
+      return NextResponse.json(
+        {
+          job,
+          message: job.created
+            ? `${job.totalCount} invigilator email(s) queued.`
+            : "This email request is already queued."
+        },
+        { status: 202 }
+      );
+    }
+
     const store = await readStore();
     const session = store.examSessions.find((item) => item.id === id);
 
