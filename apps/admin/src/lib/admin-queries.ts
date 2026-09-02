@@ -5,6 +5,7 @@ import {
   isClosedExamSession,
   isDraftExamSession,
   type ExamSession,
+  type IncidentType,
   type Room
 } from "@algo-attendance/shared";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
@@ -75,6 +76,36 @@ export type AttendanceAuditPage = {
   rooms: Room[];
 };
 
+export type IncidentAuditType = "" | IncidentType;
+export type IncidentAuditSort = "newest" | "oldest";
+
+export type IncidentAuditRow = {
+  id: string;
+  examSessionId: string;
+  studentId?: string;
+  examName: string;
+  roomId?: string;
+  roomCode?: string;
+  expectedRoomId?: string;
+  expectedRoomCode?: string;
+  userId?: string;
+  raisedByName?: string;
+  raisedByEmail?: string;
+  incidentType: IncidentType;
+  details: Record<string, string | number | boolean | null | undefined>;
+  createdAt: string;
+};
+
+export type IncidentAuditPage = {
+  rows: IncidentAuditRow[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  sessions: ExamSession[];
+  rooms: Room[];
+};
+
 type AttendanceAuditInput = {
   examSessionFilter: string;
   query: string;
@@ -103,6 +134,34 @@ type AttendanceAuditRpcRow = {
   room_mismatch: boolean;
   comment: string | null;
   device_id: string;
+  created_at: string;
+  total_count: number | string;
+};
+
+type IncidentAuditInput = {
+  examSessionFilter: string;
+  query: string;
+  roomId: string;
+  incidentType: IncidentAuditType;
+  sort: IncidentAuditSort;
+  page: number;
+  pageSize?: number;
+};
+
+type IncidentAuditRpcRow = {
+  id: string;
+  exam_session_id: string;
+  student_id: string | null;
+  exam_name: string;
+  room_id: string | null;
+  room_code: string | null;
+  expected_room_id: string | null;
+  expected_room_code: string | null;
+  user_id: string | null;
+  raised_by_name: string | null;
+  raised_by_email: string | null;
+  incident_type: IncidentType;
+  details: Record<string, string | number | boolean | null | undefined> | null;
   created_at: string;
   total_count: number | string;
 };
@@ -360,6 +419,205 @@ export async function getAttendanceAuditPage(
 
   return {
     rows: rpcRows.map(mapAttendanceAuditRow),
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    sessions,
+    rooms: (roomsResponse.data || []).map((room) => ({
+      id: String(room.id),
+      examSessionId: String(room.exam_session_id),
+      code: String(room.code),
+      displayName: String(room.display_name),
+      capacity:
+        room.capacity === null || room.capacity === undefined
+          ? undefined
+          : Number(room.capacity)
+    }))
+  };
+}
+
+function mapIncidentAuditRow(row: IncidentAuditRpcRow): IncidentAuditRow {
+  return {
+    id: row.id,
+    examSessionId: row.exam_session_id,
+    studentId: row.student_id || undefined,
+    examName: row.exam_name,
+    roomId: row.room_id || undefined,
+    roomCode: row.room_code || undefined,
+    expectedRoomId: row.expected_room_id || undefined,
+    expectedRoomCode: row.expected_room_code || undefined,
+    userId: row.user_id || undefined,
+    raisedByName: row.raised_by_name || undefined,
+    raisedByEmail: row.raised_by_email || undefined,
+    incidentType: row.incident_type,
+    details: row.details || {},
+    createdAt: row.created_at
+  };
+}
+
+async function getLocalIncidentAuditPage(
+  input: IncidentAuditInput
+): Promise<IncidentAuditPage> {
+  const store = await readStore();
+  const examSessionFilter = normalizeExamSessionFilter(input.examSessionFilter);
+  const pageSize = Math.min(Math.max(input.pageSize || 50, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+  const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
+  const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
+  const userMap = new Map(store.users.map((user) => [user.id, user]));
+  const selectedSessionIds = new Set(
+    getSelectedSessionIds(store.examSessions, examSessionFilter)
+  );
+  const query = input.query.trim().toLowerCase();
+  const filtered = store.incidents
+    .filter((incident) => {
+      if (!selectedSessionIds.has(incident.examSessionId)) return false;
+      if (input.roomId && incident.roomId !== input.roomId) return false;
+      if (input.incidentType && incident.incidentType !== input.incidentType) return false;
+      if (!query) return true;
+
+      const marker = incident.userId ? userMap.get(incident.userId) : undefined;
+      const comment =
+        typeof incident.details.comment === "string" ? incident.details.comment : "";
+      return [
+        incident.studentId,
+        sessionMap.get(incident.examSessionId)?.name,
+        incident.roomId ? roomMap.get(incident.roomId)?.code : undefined,
+        incident.expectedRoomId
+          ? roomMap.get(incident.expectedRoomId)?.code
+          : undefined,
+        marker?.fullName,
+        marker?.email,
+        comment
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    })
+    .sort((left, right) =>
+      input.sort === "oldest"
+        ? left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id)
+        : right.createdAt.localeCompare(left.createdAt) || right.id.localeCompare(left.id)
+    );
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const offset = (page - 1) * pageSize;
+  const rows = filtered.slice(offset, offset + pageSize).map((incident) => {
+    const marker = incident.userId ? userMap.get(incident.userId) : undefined;
+    return {
+      id: incident.id,
+      examSessionId: incident.examSessionId,
+      studentId: incident.studentId,
+      examName: sessionMap.get(incident.examSessionId)?.name || incident.examSessionId,
+      roomId: incident.roomId,
+      roomCode: incident.roomId
+        ? roomMap.get(incident.roomId)?.code || incident.roomId
+        : undefined,
+      expectedRoomId: incident.expectedRoomId,
+      expectedRoomCode: incident.expectedRoomId
+        ? roomMap.get(incident.expectedRoomId)?.code || incident.expectedRoomId
+        : undefined,
+      userId: incident.userId,
+      raisedByName: marker?.fullName,
+      raisedByEmail: marker?.email,
+      incidentType: incident.incidentType,
+      details: incident.details,
+      createdAt: incident.createdAt
+    } satisfies IncidentAuditRow;
+  });
+
+  return {
+    rows,
+    totalCount,
+    page,
+    pageSize,
+    totalPages,
+    sessions: sortSessions(store.examSessions),
+    rooms: store.rooms
+      .filter((room) => selectedSessionIds.has(room.examSessionId))
+      .sort((left, right) => left.code.localeCompare(right.code))
+  };
+}
+
+export async function getIncidentAuditPage(
+  input: IncidentAuditInput
+): Promise<IncidentAuditPage> {
+  if (!isSupabaseConfigured()) {
+    return getLocalIncidentAuditPage(input);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const examSessionFilter = normalizeExamSessionFilter(input.examSessionFilter);
+  const pageSize = Math.min(Math.max(input.pageSize || 50, 1), 100);
+  const requestedPage = normalizeAttendancePage(input.page);
+  const sessionsResponse = await supabase
+    .from("exam_sessions")
+    .select("id, name, exam_date, start_time, published, status, created_at")
+    .order("exam_date", { ascending: false })
+    .order("start_time", { ascending: false });
+  let sessionRows: SessionRow[];
+
+  if (sessionsResponse.error?.message.includes("status")) {
+    const legacySessionsResponse = await supabase
+      .from("exam_sessions")
+      .select("id, name, exam_date, start_time, published, created_at")
+      .order("exam_date", { ascending: false })
+      .order("start_time", { ascending: false });
+    if (legacySessionsResponse.error) {
+      throw new Error(legacySessionsResponse.error.message);
+    }
+    sessionRows = (legacySessionsResponse.data || []) as SessionRow[];
+  } else if (sessionsResponse.error) {
+    throw new Error(sessionsResponse.error.message);
+  } else {
+    sessionRows = (sessionsResponse.data || []) as SessionRow[];
+  }
+
+  const sessions = sessionRows.map(toExamSession);
+  const selectedSessionIds = getSelectedSessionIds(sessions, examSessionFilter);
+  const roomsPromise = selectedSessionIds.length
+    ? supabase
+        .from("rooms")
+        .select("id, exam_session_id, code, display_name, capacity")
+        .in("exam_session_id", selectedSessionIds)
+        .order("code")
+    : Promise.resolve({ data: [], error: null });
+  const fetchPage = async (page: number) => {
+    const response = await supabase.rpc("get_incident_audit_page", {
+      p_exam_session_filter: examSessionFilter,
+      p_query: input.query || null,
+      p_room_id: uuidPattern.test(input.roomId) ? input.roomId : null,
+      p_incident_type: input.incidentType || null,
+      p_sort: input.sort,
+      p_page: page,
+      p_page_size: pageSize
+    });
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+    return (response.data || []) as IncidentAuditRpcRow[];
+  };
+
+  let [rpcRows, roomsResponse] = await Promise.all([
+    fetchPage(requestedPage),
+    roomsPromise
+  ]);
+  if (roomsResponse.error) {
+    throw new Error(roomsResponse.error.message);
+  }
+  if (!rpcRows.length && requestedPage > 1) {
+    rpcRows = await fetchPage(1);
+  }
+
+  const totalCount = rpcRows.length ? Number(rpcRows[0].total_count) : 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = rpcRows.length && requestedPage <= totalPages ? requestedPage : 1;
+
+  return {
+    rows: rpcRows.map(mapIncidentAuditRow),
     totalCount,
     page,
     pageSize,

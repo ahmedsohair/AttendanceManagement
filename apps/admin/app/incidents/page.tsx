@@ -1,52 +1,88 @@
 import Link from "next/link";
 import { getExamSessionStatus } from "@algo-attendance/shared";
-import { requireAdminPageUser } from "@/lib/auth";
+import {
+  getIncidentAuditPage,
+  type IncidentAuditSort,
+  type IncidentAuditType
+} from "@/lib/admin-queries";
 import { formatAuditTime } from "@/lib/audit-time";
-import { readAdminAuditStoreFast } from "@/lib/repository";
+import { requireAdminPageUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
+
+type IncidentSearchParams = {
+  examSessionId?: string;
+  q?: string;
+  room?: string;
+  type?: string;
+  sort?: string;
+  page?: string;
+};
+
+function normalizeIncidentType(value?: string): IncidentAuditType {
+  return value === "wrong_room_redirected" ||
+    value === "wrong_room_present_override" ||
+    value === "duplicate_attempt" ||
+    value === "student_not_found"
+    ? value
+    : "";
+}
+
+function normalizeSort(value?: string): IncidentAuditSort {
+  return value === "oldest" ? "oldest" : "newest";
+}
+
+function normalizePage(value?: string) {
+  const page = Number.parseInt(value || "1", 10);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
+function pageHref(params: IncidentSearchParams, page: number) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key !== "page" && value) query.set(key, value);
+  }
+  if (page > 1) query.set("page", String(page));
+  const serialized = query.toString();
+  return serialized ? `/incidents?${serialized}` : "/incidents";
+}
 
 export default async function IncidentsPage({
   searchParams
 }: {
-  searchParams?: Promise<{
-    examSessionId?: string;
-  }>;
+  searchParams?: Promise<IncidentSearchParams>;
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
   const examSessionFilter = (params.examSessionId || "active").trim();
-  const store = await readAdminAuditStoreFast(examSessionFilter, {
-    includeIncidents: true
+  const query = (params.q || "").trim();
+  const roomFilter = (params.room || "").trim();
+  const incidentType = normalizeIncidentType(params.type);
+  const sort = normalizeSort(params.sort);
+  const incidentPage = await getIncidentAuditPage({
+    examSessionFilter,
+    query,
+    roomId: roomFilter,
+    incidentType,
+    sort,
+    page: normalizePage(params.page)
   });
-  const roomMap = new Map(store.rooms.map((room) => [room.id, room]));
-  const sessionMap = new Map(store.examSessions.map((session) => [session.id, session]));
-  const userMap = new Map(store.users.map((user) => [user.id, user]));
-  const activeSessionIds = new Set(
-    store.examSessions
-      .filter((session) => getExamSessionStatus(session) === "active")
-      .map((session) => session.id)
+  const sessionMap = new Map(
+    incidentPage.sessions.map((session) => [session.id, session])
   );
-  const selectedSessionIds =
-    examSessionFilter === "all"
-      ? new Set(store.examSessions.map((session) => session.id))
-      : examSessionFilter === "active"
-        ? activeSessionIds
-        : new Set([examSessionFilter]);
   const selectedSessionLabel =
     examSessionFilter === "all"
       ? "All exams"
       : examSessionFilter === "active"
         ? "Active exams"
-        : sessionMap.get(examSessionFilter)?.name || "Selected exam";
-
-  const incidents = [...store.incidents]
-    .filter((incident) => selectedSessionIds.has(incident.examSessionId))
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  const incidentGroups = incidents.reduce<Record<string, number>>((acc, incident) => {
-    acc[incident.incidentType] = (acc[incident.incidentType] || 0) + 1;
-    return acc;
-  }, {});
+        : sessionMap.get(examSessionFilter)?.name || "Active exams";
+  const firstRow = incidentPage.totalCount
+    ? (incidentPage.page - 1) * incidentPage.pageSize + 1
+    : 0;
+  const lastRow = Math.min(
+    incidentPage.page * incidentPage.pageSize,
+    incidentPage.totalCount
+  );
 
   return (
     <div className="stack">
@@ -56,27 +92,16 @@ export default async function IncidentsPage({
         <span>Incidents</span>
       </nav>
 
-      <div className="grid compact-grid">
-        {Object.entries(incidentGroups).length ? (
-          Object.entries(incidentGroups).map(([type, count]) => (
-            <div key={type} className="card compact-card">
-              <div className="subtle">{type.replaceAll("_", " ")}</div>
-              <div className="metric">{count}</div>
-            </div>
-          ))
-        ) : (
-          <div className="card compact-card">
-            <div className="subtle">Incident groups</div>
-            <div className="metric">0</div>
-          </div>
-        )}
+      <div className="card compact-card">
+        <div className="subtle">Matching incidents</div>
+        <div className="metric">{incidentPage.totalCount}</div>
       </div>
 
       <div className="card wide-card">
         <div className="inline-actions" style={{ justifyContent: "space-between" }}>
           <div>
             <div className="kicker">Incident Log</div>
-            <h2 className="section-title">Total Incidents</h2>
+            <h2 className="section-title">Recorded Incidents</h2>
             <div className="subtle">
               Showing: <strong>{selectedSessionLabel}</strong>
             </div>
@@ -85,84 +110,127 @@ export default async function IncidentsPage({
             <select name="examSessionId" defaultValue={examSessionFilter}>
               <option value="active">Active exams only</option>
               <option value="all">All exams</option>
-              {store.examSessions.map((session) => {
-                const status = getExamSessionStatus(session);
-
-                return (
-                  <option key={session.id} value={session.id}>
-                    {session.name} ({status})
-                  </option>
-                );
-              })}
+              {incidentPage.sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name} ({getExamSessionStatus(session)})
+                </option>
+              ))}
             </select>
-            <button className="secondary" type="submit">
-              Apply
-            </button>
-            <Link className="button secondary" href="/incidents">
-              Clear
-            </Link>
+            <input name="q" placeholder="Search student/comment/staff" defaultValue={query} />
+            <select name="room" defaultValue={roomFilter}>
+              <option value="">All rooms</option>
+              {incidentPage.rooms.map((room) => (
+                <option key={room.id} value={room.id}>{room.code}</option>
+              ))}
+            </select>
+            <select name="type" defaultValue={incidentType}>
+              <option value="">All incident types</option>
+              <option value="wrong_room_redirected">Wrong room redirected</option>
+              <option value="wrong_room_present_override">Wrong room marked present</option>
+              <option value="duplicate_attempt">Duplicate attempt</option>
+              <option value="student_not_found">Student not found</option>
+            </select>
+            <select name="sort" defaultValue={sort}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+            <button className="secondary" type="submit">Apply</button>
+            <Link className="button secondary" href="/incidents">Clear</Link>
           </form>
         </div>
         <div className="table-scroll">
-      <table className="table compact-table">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Student ID</th>
-            <th>Exam</th>
-            <th>Room</th>
-            <th>Expected Room</th>
-            <th>Raised By</th>
-            <th>Comment</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody>
-          {incidents.length ? (
-            incidents.map((incident) => (
-              <tr key={incident.id}>
-                <td><span className="pill danger">{incident.incidentType}</span></td>
-                <td className="data-mono">{incident.studentId || "-"}</td>
-                <td>{sessionMap.get(incident.examSessionId)?.name || incident.examSessionId}</td>
-                <td>
-                  {incident.roomId ? roomMap.get(incident.roomId)?.code || incident.roomId : "-"}
-                </td>
-                <td>
-                  {incident.expectedRoomId
-                    ? roomMap.get(incident.expectedRoomId)?.code || incident.expectedRoomId
-                    : "-"}
-                </td>
-                <td>
-                  {incident.userId && userMap.get(incident.userId) ? (
-                    <>
-                      <strong>{userMap.get(incident.userId)?.fullName}</strong>
-                      <br />
-                      <span className="subtle">{userMap.get(incident.userId)?.email}</span>
-                    </>
-                  ) : (
-                    incident.userId || "-"
-                  )}
-                </td>
-                <td>
-                  {typeof incident.details.comment === "string" && incident.details.comment
-                    ? incident.details.comment
-                    : "-"}
-                </td>
-                <td className="data-mono" title={incident.createdAt}>
-                  {formatAuditTime(incident.createdAt)}
-                </td>
+          <table className="table compact-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Student ID</th>
+                <th>Exam</th>
+                <th>Room</th>
+                <th>Expected Room</th>
+                <th>Raised By</th>
+                <th>Comment</th>
+                <th>Timestamp</th>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={8} className="subtle">
-                No incidents recorded yet.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {incidentPage.rows.length ? (
+                incidentPage.rows.map((incident) => (
+                  <tr key={incident.id}>
+                    <td>
+                      <span className="pill danger">
+                        {incident.incidentType.replaceAll("_", " ")}
+                      </span>
+                    </td>
+                    <td className="data-mono">{incident.studentId || "-"}</td>
+                    <td>
+                      <Link href={`/sessions/${incident.examSessionId}`}>
+                        {incident.examName}
+                      </Link>
+                    </td>
+                    <td>{incident.roomCode || "-"}</td>
+                    <td>{incident.expectedRoomCode || "-"}</td>
+                    <td>
+                      {incident.raisedByName ? (
+                        <>
+                          <strong>{incident.raisedByName}</strong>
+                          {incident.raisedByEmail ? (
+                            <>
+                              <br />
+                              <span className="subtle">{incident.raisedByEmail}</span>
+                            </>
+                          ) : null}
+                        </>
+                      ) : (
+                        incident.userId || "-"
+                      )}
+                    </td>
+                    <td>
+                      {typeof incident.details.comment === "string" &&
+                      incident.details.comment
+                        ? incident.details.comment
+                        : "-"}
+                    </td>
+                    <td className="data-mono" title={incident.createdAt}>
+                      {formatAuditTime(incident.createdAt)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="subtle">
+                    No incidents match the current filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
+        <nav className="pagination-bar" aria-label="Incident pages">
+          <span className="pagination-summary">
+            {incidentPage.totalCount
+              ? `${firstRow}-${lastRow} of ${incidentPage.totalCount}`
+              : "0 records"}
+          </span>
+          <div className="inline-actions">
+            {incidentPage.page > 1 ? (
+              <Link className="button secondary" href={pageHref(params, incidentPage.page - 1)}>
+                Previous
+              </Link>
+            ) : (
+              <span className="button secondary disabled" aria-disabled="true">Previous</span>
+            )}
+            <span className="pagination-summary">
+              Page {incidentPage.page} of {incidentPage.totalPages}
+            </span>
+            {incidentPage.page < incidentPage.totalPages ? (
+              <Link className="button secondary" href={pageHref(params, incidentPage.page + 1)}>
+                Next
+              </Link>
+            ) : (
+              <span className="button secondary disabled" aria-disabled="true">Next</span>
+            )}
+          </div>
+        </nav>
       </div>
     </div>
   );
