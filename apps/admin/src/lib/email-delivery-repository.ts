@@ -25,6 +25,18 @@ export type EmailJobSummary = {
   totalCount: number;
 };
 
+export type EmailDeliverySummary = {
+  acceptedAt: string | null;
+  attemptCount: number;
+  deliveredAt: string | null;
+  failureReason: string | null;
+  id: string;
+  provider: "resend" | "smtp" | null;
+  recipientEmail: string;
+  requestedAt: string;
+  status: EmailDeliveryStatus;
+};
+
 export type ClaimedEmailDelivery = {
   attemptCount: number;
   examSessionId: string | null;
@@ -49,11 +61,17 @@ type EmailJobRow = {
 };
 
 type EmailDeliveryRow = {
+  accepted_at?: string | null;
   attempt_count: number;
+  delivered_at?: string | null;
   exam_session_id: string | null;
   id: string;
   job_id: string;
+  failure_reason?: string | null;
+  provider?: "resend" | "smtp" | null;
   recipient_email: string;
+  requested_at?: string;
+  status?: EmailDeliveryStatus;
   template_type: "assignment" | "access_code";
   template_data: unknown;
   template_version: string;
@@ -70,6 +88,20 @@ function mapJob(row: EmailJobRow, created = false): EmailJobSummary {
     processedCount: row.processed_count,
     status: row.status,
     totalCount: row.total_count
+  };
+}
+
+function mapDeliverySummary(row: EmailDeliveryRow): EmailDeliverySummary {
+  return {
+    acceptedAt: row.accepted_at || null,
+    attemptCount: row.attempt_count,
+    deliveredAt: row.delivered_at || null,
+    failureReason: row.failure_reason || null,
+    id: row.id,
+    provider: row.provider || null,
+    recipientEmail: row.recipient_email,
+    requestedAt: row.requested_at || "",
+    status: row.status || "unknown"
   };
 }
 
@@ -131,6 +163,42 @@ export async function getEmailJob(jobId: string) {
   }
 
   return response.data ? mapJob(response.data as EmailJobRow) : null;
+}
+
+export async function listEmailDeliveries(jobId: string) {
+  const response = await getSupabaseAdmin()
+    .from("email_deliveries")
+    .select(
+      "id, job_id, recipient_email, status, provider, attempt_count, failure_reason, requested_at, accepted_at, delivered_at, exam_session_id, user_id, template_type, template_version, template_data"
+    )
+    .eq("job_id", jobId)
+    .order("recipient_email");
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  return ((response.data || []) as EmailDeliveryRow[]).map(mapDeliverySummary);
+}
+
+export async function retryFailedEmailDeliveries(input: {
+  deliveryIds: string[];
+  jobId: string;
+}) {
+  const response = await getSupabaseAdmin().rpc("retry_failed_email_deliveries", {
+    p_delivery_ids: input.deliveryIds,
+    p_job_id: input.jobId
+  });
+
+  if (response.error) {
+    throw new Error(response.error.message);
+  }
+
+  return response.data as {
+    jobId: string;
+    retriedCount: number;
+    status: EmailJobStatus;
+  };
 }
 
 export async function claimEmailDeliveries(input: {

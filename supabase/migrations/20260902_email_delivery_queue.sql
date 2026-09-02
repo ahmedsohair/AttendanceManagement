@@ -444,6 +444,48 @@ begin
 end;
 $$;
 
+create or replace function public.retry_failed_email_deliveries(
+  p_job_id uuid,
+  p_delivery_ids uuid[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_retried integer;
+  v_job public.email_jobs%rowtype;
+begin
+  if p_delivery_ids is null or cardinality(p_delivery_ids) = 0 then
+    raise exception 'Select at least one failed email delivery.' using errcode = '22023';
+  end if;
+
+  update public.email_deliveries
+  set status = 'queued',
+      failure_reason = null,
+      next_attempt_at = clock_timestamp(),
+      lease_owner = null,
+      lease_expires_at = null,
+      updated_at = clock_timestamp()
+  where job_id = p_job_id
+    and id = any(p_delivery_ids)
+    and status = 'failed';
+
+  get diagnostics v_retried = row_count;
+  if v_retried = 0 then
+    raise exception 'No selected failed email deliveries can be retried.' using errcode = '55000';
+  end if;
+
+  select * into v_job from public.refresh_email_job_status(p_job_id);
+  return jsonb_build_object(
+    'jobId', v_job.id::text,
+    'status', v_job.status,
+    'retriedCount', v_retried
+  );
+end;
+$$;
+
 revoke all on table public.email_jobs from public, anon, authenticated;
 revoke all on table public.email_deliveries from public, anon, authenticated;
 revoke all on table public.email_webhook_events from public, anon, authenticated;
@@ -452,6 +494,7 @@ revoke all on function public.create_assignment_email_job(uuid, uuid, text, text
 revoke all on function public.claim_email_deliveries(uuid, text, integer, integer) from public, anon, authenticated;
 revoke all on function public.complete_email_delivery_attempt(uuid, text, text, text, text, text, integer) from public, anon, authenticated;
 revoke all on function public.record_email_provider_event(text, text, text, text, jsonb) from public, anon, authenticated;
+revoke all on function public.retry_failed_email_deliveries(uuid, uuid[]) from public, anon, authenticated;
 
 grant select, insert, update, delete on table public.email_jobs to service_role;
 grant select, insert, update, delete on table public.email_deliveries to service_role;
@@ -461,3 +504,4 @@ grant execute on function public.create_assignment_email_job(uuid, uuid, text, t
 grant execute on function public.claim_email_deliveries(uuid, text, integer, integer) to service_role;
 grant execute on function public.complete_email_delivery_attempt(uuid, text, text, text, text, text, integer) to service_role;
 grant execute on function public.record_email_provider_event(text, text, text, text, jsonb) to service_role;
+grant execute on function public.retry_failed_email_deliveries(uuid, uuid[]) to service_role;

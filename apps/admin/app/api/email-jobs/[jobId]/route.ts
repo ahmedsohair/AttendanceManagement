@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
-import { getEmailJob } from "@/lib/email-delivery-repository";
+import { getEmailJob, listEmailDeliveries } from "@/lib/email-delivery-repository";
 
 export async function GET(
   request: Request,
@@ -9,13 +9,16 @@ export async function GET(
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
     const { jobId } = await params;
-    const job = await getEmailJob(jobId);
+    const [job, deliveries] = await Promise.all([
+      getEmailJob(jobId),
+      listEmailDeliveries(jobId)
+    ]);
 
     if (!job) {
       return NextResponse.json({ message: "Email job not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ job });
+    return NextResponse.json({ deliveries, job });
   } catch (error) {
     return NextResponse.json(
       { message: error instanceof Error ? error.message : "Unable to read email job." },

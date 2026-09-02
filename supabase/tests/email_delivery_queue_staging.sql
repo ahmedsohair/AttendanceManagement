@@ -94,6 +94,22 @@ begin
     raise exception 'Email job counters or partial status are incorrect.';
   end if;
 
+  v_response := public.retry_failed_email_deliveries(v_job_id, array[v_delivery_id]);
+  if (v_response ->> 'retriedCount')::integer <> 1
+    or (select status from public.email_deliveries where id = v_delivery_id) <> 'queued' then
+    raise exception 'Selected failed delivery was not safely requeued.';
+  end if;
+
+  select id into strict v_delivery_id
+  from public.email_deliveries
+  where job_id = v_job_id and status = 'accepted';
+  begin
+    perform public.retry_failed_email_deliveries(v_job_id, array[v_delivery_id]);
+    raise exception 'Accepted delivery was incorrectly retried.';
+  exception
+    when object_not_in_prerequisite_state then null;
+  end;
+
   v_response := public.record_email_provider_event(
     'resend', 'event-delivered-' || v_job_id::text, 'email.delivered',
     v_message_id, jsonb_build_object('type', 'email.delivered')
