@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { IDBFactory } from "fake-indexeddb";
 import {
   classifyOutboxError,
   createPendingOutboxItem,
+  createScannerOutbox,
+  flushScannerOutbox,
   getRetryDelayMs,
   isOutboxItemClaimable,
   summarizeOutbox
@@ -54,4 +57,94 @@ test("summarizes recoverable and terminal queue states", () => {
     ]),
     { total: 4, pending: 1, syncing: 1, failed: 1, conflict: 1 }
   );
+});
+
+test("persists queued work and allows only one simultaneous claim", async () => {
+  const indexedDb = new IDBFactory();
+  const firstTab = createScannerOutbox({ indexedDb, now: () => 1000 });
+  await firstTab.enqueue({
+    id: "request-persisted",
+    userId: "user-1",
+    queuedAt: "2026-09-02T00:00:00.000Z"
+  });
+
+  const restartedTab = createScannerOutbox({ indexedDb, now: () => 1000 });
+  assert.equal((await restartedTab.list()).length, 1);
+
+  const claims = await Promise.all([
+    firstTab.claimNext("user-1"),
+    restartedTab.claimNext("user-1")
+  ]);
+  assert.equal(claims.filter(Boolean).length, 1);
+  assert.equal(claims.find(Boolean)?.id, "request-persisted");
+
+  await restartedTab.complete("request-persisted");
+  assert.deepEqual(await firstTab.list(), []);
+});
+
+test("retains an offline mark and synchronizes it once after reconnection", async () => {
+  const indexedDb = new IDBFactory();
+  let currentTime = 1000;
+  const outbox = createScannerOutbox({ indexedDb, now: () => currentTime });
+  await outbox.enqueue({
+    id: "stable-request-id",
+    userId: "user-1",
+    queuedAt: "2026-09-02T00:00:00.000Z",
+    request: { requestId: "stable-request-id" }
+  });
+
+  let serverWrites = 0;
+  const firstFlush = await flushScannerOutbox({
+    outbox,
+    userId: "user-1",
+    random: () => 0.5,
+    send: async () => {
+      throw Object.assign(new Error("offline"), { kind: "offline" });
+    }
+  });
+  assert.equal(firstFlush.retryBlocked, true);
+  assert.equal((await outbox.list())[0].status, "pending");
+
+  currentTime = 2000;
+  const secondFlush = await flushScannerOutbox({
+    outbox,
+    userId: "user-1",
+    send: async (item) => {
+      assert.equal(item.request.requestId, "stable-request-id");
+      serverWrites += 1;
+      return { event: { id: "event-1" } };
+    }
+  });
+  assert.equal(secondFlush.synced, 1);
+  assert.equal(serverWrites, 1);
+  assert.deepEqual(await outbox.list(), []);
+});
+
+test("keeps a closed-exam conflict visible without retrying", async () => {
+  const indexedDb = new IDBFactory();
+  const outbox = createScannerOutbox({ indexedDb, now: () => 1000 });
+  await outbox.enqueue({
+    id: "closed-exam-request",
+    userId: "user-1",
+    queuedAt: "2026-09-02T00:00:00.000Z"
+  });
+
+  let sends = 0;
+  const result = await flushScannerOutbox({
+    outbox,
+    userId: "user-1",
+    send: async () => {
+      sends += 1;
+      throw Object.assign(new Error("Exam session is not active."), {
+        kind: "conflict",
+        status: 409
+      });
+    }
+  });
+
+  const [item] = await outbox.list();
+  assert.equal(sends, 1);
+  assert.equal(result.terminal, 1);
+  assert.equal(item.status, "conflict");
+  assert.equal(item.lastError, "Exam session is not active.");
 });

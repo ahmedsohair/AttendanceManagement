@@ -187,3 +187,60 @@ export function createScannerOutbox({ indexedDb = globalThis.indexedDB, now = Da
 
   return { enqueue, list, claimNext, complete, markRetry, markTerminal, retry };
 }
+
+/**
+ * @param {{
+ *   outbox: ReturnType<typeof createScannerOutbox>,
+ *   userId: string,
+ *   send: (item: any) => Promise<any>,
+ *   random?: () => number,
+ *   onAttempt?: (item: any) => void | Promise<void>,
+ *   onSynced?: (item: any, response: any) => void | Promise<void>,
+ *   onRetry?: (item: any, error: unknown) => void | Promise<void>,
+ *   onTerminal?: (item: any, disposition: string, error: unknown) => void | Promise<void>
+ * }} options
+ */
+export async function flushScannerOutbox({
+  outbox,
+  userId,
+  send,
+  random = Math.random,
+  onAttempt = () => undefined,
+  onSynced = () => undefined,
+  onRetry = () => undefined,
+  onTerminal = () => undefined
+}) {
+  const result = { synced: 0, terminal: 0, retryBlocked: false };
+
+  while (true) {
+    const item = await outbox.claimNext(userId);
+    if (!item) {
+      return result;
+    }
+
+    await onAttempt(item);
+    try {
+      const response = await send(item);
+      await outbox.complete(item.id);
+      result.synced += 1;
+      await onSynced(item, response);
+    } catch (error) {
+      const disposition = classifyOutboxError(error);
+      const message = error instanceof Error ? error.message : "Unable to synchronize attendance.";
+      if (disposition === "retry") {
+        await outbox.markRetry(
+          item.id,
+          message,
+          getRetryDelayMs(item.attempts + 1, random)
+        );
+        result.retryBlocked = true;
+        await onRetry(item, error);
+        return result;
+      }
+
+      await outbox.markTerminal(item.id, disposition, message);
+      result.terminal += 1;
+      await onTerminal(item, disposition, error);
+    }
+  }
+}

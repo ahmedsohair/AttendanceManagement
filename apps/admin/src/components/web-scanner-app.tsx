@@ -16,6 +16,7 @@ import {
 import {
   classifyOutboxError,
   createScannerOutbox,
+  flushScannerOutbox,
   getRetryDelayMs,
   summarizeOutbox
 } from "@/lib/scanner-outbox.mjs";
@@ -485,19 +486,13 @@ export function WebScannerApp() {
     }
 
     outboxFlushActiveRef.current = true;
-    let retryBlocked = false;
     let madeRequest = false;
     try {
-      while (userRef.current && navigator.onLine) {
-        const item = await getOutbox().claimNext(userRef.current.id) as ScannerOutboxItem | null;
-        if (!item) {
-          break;
-        }
-
-        madeRequest = true;
-        setBackendState("syncing");
-        try {
-          await requestJson<MarkResponse>(
+      const result = await flushScannerOutbox({
+        outbox: getOutbox(),
+        userId: userRef.current.id,
+        send: (item: ScannerOutboxItem) =>
+          requestJson<MarkResponse>(
             `outbox-${item.id}`,
             "/api/attendance/mark",
             {
@@ -506,8 +501,12 @@ export function WebScannerApp() {
               body: JSON.stringify(item.request)
             },
             12000
-          );
-          await getOutbox().complete(item.id);
+          ),
+        onAttempt: () => {
+          madeRequest = true;
+          setBackendState("syncing");
+        },
+        onSynced: async (item: ScannerOutboxItem) => {
           setLastSyncAt(new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -516,24 +515,18 @@ export function WebScannerApp() {
           if (selectedRoomRef.current?.id === item.roomId) {
             await loadLiveState(item.roomId).catch(() => undefined);
           }
-        } catch (error) {
-          const disposition = classifyOutboxError(error);
-          const message = error instanceof Error ? error.message : "Unable to synchronize attendance.";
-          if (disposition === "retry") {
-            await getOutbox().markRetry(item.id, message, getRetryDelayMs(item.attempts + 1));
-            setBackendState(navigator.onLine ? "unreachable" : "offline");
-            retryBlocked = true;
-            break;
-          }
-          await getOutbox().markTerminal(item.id, disposition, message);
+        },
+        onRetry: () => {
+          setBackendState(navigator.onLine ? "unreachable" : "offline");
         }
+      });
+
+      if (navigator.onLine && madeRequest && !result.retryBlocked) {
+        setBackendState("online");
       }
     } finally {
       outboxFlushActiveRef.current = false;
       await refreshOutbox().catch(() => undefined);
-      if (navigator.onLine && madeRequest && !retryBlocked) {
-        setBackendState("online");
-      }
     }
   }, [getOutbox, loadLiveState, refreshOutbox, requestJson]);
 
