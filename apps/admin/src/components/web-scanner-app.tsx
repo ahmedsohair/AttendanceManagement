@@ -14,6 +14,12 @@ import {
   createRequestCoordinator
 } from "@/lib/scanner-requests.mjs";
 import {
+  classifyOutboxError,
+  createScannerOutbox,
+  getRetryDelayMs,
+  summarizeOutbox
+} from "@/lib/scanner-outbox.mjs";
+import {
   describeOcrLoadError,
   getOcrCanvasWidth,
   preprocessLowLightImageData,
@@ -60,6 +66,32 @@ type RecentScanChip = {
   label: string;
   detail: string;
   tone: "ok" | "warn";
+};
+
+type MarkResponse = {
+  event?: { id: string; roomMismatch: boolean; createdAt: string };
+  incident?: { id: string; incidentType: string; createdAt: string };
+  result: LookupResult;
+};
+
+type ScannerOutboxItem = {
+  id: string;
+  request: MarkAttendanceRequest;
+  examSessionId: string;
+  roomId: string;
+  studentId: string;
+  source: "ocr" | "manual";
+  comment?: string;
+  overrideWrongRoom: boolean;
+  action: "mark_present" | "redirect_only";
+  deviceId: string;
+  userId: string;
+  queuedAt: string;
+  status: "pending" | "syncing" | "failed" | "conflict";
+  attempts: number;
+  nextAttemptAt: number;
+  leaseUntil: number;
+  lastError?: string | null;
 };
 
 type OcrWorker = {
@@ -217,6 +249,8 @@ export function WebScannerApp() {
   const ocrLoopRef = useRef<ReturnType<typeof createSingleFlightLoop> | null>(null);
   const authExpiryHandlerRef = useRef<() => void>(() => undefined);
   const requestCoordinatorRef = useRef<ReturnType<typeof createRequestCoordinator> | null>(null);
+  const outboxRef = useRef<ReturnType<typeof createScannerOutbox> | null>(null);
+  const outboxFlushActiveRef = useRef(false);
   const userRef = useRef<User | null>(null);
   const selectedRoomRef = useRef<RoomWithSession | null>(null);
   const busyRef = useRef(false);
@@ -260,6 +294,10 @@ export function WebScannerApp() {
   const [torchMessage, setTorchMessage] = useState("");
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [scanHold, setScanHold] = useState(false);
+  const [outboxItems, setOutboxItems] = useState<ScannerOutboxItem[]>([]);
+  const [backendState, setBackendState] = useState<"online" | "offline" | "unreachable" | "syncing">(
+    "online"
+  );
 
   authExpiryHandlerRef.current = () => {
     ocrLoopRef.current?.stop();
@@ -327,6 +365,19 @@ export function WebScannerApp() {
     requestCoordinatorRef.current?.cancelAll();
   }, []);
 
+  const getOutbox = useCallback(() => {
+    if (!outboxRef.current) {
+      outboxRef.current = createScannerOutbox({ indexedDb: window.indexedDB });
+    }
+    return outboxRef.current;
+  }, []);
+
+  const refreshOutbox = useCallback(async () => {
+    const items = await getOutbox().list() as ScannerOutboxItem[];
+    setOutboxItems(items);
+    return items;
+  }, [getOutbox]);
+
   const resetForNextScan = useCallback(() => {
     markIdempotencyRef.current?.clear();
     setStudentId("");
@@ -379,7 +430,128 @@ export function WebScannerApp() {
       minute: "2-digit",
       second: "2-digit"
     }));
+    setBackendState("online");
   }, []);
+
+  const applyMarkSuccess = useCallback((payload: MarkResponse, normalizedId: string) => {
+    const successMessage = payload.event?.roomMismatch
+      ? "Present marked with room mismatch flag."
+      : payload.event
+        ? "Attendance marked."
+        : "Incident logged.";
+    const chip: RecentScanChip = {
+      key: `local-${Date.now()}-${normalizedId}`,
+      label: normalizedId,
+      detail: payload.event?.roomMismatch
+        ? "Mismatch"
+        : payload.event
+          ? "Present"
+          : payload.incident?.incidentType.replaceAll("_", " ") || "Incident",
+      tone: payload.event && !payload.event.roomMismatch ? "ok" : "warn"
+    };
+
+    setStatusMessage(successMessage);
+    setOptimisticStats((current) => ({
+      present: current.present + (payload.event ? 1 : 0),
+      mismatch: current.mismatch + (payload.event?.roomMismatch ? 1 : 0),
+      redirected:
+        current.redirected +
+        (payload.incident?.incidentType === "wrong_room_redirected" ? 1 : 0)
+    }));
+    setLocalRecentChips((current) => [chip, ...current].slice(0, 3));
+    setLastSyncAt(new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }));
+    setBackendState("online");
+  }, []);
+
+  const flushOutbox = useCallback(async () => {
+    if (outboxFlushActiveRef.current || !userRef.current || !navigator.onLine) {
+      return;
+    }
+
+    outboxFlushActiveRef.current = true;
+    setBackendState("syncing");
+    let retryBlocked = false;
+    try {
+      while (userRef.current && navigator.onLine) {
+        const item = await getOutbox().claimNext() as ScannerOutboxItem | null;
+        if (!item) {
+          break;
+        }
+
+        try {
+          await requestJson<MarkResponse>(
+            `outbox-${item.id}`,
+            "/api/attendance/mark",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(item.request)
+            },
+            12000
+          );
+          await getOutbox().complete(item.id);
+          setLastSyncAt(new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+          }));
+          if (selectedRoomRef.current?.id === item.roomId) {
+            await loadLiveState(item.roomId).catch(() => undefined);
+          }
+        } catch (error) {
+          const disposition = classifyOutboxError(error);
+          const message = error instanceof Error ? error.message : "Unable to synchronize attendance.";
+          if (disposition === "retry") {
+            await getOutbox().markRetry(item.id, message, getRetryDelayMs(item.attempts + 1));
+            setBackendState(navigator.onLine ? "unreachable" : "offline");
+            retryBlocked = true;
+            break;
+          }
+          await getOutbox().markTerminal(item.id, disposition, message);
+        }
+      }
+    } finally {
+      outboxFlushActiveRef.current = false;
+      await refreshOutbox().catch(() => undefined);
+      if (navigator.onLine && !retryBlocked) {
+        setBackendState("online");
+      }
+    }
+  }, [getOutbox, loadLiveState, refreshOutbox, requestJson]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setBackendState("syncing");
+      void flushOutbox();
+    };
+    const handleOffline = () => setBackendState("offline");
+
+    setBackendState(navigator.onLine ? "online" : "offline");
+    refreshOutbox().catch(() => undefined);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    const intervalId = window.setInterval(() => {
+      if (navigator.onLine) {
+        void flushOutbox();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      window.clearInterval(intervalId);
+    };
+  }, [flushOutbox, refreshOutbox]);
+
+  useEffect(() => {
+    if (user) {
+      void flushOutbox();
+    }
+  }, [flushOutbox, user]);
 
   useEffect(() => {
     userRef.current = user;
@@ -812,6 +984,7 @@ export function WebScannerApp() {
     }
 
     setBusy(true);
+    let queuedRequestId: string | null = null;
     try {
       const deviceId = getDeviceId();
       const action = overrides.action || "mark_present";
@@ -826,8 +999,9 @@ export function WebScannerApp() {
         overrideWrongRoom: overrides.overrideWrongRoom ?? false,
         comment: nextComment || null
       });
+      const requestId = markIdempotencyRef.current!.get(fingerprint);
       const requestBody: MarkAttendanceRequest = {
-        requestId: markIdempotencyRef.current!.get(fingerprint),
+        requestId,
         examSessionId: currentRoom.examSessionId,
         roomId: currentRoom.id,
         studentId: normalizedId,
@@ -838,13 +1012,26 @@ export function WebScannerApp() {
         comment: nextComment,
         ...overrides
       };
+      queuedRequestId = requestId;
 
-      const payload = await requestJson<{
-        event?: { id: string; roomMismatch: boolean; createdAt: string };
-        incident?: { id: string; incidentType: string; createdAt: string };
-        result: LookupResult;
-      }>(
-        "mark",
+      await getOutbox().enqueue({
+        id: requestId,
+        request: requestBody,
+        examSessionId: currentRoom.examSessionId,
+        roomId: currentRoom.id,
+        studentId: normalizedId,
+        source: lastSource,
+        comment: nextComment,
+        overrideWrongRoom: requestBody.overrideWrongRoom ?? false,
+        action,
+        deviceId,
+        userId: currentUser.id,
+        queuedAt: new Date().toISOString()
+      });
+      await refreshOutbox();
+
+      const payload = await requestJson<MarkResponse>(
+        `mark-${requestId}`,
         "/api/attendance/mark",
         {
           method: "POST",
@@ -854,41 +1041,43 @@ export function WebScannerApp() {
         12000
       );
 
-      const successMessage = payload.event?.roomMismatch
-        ? "Present marked with room mismatch flag."
-        : payload.event
-          ? "Attendance marked."
-          : "Incident logged.";
-      const chip: RecentScanChip = {
-        key: `local-${Date.now()}-${normalizedId}`,
-        label: normalizedId,
-        detail: payload.event?.roomMismatch
-          ? "Mismatch"
-          : payload.event
-            ? "Present"
-            : payload.incident?.incidentType.replaceAll("_", " ") || "Incident",
-        tone: payload.event && !payload.event.roomMismatch ? "ok" : "warn"
-      };
-
-      setStatusMessage(successMessage);
-      setOptimisticStats((current) => ({
-        present: current.present + (payload.event ? 1 : 0),
-        mismatch: current.mismatch + (payload.event?.roomMismatch ? 1 : 0),
-        redirected:
-          current.redirected +
-          (payload.incident?.incidentType === "wrong_room_redirected" ? 1 : 0)
-      }));
-      setLocalRecentChips((current) => [chip, ...current].slice(0, 3));
+      await getOutbox().complete(requestId);
+      await refreshOutbox();
+      applyMarkSuccess(payload, normalizedId);
       markIdempotencyRef.current?.clear();
       window.setTimeout(resetForNextScan, 180);
       loadLiveState(currentRoom.id).catch(() => undefined);
     } catch (error) {
-      if (error instanceof ScannerRequestError && error.kind === "timeout") {
+      if (!queuedRequestId) {
         setStatusMessage(
-          "Attendance confirmation timed out. Check recent activity before trying again."
+          error instanceof Error
+            ? error.message
+            : "Unable to save attendance safely on this device."
         );
-      } else if (!(error instanceof ScannerRequestError && error.kind === "cancelled")) {
-        setStatusMessage(error instanceof Error ? error.message : "Unable to mark attendance.");
+      } else {
+        const disposition = classifyOutboxError(error);
+        const message = error instanceof Error ? error.message : "Unable to mark attendance.";
+        if (disposition === "retry") {
+          await getOutbox().markRetry(queuedRequestId, message, getRetryDelayMs(1));
+          setBackendState(navigator.onLine ? "unreachable" : "offline");
+          setStatusMessage("Saved on this device. Attendance is pending synchronization.");
+          setLocalRecentChips((current) => [{
+            key: `pending-${queuedRequestId}`,
+            label: normalizedId,
+            detail: "Pending sync",
+            tone: "warn" as const
+          }, ...current].slice(0, 3));
+          markIdempotencyRef.current?.clear();
+          window.setTimeout(resetForNextScan, 450);
+        } else {
+          await getOutbox().markTerminal(queuedRequestId, disposition, message);
+          setStatusMessage(
+            disposition === "conflict"
+              ? `Attendance needs review: ${message}`
+              : `Attendance was not marked: ${message}`
+          );
+        }
+        await refreshOutbox();
       }
     } finally {
       setBusy(false);
