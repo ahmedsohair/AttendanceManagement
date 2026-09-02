@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -14,6 +15,8 @@ import {
   updateInvigilatorDetails
 } from "@/lib/repository";
 import { readStore } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { sendTrackedAccessCodeEmail } from "@/lib/tracked-access-code-email";
 
 export const dynamic = "force-dynamic";
 
@@ -132,21 +135,32 @@ async function submitAccessCodeEmail(formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const fullName = String(formData.get("fullName") || "").trim();
   const userId = String(formData.get("userId") || "").trim();
+  const idempotencyKey = String(formData.get("idempotencyKey") || "").trim();
 
   try {
-    await requireAdminPageUser();
+    const admin = await requireAdminPageUser();
 
-    if (!accessCode || !email || !userId) {
+    if (!accessCode || !email || !userId || !idempotencyKey) {
       throw new Error("Invigilator, access code, and email are required.");
     }
 
-    await sendInvigilatorAccessCodeEmail({
-      accessCode,
-      appBaseUrl: getAppBaseUrl(),
-      email,
-      fullName
-    });
-    await recordInvigilatorAccessCodeEmailed(userId, accessCode);
+    if (isSupabaseConfigured()) {
+      await sendTrackedAccessCodeEmail({
+        accessCode,
+        appBaseUrl: getAppBaseUrl(),
+        idempotencyKey,
+        requestedBy: admin.id,
+        userId
+      });
+    } else {
+      await sendInvigilatorAccessCodeEmail({
+        accessCode,
+        appBaseUrl: getAppBaseUrl(),
+        email,
+        fullName
+      });
+      await recordInvigilatorAccessCodeEmailed(userId, accessCode);
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to email access code.";
@@ -156,7 +170,7 @@ async function submitAccessCodeEmail(formData: FormData) {
 
   revalidatePath("/invigilators");
   await setAccessCodeFlash({ accessCode, codeEmail: email, codeUserId: userId || undefined });
-  redirect("/invigilators?message=Access%20code%20emailed.");
+  redirect("/invigilators?message=Access-code%20email%20accepted%20by%20the%20email%20provider.");
 }
 
 async function submitInvigilatorDelete(formData: FormData) {
@@ -229,6 +243,7 @@ export default async function InvigilatorsPage({
                   <input name="accessCode" type="hidden" value={accessCodeFlash.accessCode} />
                   <input name="email" type="hidden" value={accessCodeFlash.codeEmail} />
                   <input name="userId" type="hidden" value={accessCodeFlash.codeUserId || ""} />
+                  <input name="idempotencyKey" type="hidden" value={randomUUID()} />
                   <button type="submit">Email Code</button>
                 </form>
               </div>
