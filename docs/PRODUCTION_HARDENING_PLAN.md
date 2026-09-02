@@ -343,12 +343,21 @@ Verification completed on staging on 2 September 2026:
 
 ### 3.7 Enforce exam state transitions
 
-- [ ] Define allowed transitions: draft -> active -> closed.
-- [ ] Decide whether closed -> active reopening is supported; reject it otherwise.
-- [ ] Require complete allocations and room assignments before publication.
-- [ ] Reject closing a draft unless explicitly supported.
-- [ ] Prevent permanent deletion of active exams.
-- [ ] Prefer soft deletion/archive for exams with attendance or incident history.
+- [x] Define allowed transitions: draft -> active -> closed.
+- [x] Decide whether closed -> active reopening is supported; reject it otherwise.
+- [x] Require complete allocations and room assignments before publication.
+- [x] Reject closing a draft unless explicitly supported.
+- [x] Prevent permanent deletion of active exams.
+- [x] Prefer soft deletion/archive for exams with attendance or incident history.
+
+Implementation and verification:
+
+- The `transition_exam_session` RPC locks the exam row and permits only draft-to-active and active-to-closed transitions.
+- Publication is rejected unless the exam has rooms, every room has allocations, every allocation belongs to the same exam, and every room has an invigilator assignment.
+- Closed exams cannot be reopened. Active and closed exams cannot be permanently deleted; only drafts without attendance or incident history can be deleted.
+- The admin repository uses the enforced RPCs, and destructive controls expose only `Delete Draft` for eligible draft exams.
+- Rollback-only staging tests verify incomplete publication failures, successful publication and closure, repeated-transition failures, reopen rejection, retained active/closed history, and valid draft deletion.
+- The admin production build, 13-test scanner regression suite, deployed scanner, and synthetic invigilator login pass.
 
 ### Acceptance Criteria
 
@@ -601,7 +610,7 @@ Verification completed on staging on 2 September 2026:
 | 0 | `b1511d2` | Yes | No runtime change | Recovery tested; isolated staging seeded and verified. |
 | 1 | `352af9e`, `9256bc8` | Yes, region alignment and legacy OCR removal | No | Staging functions execute in `sin1`; 150-request acceptance run passed. Removed OCR endpoint returns 404 while scanner and login remain healthy. |
 | 2 | `128fdd1`, `6939bfe`, `b62e8e6`, `bab059e` | Automated suite/build/API smoke passed; physical devices pending | No | Implementation complete. Awaiting representative Android and iPhone acceptance before Phase 3 is activated. |
-| 3 | `8e62a55` through `70a4b91` | Sections 3.1-3.6 database tests, admin build, scanner regressions, and deployed login smoke passed | No | Atomic attendance, idempotency, integrity, imports, room assignments, and staged access-code rotation complete on staging. Section 3.7 remains. |
+| 3 | `8e62a55` through `fd4842e` | Sections 3.1-3.7 database tests, admin build, scanner regressions, and deployed login smoke passed | No | Atomic attendance, idempotency, integrity, imports, room assignments, staged access-code rotation, and enforced exam lifecycle complete on staging. |
 | 4 |  |  |  |  |
 | 5 |  |  |  |  |
 | 6 |  |  |  |  |
@@ -619,3 +628,4 @@ Verification completed on staging on 2 September 2026:
 - [x] Phase 2 implementation completed on staging.
 - [ ] Phase 2 physical Android and iPhone acceptance completed (explicitly deferred by the project owner on 1 September 2026).
 - [x] Phase 3 activated for staging-only development by project-owner exception; production remains unchanged.
+- [x] Phase 3 transactional database correctness completed and verified on staging; production remains unchanged.
