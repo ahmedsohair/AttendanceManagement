@@ -39,6 +39,6 @@
     "create:admin": "node --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/create-admin.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.1"
+    "@playwright/test": "^1.55.1"
   }
 }
