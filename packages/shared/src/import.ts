@@ -1,4 +1,5 @@
 import type { Room, SessionImportPayload, StudentAllocation } from "./types";
+import { normalizeRoomCode } from "./schemas";
 import { normalizeStudentId } from "./student-id";
 
 export interface NormalizedImport {
@@ -25,7 +26,7 @@ export function normalizeImportPayload(
     }
 
     seenStudentIds.add(studentId);
-    const roomCode = normalizeText(row.room);
+    const roomCode = normalizeRoomCode(row.room);
 
     if (!roomMap.has(roomCode)) {
       roomMap.set(roomCode, {
