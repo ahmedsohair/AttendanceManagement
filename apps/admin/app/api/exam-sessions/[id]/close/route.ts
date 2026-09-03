@@ -9,10 +9,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireApiUser(request, { allowedRoles: ["admin"] });
+    const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id: rawId } = await params;
     const id = uuidSchema.parse(rawId);
-    await closeExamSession(id);
+    await closeExamSession(id, admin.id);
     return new NextResponse(null, {
       status: 303,
       headers: {

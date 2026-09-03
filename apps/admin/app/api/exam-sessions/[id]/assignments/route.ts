@@ -10,12 +10,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireApiUser(request, { allowedRoles: ["admin"] });
+    const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id: rawId } = await params;
     const id = uuidSchema.parse(rawId);
     const payload = roomAssignmentRequestSchema.parse(await request.json());
 
     const committedRoomAssignments = await updateExamRoomAssignments({
+      actorUserId: admin.id,
       examSessionId: id,
       expectedRoomAssignments: payload.expectedRoomAssignments,
       roomAssignments: payload.roomAssignments

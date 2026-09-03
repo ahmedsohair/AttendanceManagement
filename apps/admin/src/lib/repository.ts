@@ -463,7 +463,7 @@ export async function createInvigilator(input: {
   return { accessCode, userId: authUserId };
 }
 
-export async function stageInvigilatorAccessCode(userIdInput: string) {
+export async function stageInvigilatorAccessCode(userIdInput: string, actorUserId: string) {
   const accessCode = generateAccessCode();
   const accessCodeHash = hashAccessCode(accessCode);
 
@@ -483,6 +483,7 @@ export async function stageInvigilatorAccessCode(userIdInput: string) {
 
   const userId = assertUuid(userIdInput, "Invigilator ID");
   const response = await getSupabaseAdmin().rpc("stage_invigilator_access_code", {
+    p_actor_user_id: assertUuid(actorUserId, "Administrator ID"),
     p_user_id: userId,
     p_access_code_hash: accessCodeHash
   });
@@ -496,7 +497,8 @@ export async function stageInvigilatorAccessCode(userIdInput: string) {
 
 export async function activateInvigilatorAccessCode(
   userIdInput: string,
-  accessCodeInput: string
+  accessCodeInput: string,
+  actorUserId: string
 ) {
   const accessCode = accessCodeInput.trim();
   const accessCodeHash = hashAccessCode(accessCode);
@@ -552,6 +554,7 @@ export async function activateInvigilatorAccessCode(
   }
 
   const activationResponse = await supabase.rpc("activate_invigilator_access_code", {
+    p_actor_user_id: assertUuid(actorUserId, "Administrator ID"),
     p_user_id: userId,
     p_access_code_hash: accessCodeHash
   });
@@ -839,6 +842,7 @@ export async function updateInvigilatorRoomAssignments(input: {
 }
 
 export async function updateExamRoomAssignments(input: {
+  actorUserId: string;
   examSessionId: string;
   expectedRoomAssignments?: Array<{
     roomId: string;
@@ -952,6 +956,7 @@ export async function updateExamRoomAssignments(input: {
   const expectedAssignments = normalizeAssignments(input.expectedRoomAssignments);
   const submittedAssignments = normalizeAssignments(input.roomAssignments);
   const response = await getSupabaseAdmin().rpc("replace_room_assignments_atomic", {
+    p_actor_user_id: assertUuid(input.actorUserId, "Administrator ID"),
     p_exam_session_id: sessionId,
     p_expected_assignments: expectedAssignments,
     p_room_assignments: submittedAssignments
@@ -1096,7 +1101,7 @@ export async function importExamSession(payload: SessionImportPayload) {
   };
 }
 
-export async function publishExamSession(sessionId: string) {
+export async function publishExamSession(sessionId: string, actorUserId: string) {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
     const session = store.examSessions.find((item) => item.id === sessionId);
@@ -1147,6 +1152,7 @@ export async function publishExamSession(sessionId: string) {
 
   const sessionUuid = assertUuid(sessionId, "Exam session ID");
   const response = await getSupabaseAdmin().rpc("transition_exam_session", {
+    p_actor_user_id: assertUuid(actorUserId, "Administrator ID"),
     p_exam_session_id: sessionUuid,
     p_target_status: "active"
   });
@@ -1155,7 +1161,7 @@ export async function publishExamSession(sessionId: string) {
   }
 }
 
-export async function closeExamSession(sessionId: string) {
+export async function closeExamSession(sessionId: string, actorUserId: string) {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
     const session = store.examSessions.find((item) => item.id === sessionId);
@@ -1173,6 +1179,7 @@ export async function closeExamSession(sessionId: string) {
   }
 
   const response = await getSupabaseAdmin().rpc("transition_exam_session", {
+    p_actor_user_id: assertUuid(actorUserId, "Administrator ID"),
     p_exam_session_id: assertUuid(sessionId, "Exam session ID"),
     p_target_status: "closed"
   });

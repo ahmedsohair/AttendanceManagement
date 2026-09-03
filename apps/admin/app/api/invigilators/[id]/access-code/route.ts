@@ -12,10 +12,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireApiUser(request, { allowedRoles: ["admin"] });
+    const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id: rawId } = await params;
     const id = uuidSchema.parse(rawId);
-    const result = await stageInvigilatorAccessCode(id);
+    const result = await stageInvigilatorAccessCode(id, admin.id);
     return NextResponse.json({
       accessCode: result.accessCode,
       message: "New code generated. Activate it when you are ready to replace the current code.",
@@ -31,13 +31,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireApiUser(request, { allowedRoles: ["admin"] });
+    const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id: rawId } = await params;
     const id = uuidSchema.parse(rawId);
     const body = activateAccessCodeRequestSchema.parse(await request.json());
     const result = await activateInvigilatorAccessCode(
       id,
-      body.accessCode
+      body.accessCode,
+      admin.id
     );
 
     return NextResponse.json({
