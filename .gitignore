@@ -6,6 +6,9 @@ build
 .expo-shared
 .expo-export*
 coverage
+playwright-report/
+test-results/
+playwright/.auth/
 backups/
 supabase/.temp/
 *.log
