@@ -30,6 +30,7 @@
     "build": "npm run build --workspaces",
     "lint": "npm run lint --workspaces",
     "test:web": "npm --workspace @algo-attendance/shared test && npm --workspace @algo-attendance/admin run test:api && npm --workspace @algo-attendance/admin run test:server-unit && npm --workspace @algo-attendance/admin run test:scanner",
+    "test:staging-api": "powershell -ExecutionPolicy Bypass -File ./scripts/test-staging-api-contracts.ps1 -ConfirmStagingTest",
     "typecheck:web": "tsc -p packages/shared/tsconfig.json --noEmit --incremental false && tsc -p apps/admin/tsconfig.json --noEmit --incremental false",
     "verify:supabase": "node scripts/verify-supabase.mjs",
     "create:admin": "node --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/create-admin.mjs"
