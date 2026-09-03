@@ -464,10 +464,18 @@ Staging verification completed on 3 September 2026:
 
 ### 6.1 Paginate large data views
 
-- [ ] Add server-side pagination to attendance, incidents, mismatches, sessions, and invigilators.
-- [ ] Move search, room filter, status filter, and sorting into database queries.
-- [ ] Avoid loading all historical allocations merely to render one filtered page.
-- [ ] Keep export as a separate full-data operation.
+- [x] Add server-side pagination to attendance, incidents, mismatches, sessions, and invigilators.
+- [x] Move search, room filter, status filter, and sorting into database queries.
+- [x] Avoid loading all historical allocations merely to render one filtered page.
+- [x] Keep export as a separate full-data operation.
+
+Verification completed on staging on 3 September 2026:
+
+- Attendance, incident, mismatch, session, and invigilator directories use bounded database pages with exact totals.
+- Search, room/status/type filters, joins, and ordering execute in service-role-only database functions rather than over full browser or server datasets.
+- The dashboard uses one bounded summary function and reports exact operational totals without loading every historical session, room, assignment, attendance event, or incident.
+- Exam XLSX export remains an explicit full-data operation so reports are complete.
+- Rollback-only database tests, admin TypeScript checks, the production build, and manual staging checks pass.
 
 ### 6.2 Tighten input validation
 
@@ -649,3 +657,4 @@ Staging verification completed on 3 September 2026:
 - [x] Phase 4 network-resilience implementation completed and verified on staging; physical device outage acceptance remains deferred.
 - [x] Phase 5 email reliability implementation and end-to-end staging delivery tracking completed.
 - [ ] Phase 5 DMARC enforcement completed after sufficient monitoring data is reviewed (intentionally deferred while the sending domain is new).
+- [x] Phase 6.1 admin pagination and bounded dashboard queries completed and verified on staging.
