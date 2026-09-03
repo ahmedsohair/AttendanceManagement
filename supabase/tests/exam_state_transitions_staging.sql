@@ -12,9 +12,11 @@ begin
   where email = 'invigilator01@example.com';
 
   insert into public.exam_sessions (
-    id, name, exam_date, start_time, published, status
+    id, name, exam_date, start_time, published, status,
+    import_checksum, import_student_count, import_room_count
   ) values (
-    v_session_id, 'State transition test', current_date, '09:00', false, 'draft'
+    v_session_id, 'State transition test', current_date, '09:00', false, 'draft',
+    repeat('c', 64), 1, 1
   );
   insert into public.rooms (id, exam_session_id, code, display_name)
   values (v_room_id, v_session_id, 'TEST-ROOM', 'Test Room');
