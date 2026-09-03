@@ -609,12 +609,21 @@ Staging load evidence captured on 3 September 2026:
 
 ### 7.5 CI quality gates
 
-- [ ] Type-check admin and shared web packages.
-- [ ] Run unit and integration tests.
-- [ ] Build the admin production bundle.
-- [ ] Run dependency and secret scanning.
-- [ ] Validate migrations against a temporary database.
+- [x] Type-check admin and shared web packages.
+- [x] Run unit and integration tests.
+- [x] Build the admin production bundle.
+- [x] Run dependency and secret scanning.
+- [x] Validate migrations against a temporary database.
 - [ ] Prevent deployment when critical checks fail.
+
+CI evidence captured on 3 September 2026:
+
+- GitHub Actions workflow `Web release gate` runs on pushes and pull requests targeting `main` or `hardening/staging`.
+- The hosted run for commit `86b854a` passed web type-checking, 49 unit/integration regressions, the admin production build, critical runtime dependency audit, full-history Gitleaks scanning, and the aggregate release gate.
+- A disposable PostgreSQL 17 service recreates the minimum Supabase role/auth primitives, applies the base schema and all 17 migrations in filename order, reapplies every migration to verify idempotency, and confirms all seven core application tables exist.
+- The critical audit gate reports existing lower-severity transitive advisories but blocks any critical runtime advisory. Unsafe forced downgrades remain prohibited.
+- Playwright was upgraded from 1.51.1 to 1.55.1 to remove its browser-download certificate advisory; all eight staging browser tests passed afterward.
+- Required-check enforcement still needs to be enabled in repository/deployment settings so a failed `Release gate` prevents promotion rather than merely reporting failure.
 
 ### Acceptance Criteria
 
