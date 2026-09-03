@@ -539,11 +539,18 @@ Implementation evidence (2026-09-03):
 
 ### 7.1 Unit tests
 
-- [ ] Student ID normalization and OCR candidate extraction.
-- [ ] Spreadsheet header aliases, blank rows, duplicate IDs, limits, and malformed files.
-- [ ] Attendance state transitions and mismatch rules.
-- [ ] Access-code normalization, generation, and hashing.
-- [ ] Report/export classification of present, mismatch-present, and absent students.
+- [x] Student ID normalization and OCR candidate extraction.
+- [x] Spreadsheet header aliases, blank rows, duplicate IDs, limits, and malformed files.
+- [x] Attendance state transitions and mismatch rules.
+- [x] Access-code normalization, generation, and hashing.
+- [x] Report/export classification of present, mismatch-present, and absent students.
+
+Implementation evidence (2026-09-03):
+
+- OCR candidate extraction was moved from the React component into the tested scanner OCR runtime without changing behavior.
+- Shared tests cover RMIT student-ID normalization and correct-room, wrong-room, redirect, override, duplicate, not-found, comments, and report classification.
+- Server unit tests cover access-code normalization/generation/hashing and parse real XLSX buffers through the production ExcelJS parser.
+- Spreadsheet regressions cover aliases, blank rows, row provenance, duplicate/conflicting IDs, missing columns, protected/legacy signatures, malformed content, and the 2,500-row limit.
 
 ### 7.2 API integration tests
 
