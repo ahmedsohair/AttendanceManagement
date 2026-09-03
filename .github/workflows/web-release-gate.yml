@@ -1,0 +1,104 @@
+name: Web release gate
+
+on:
+  pull_request:
+    branches:
+      - main
+      - hardening/staging
+  push:
+    branches:
+      - main
+      - hardening/staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-quality:
+    name: Type-check, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck:web
+      - run: npm run test:web
+      - run: npm --workspace @algo-attendance/admin run build
+
+  dependency-audit:
+    name: Critical dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=critical
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  migration-validation:
+    name: Temporary database migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: exampulse_ci
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d exampulse_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/exampulse_ci
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/validate-migrations-ci.sh
+
+  release-gate:
+    name: Release gate
+    if: always()
+    needs:
+      - web-quality
+      - dependency-audit
+      - secret-scan
+      - migration-validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every quality job to pass
+        env:
+          WEB_QUALITY: ${{ needs.web-quality.result }}
+          DEPENDENCY_AUDIT: ${{ needs.dependency-audit.result }}
+          SECRET_SCAN: ${{ needs.secret-scan.result }}
+          MIGRATION_VALIDATION: ${{ needs.migration-validation.result }}
+        run: |
+          test "$WEB_QUALITY" = "success"
+          test "$DEPENDENCY_AUDIT" = "success"
+          test "$SECRET_SCAN" = "success"
+          test "$MIGRATION_VALIDATION" = "success"
