@@ -21,14 +21,13 @@ type SessionRow = {
   created_at: string;
 };
 
-export type SessionsOverview = {
+export type DashboardData = {
   activeSessions: ExamSession[];
   draftSessions: ExamSession[];
   closedSessions: ExamSession[];
   roomCountBySessionId: Map<string, number>;
-};
-
-export type DashboardData = SessionsOverview & {
+  activeSessionCount: number;
+  draftSessionCount: number;
   overall: {
     present: number;
     mismatch: number;
@@ -223,6 +222,23 @@ type InvigilatorRpcRow = {
   email: string;
   full_name: string;
   total_count: number | string;
+};
+
+type DashboardSessionRpcRow = SessionRow & {
+  status: NonNullable<ExamSession["status"]>;
+  room_count: number | string;
+};
+
+type DashboardRpcResult = {
+  activeSessions: DashboardSessionRpcRow[];
+  draftSessions: DashboardSessionRpcRow[];
+  closedSessions: DashboardSessionRpcRow[];
+  activeCount: number | string;
+  draftCount: number | string;
+  presentCount: number | string;
+  mismatchCount: number | string;
+  incidentCount: number | string;
+  unassignedActiveRooms: number | string;
 };
 
 const uuidPattern =
@@ -847,44 +863,6 @@ export async function getInvigilatorPage(
   };
 }
 
-export async function getSessionsOverview(): Promise<SessionsOverview> {
-  if (!isSupabaseConfigured()) {
-    const store = await readStore();
-    return {
-      ...splitSessions(store.examSessions),
-      roomCountBySessionId: countRooms(
-        store.rooms.map((room) => ({ exam_session_id: room.examSessionId }))
-      )
-    };
-  }
-
-  const supabase = getSupabaseAdmin();
-  let sessionsResponse = await supabase
-    .from("exam_sessions")
-    .select("id, name, exam_date, start_time, published, status, created_at");
-
-  if (sessionsResponse.error?.message.includes("status")) {
-    sessionsResponse = await supabase
-      .from("exam_sessions")
-      .select("id, name, exam_date, start_time, published, created_at");
-  }
-
-  const roomsResponse = await supabase.from("rooms").select("id, exam_session_id");
-
-  if (sessionsResponse.error) {
-    throw new Error(sessionsResponse.error.message);
-  }
-
-  if (roomsResponse.error) {
-    throw new Error(roomsResponse.error.message);
-  }
-
-  return {
-    ...splitSessions((sessionsResponse.data || []).map(toExamSession)),
-    roomCountBySessionId: countRooms(roomsResponse.data || [])
-  };
-}
-
 export async function getDashboardData(): Promise<DashboardData> {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
@@ -892,7 +870,12 @@ export async function getDashboardData(): Promise<DashboardData> {
       store.examSessions.filter(isActiveExamSession).map((session) => session.id)
     );
 
-    const split = splitSessions(store.examSessions);
+    const allSessions = splitSessions(store.examSessions);
+    const split = {
+      activeSessions: allSessions.activeSessions.slice(0, 20),
+      draftSessions: allSessions.draftSessions.slice(0, 10),
+      closedSessions: allSessions.closedSessions.slice(0, 5)
+    };
     const activeRoomIds = new Set(
       store.rooms
         .filter((room) => activeSessionIds.has(room.examSessionId))
@@ -914,6 +897,8 @@ export async function getDashboardData(): Promise<DashboardData> {
 
     return {
       ...split,
+      activeSessionCount: allSessions.activeSessions.length,
+      draftSessionCount: allSessions.draftSessions.length,
       roomCountBySessionId: countRooms(
         store.rooms.map((room) => ({ exam_session_id: room.examSessionId }))
       ),
@@ -923,7 +908,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         incidents
       },
       needsAttention: buildNeedsAttention({
-        draftCount: split.draftSessions.length,
+        draftCount: allSessions.draftSessions.length,
         incidentCount: incidents,
         mismatchCount: mismatch,
         unassignedActiveRooms
@@ -931,101 +916,52 @@ export async function getDashboardData(): Promise<DashboardData> {
     };
   }
 
-  const overview = await getSessionsOverview();
-  const activeSessionIds = overview.activeSessions.map((session) => session.id);
-
-  if (!activeSessionIds.length) {
-    return {
-      ...overview,
-      overall: {
-        present: 0,
-        mismatch: 0,
-        incidents: 0
-      },
-      needsAttention: buildNeedsAttention({
-        draftCount: overview.draftSessions.length,
-        incidentCount: 0,
-        mismatchCount: 0,
-        unassignedActiveRooms: 0
-      })
-    };
-  }
-
   const supabase = getSupabaseAdmin();
-  const activeSessionIdSet = new Set(activeSessionIds);
-  const [
-    roomsResponse,
-    assignmentsResponse,
-    attendanceResponse,
-    mismatchResponse,
-    incidentsResponse
-  ] = await Promise.all([
-    supabase
-      .from("rooms")
-      .select("id, exam_session_id")
-      .in("exam_session_id", activeSessionIds),
-    supabase.from("room_assignments").select("room_id"),
-    supabase
-      .from("attendance_events")
-      .select("id", { count: "exact", head: true })
-      .in("exam_session_id", activeSessionIds),
-    supabase
-      .from("attendance_events")
-      .select("id", { count: "exact", head: true })
-      .in("exam_session_id", activeSessionIds)
-      .eq("room_mismatch", true),
-    supabase
-      .from("incidents")
-      .select("id", { count: "exact", head: true })
-      .in("exam_session_id", activeSessionIds)
-  ]);
-
-  if (roomsResponse.error) {
-    throw new Error(roomsResponse.error.message);
+  const response = await supabase.rpc("get_admin_dashboard_summary", {
+    p_active_limit: 20,
+    p_draft_limit: 10,
+    p_closed_limit: 5
+  });
+  if (response.error) {
+    throw new Error(response.error.message);
   }
 
-  if (assignmentsResponse.error) {
-    throw new Error(assignmentsResponse.error.message);
-  }
-
-  if (attendanceResponse.error) {
-    throw new Error(attendanceResponse.error.message);
-  }
-
-  if (mismatchResponse.error) {
-    throw new Error(mismatchResponse.error.message);
-  }
-
-  if (incidentsResponse.error) {
-    throw new Error(incidentsResponse.error.message);
-  }
-
-  const activeRoomIds = new Set(
-    (roomsResponse.data || [])
-      .filter((room) => activeSessionIdSet.has(room.exam_session_id))
-      .map((room) => room.id)
+  const summary = response.data as DashboardRpcResult;
+  const activeSessions = (summary.activeSessions || []).map(toExamSession);
+  const draftSessions = (summary.draftSessions || []).map(toExamSession);
+  const closedSessions = (summary.closedSessions || []).map(toExamSession);
+  const sessionRows = [
+    ...(summary.activeSessions || []),
+    ...(summary.draftSessions || []),
+    ...(summary.closedSessions || [])
+  ];
+  const roomCountBySessionId = new Map(
+    sessionRows.map((session) => [session.id, Number(session.room_count)])
   );
-  const assignedRoomIds = new Set(
-    (assignmentsResponse.data || [])
-      .map((assignment) => assignment.room_id)
-      .filter((roomId) => activeRoomIds.has(roomId))
-  );
-  const present = attendanceResponse.count || 0;
-  const mismatch = mismatchResponse.count || 0;
-  const incidents = incidentsResponse.count || 0;
+  const activeSessionCount = Number(summary.activeCount);
+  const draftSessionCount = Number(summary.draftCount);
+  const present = Number(summary.presentCount);
+  const mismatch = Number(summary.mismatchCount);
+  const incidents = Number(summary.incidentCount);
+  const unassignedActiveRooms = Number(summary.unassignedActiveRooms);
 
   return {
-    ...overview,
+    activeSessions,
+    draftSessions,
+    closedSessions,
+    roomCountBySessionId,
+    activeSessionCount,
+    draftSessionCount,
     overall: {
       present,
       mismatch,
       incidents
     },
     needsAttention: buildNeedsAttention({
-      draftCount: overview.draftSessions.length,
+      draftCount: draftSessionCount,
       incidentCount: incidents,
       mismatchCount: mismatch,
-      unassignedActiveRooms: activeRoomIds.size - assignedRoomIds.size
+      unassignedActiveRooms
     })
   };
 }

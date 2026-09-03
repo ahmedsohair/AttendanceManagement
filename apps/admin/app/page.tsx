@@ -12,13 +12,15 @@ export default async function DashboardPage() {
     activeSessions,
     draftSessions,
     closedSessions,
+    activeSessionCount,
+    draftSessionCount,
     overall,
     needsAttention,
     roomCountBySessionId
   } = await getDashboardData();
   logServerTiming("page.dashboard", startedAt, {
-    activeSessions: activeSessions.length,
-    draftSessions: draftSessions.length,
+    activeSessions: activeSessionCount,
+    draftSessions: draftSessionCount,
     closedSessions: closedSessions.length,
     present: overall.present,
     incidents: overall.incidents
@@ -40,7 +42,7 @@ export default async function DashboardPage() {
           <div className="grid compact-grid">
             <Link className="card metric-card compact-card" href="/sessions">
               <div className="subtle">Active Exams</div>
-              <div className="metric">{activeSessions.length}</div>
+              <div className="metric">{activeSessionCount}</div>
             </Link>
             <Link className="card metric-card compact-card" href="/attendance">
               <div className="subtle">Attendance Marked</div>
@@ -78,6 +80,12 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+          {activeSessionCount > activeSessions.length ? (
+            <div className="subtle">
+              Showing {activeSessions.length} of {activeSessionCount} active exams. View all sessions
+              for the complete list.
+            </div>
+          ) : null}
         </div>
 
         <div className="card attention-card">
@@ -136,6 +144,11 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+          {draftSessionCount > draftSessions.length ? (
+            <div className="subtle">
+              Showing {draftSessions.length} of {draftSessionCount} draft exams.
+            </div>
+          ) : null}
         </div>
 
         <div className="card">
@@ -143,7 +156,7 @@ export default async function DashboardPage() {
           <h2 className="section-title">Closed Exams</h2>
           <div className="exam-card-list">
             {closedSessions.length ? (
-              closedSessions.slice(0, 5).map((session) => (
+              closedSessions.map((session) => (
                 <Link key={session.id} className="exam-row-card" href={`/sessions/${session.id}`}>
                   <span>
                     <strong>{session.name}</strong>
