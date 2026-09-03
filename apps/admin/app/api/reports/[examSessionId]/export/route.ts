@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildExamSessionReport, uuidSchema } from "@algo-attendance/shared";
+import { buildExamSessionReport, classifyAttendanceStatus, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { readExamSessionStoreFast } from "@/lib/repository";
 import { buildWorkbookSheets } from "@/lib/spreadsheet";
@@ -58,11 +58,7 @@ export async function GET(
       return {
         student_id: allocation.studentId,
         student_name: allocation.studentName,
-        attendance_status: attendance
-          ? attendance.roomMismatch
-            ? "Mismatch present"
-            : "Present"
-          : "Absent",
+        attendance_status: classifyAttendanceStatus(attendance),
         expected_room: roomMap.get(allocation.roomId)?.code || allocation.roomId,
         zone: allocation.zone,
         course_code: allocation.courseCode || "",

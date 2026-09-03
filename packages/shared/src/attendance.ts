@@ -7,11 +7,16 @@ import type {
   LookupResult,
   MarkAttendanceRequest,
   RoomSummary
-} from "./types";
+} from "./types.ts";
 
 interface AttendanceDeps {
   now: () => string;
   nextId: () => string;
+}
+
+export function classifyAttendanceStatus(event?: AttendanceEvent) {
+  if (!event) return "Absent" as const;
+  return event.roomMismatch ? "Mismatch present" as const : "Present" as const;
 }
 
 function normalizeComment(comment?: string) {
