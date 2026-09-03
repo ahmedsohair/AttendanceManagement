@@ -1664,6 +1664,104 @@ export async function readExamSessionStoreFast(examSessionId: string): Promise<D
   };
 }
 
+export async function readExamSetupStoreFast(examSessionId?: string): Promise<DataStore> {
+  if (!isSupabaseConfigured()) {
+    const store = await readStore();
+    const roomIds = new Set(
+      examSessionId
+        ? store.rooms
+            .filter((room) => room.examSessionId === examSessionId)
+            .map((room) => room.id)
+        : []
+    );
+    return {
+      users: store.users
+        .filter((user) => user.role === "invigilator")
+        .map((user) => ({
+          ...user,
+          assignedRoomIds: user.assignedRoomIds.filter((roomId) => roomIds.has(roomId))
+        })),
+      examSessions: examSessionId
+        ? store.examSessions.filter((session) => session.id === examSessionId)
+        : [],
+      rooms: examSessionId
+        ? store.rooms.filter((room) => room.examSessionId === examSessionId)
+        : [],
+      studentAllocations: [],
+      attendanceEvents: [],
+      incidents: []
+    };
+  }
+
+  const supabase = getSupabaseAdmin();
+  const usersPromise = supabase
+    .from("users")
+    .select("id, email, full_name, role")
+    .eq("role", "invigilator");
+  const sessionPromise = examSessionId
+    ? supabase
+        .from("exam_sessions")
+        .select("id, name, exam_date, start_time, published, status, created_at")
+        .eq("id", examSessionId)
+        .maybeSingle()
+    : Promise.resolve({ data: null, error: null });
+  const roomsPromise = examSessionId
+    ? supabase
+        .from("rooms")
+        .select("id, exam_session_id, code, display_name, capacity")
+        .eq("exam_session_id", examSessionId)
+    : Promise.resolve({ data: [], error: null });
+  const [usersResponse, sessionResponse, roomsResponse] = await Promise.all([
+    usersPromise,
+    sessionPromise,
+    roomsPromise
+  ]);
+
+  for (const response of [usersResponse, sessionResponse, roomsResponse]) {
+    if (response.error) {
+      throw new Error(response.error.message);
+    }
+  }
+
+  const roomIds = (roomsResponse.data || []).map((room) => String(room.id));
+  const assignmentsResponse = roomIds.length
+    ? await supabase
+        .from("room_assignments")
+        .select("room_id, user_id")
+        .in("room_id", roomIds)
+    : { data: [], error: null };
+  if (assignmentsResponse.error) {
+    throw new Error(assignmentsResponse.error.message);
+  }
+
+  const assignedRoomsByUser = new Map<string, string[]>();
+  for (const assignment of assignmentsResponse.data || []) {
+    const userId = String(assignment.user_id);
+    const assignedRoomIds = assignedRoomsByUser.get(userId) || [];
+    assignedRoomIds.push(String(assignment.room_id));
+    assignedRoomsByUser.set(userId, assignedRoomIds);
+  }
+
+  return {
+    users: (usersResponse.data || []).map((user) =>
+      userWithAssignments(
+        {
+          id: String(user.id),
+          email: String(user.email),
+          full_name: String(user.full_name),
+          role: user.role as User["role"]
+        },
+        assignedRoomsByUser.get(String(user.id)) || []
+      )
+    ),
+    examSessions: sessionResponse.data ? [mapSupabaseSession(sessionResponse.data)] : [],
+    rooms: (roomsResponse.data || []).map(mapSupabaseRoom),
+    studentAllocations: [],
+    attendanceEvents: [],
+    incidents: []
+  };
+}
+
 export async function readAdminAuditStoreFast(
   examSessionFilter: string,
   options: {

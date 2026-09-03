@@ -1,5 +1,6 @@
+import { uuidSchema } from "@algo-attendance/shared";
 import { requireAdminPageUser } from "@/lib/auth";
-import { readStore } from "@/lib/store";
+import { readExamSetupStoreFast } from "@/lib/repository";
 import { ExamAssignmentWizard } from "@/components/exam-assignment-wizard";
 import { NewExamImportForm } from "@/components/new-exam-import-form";
 
@@ -16,9 +17,11 @@ export default async function NewSessionPage({
 }) {
   await requireAdminPageUser();
   const params = (await searchParams) || {};
-  const store = await readStore();
-  const session = params.sessionId
-    ? store.examSessions.find((item) => item.id === params.sessionId)
+  const parsedSessionId = uuidSchema.safeParse(params.sessionId);
+  const sessionId = parsedSessionId.success ? parsedSessionId.data : undefined;
+  const store = await readExamSetupStoreFast(sessionId);
+  const session = sessionId
+    ? store.examSessions.find((item) => item.id === sessionId)
     : null;
   const sessionRooms = session
     ? store.rooms
