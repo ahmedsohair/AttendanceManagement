@@ -116,3 +116,29 @@ export function describeOcrLoadError(error) {
   }
   return "OCR could not be initialized. Retry OCR or continue with manual entry.";
 }
+/**
+ * @param {string} text
+ * @returns {string | null}
+ */
+export function extractStudentIdCandidate(text) {
+  /** @type {Set<string>} */
+  const candidates = new Set();
+  const normalizedGroups = text.replace(/[^\d]/g, " ").split(/\s+/).filter(Boolean);
+
+  for (const group of normalizedGroups) {
+    if (group.length >= 6 && group.length <= 10) candidates.add(group);
+  }
+
+  const collapsedDigits = text.replace(/\D/g, "");
+  if (collapsedDigits.length >= 6 && collapsedDigits.length <= 10) {
+    candidates.add(collapsedDigits);
+  }
+
+  const preferred = Array.from(candidates).sort((left, right) => {
+    const leftScore = left.length === 7 ? 0 : Math.abs(left.length - 7) + 1;
+    const rightScore = right.length === 7 ? 0 : Math.abs(right.length - 7) + 1;
+    return leftScore - rightScore;
+  });
+
+  return preferred[0] || null;
+}

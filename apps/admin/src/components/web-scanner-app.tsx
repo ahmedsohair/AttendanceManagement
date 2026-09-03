@@ -22,6 +22,7 @@ import {
 } from "@/lib/scanner-outbox.mjs";
 import {
   describeOcrLoadError,
+  extractStudentIdCandidate,
   getOcrCanvasWidth,
   preprocessLowLightImageData,
   supportsWasmSimd
@@ -128,30 +129,6 @@ function normalizeAccessCode(input: string) {
   }
 
   return `AMS-${body.slice(0, 4)}${body.length > 4 ? `-${body.slice(4)}` : ""}`;
-}
-
-function extractStudentIdCandidate(text: string) {
-  const candidates = new Set<string>();
-  const normalizedGroups = text.replace(/[^\d]/g, " ").split(/\s+/).filter(Boolean);
-
-  for (const group of normalizedGroups) {
-    if (group.length >= 6 && group.length <= 10) {
-      candidates.add(group);
-    }
-  }
-
-  const collapsedDigits = text.replace(/\D/g, "");
-  if (collapsedDigits.length >= 6 && collapsedDigits.length <= 10) {
-    candidates.add(collapsedDigits);
-  }
-
-  const preferred = Array.from(candidates).sort((left, right) => {
-    const leftScore = left.length === 7 ? 0 : Math.abs(left.length - 7) + 1;
-    const rightScore = right.length === 7 ? 0 : Math.abs(right.length - 7) + 1;
-    return leftScore - rightScore;
-  });
-
-  return preferred[0] || null;
 }
 
 function getDeviceId() {
