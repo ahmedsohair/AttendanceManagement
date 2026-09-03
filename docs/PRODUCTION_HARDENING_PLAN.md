@@ -556,7 +556,7 @@ Implementation evidence (2026-09-03):
 
 - [x] Authentication and authorization for every route.
 - [x] Correct-room mark, wrong-room redirect, wrong-room override, duplicate and not-found cases.
-- [ ] Concurrent marks from multiple devices.
+- [x] Concurrent marks from multiple devices.
 - [x] Idempotent retries after simulated timeouts.
 - [x] Closed-exam and revoked-assignment behavior.
 - [x] Atomic import and assignment rollback.
@@ -569,6 +569,7 @@ Verification evidence (2026-09-03):
 - Database idempotency tests reuse request identifiers after simulated client retries and reject reuse with a changed payload; scanner request tests retain the same identifier across timeout retries.
 - Atomic import and room-assignment tests prove failed, conflicting, incomplete, and stale writes leave no partial committed state.
 - Staging authentication rate limits were verified independently, and all tested API failures use the stable status, error-code, message, and request-ID contract.
+- Two independently scheduled database sessions marked the same student concurrently: exactly one attendance event committed, the competing request returned `already_marked` with one `duplicate_attempt`, both idempotency records completed, and all test-tagged rows were removed afterward.
 
 ### 7.3 Browser end-to-end tests
 
