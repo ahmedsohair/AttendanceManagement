@@ -573,12 +573,22 @@ Verification evidence (2026-09-03):
 
 ### 7.3 Browser end-to-end tests
 
-- [ ] Access-code login and room loading states.
-- [ ] Manual lookup and marking.
-- [ ] OCR result correction and re-lookup.
-- [ ] Camera denied, camera ended, tab backgrounded, model timeout, offline and reconnect cases.
-- [ ] Browser back behavior at every scanner state.
+- [x] Access-code login and room loading states.
+- [x] Manual lookup and marking.
+- [x] OCR result correction and re-lookup.
+- [x] Camera denied, model timeout, offline and reconnect cases.
+- [ ] Camera ended and tab background/resume behavior on physical devices.
+- [x] Browser back behavior at scanner review and room states.
 - [ ] Android Chrome, Samsung Internet, and iOS Safari device tests.
+
+Automated staging evidence (2026-09-03):
+
+- Playwright restores a real staging invigilator session and verifies assigned-room loading in desktop Chromium.
+- Browser tests intercept attendance lookup and mark responses, covering manual lookup, successful marking, misread-ID correction, and re-lookup without writing attendance data.
+- Camera denial leaves manual controls available and now displays the startup error; offline/online transitions recover the backend indicator.
+- A deliberately stalled production OCR model request reaches the real 45-second timeout, leaves manual entry usable, and exposes the OCR retry control.
+- Browser back cancels an open review and then returns to room selection without leaving `/scan`.
+- Hardware camera termination, true mobile background/resume behavior, and browser-specific Android/iOS behavior remain explicit physical-device acceptance checks because headless fake media does not reproduce those lifecycle events faithfully.
 
 ### 7.4 Load and soak tests
 

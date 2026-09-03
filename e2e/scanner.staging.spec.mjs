@@ -29,8 +29,10 @@ function lookupResult(studentId, status = "ready_to_mark") {
   };
 }
 
-async function prepareScanner(page) {
-  await page.route(/paddle-model-ecology|cdn\.jsdelivr\.net.*onnxruntime/, (route) => route.abort());
+async function prepareScanner(page, { abortOcrModels = true } = {}) {
+  if (abortOcrModels) {
+    await page.route(/paddle-model-ecology|cdn\.jsdelivr\.net.*onnxruntime/, (route) => route.abort());
+  }
   await page.goto("/scan");
   await expect(page.getByRole("heading", { name: "Choose Room" })).toBeVisible();
 }
@@ -105,6 +107,16 @@ test("reports denied camera access while manual controls remain available", asyn
   await selectFirstRoom(page);
   await expect(page.getByText(/permission|denied|not allowed/i)).toBeVisible();
   await expect(page.getByPlaceholder("Manual student number")).toBeVisible();
+});
+
+test("times out a stalled OCR model load without blocking manual entry", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.route("https://paddle-model-ecology.bj.bcebos.com/**", () => new Promise(() => {}));
+  await prepareScanner(page, { abortOcrModels: false });
+  await selectFirstRoom(page);
+  await expect(page.getByText(/OCR loading timed out/i)).toBeVisible({ timeout: 50_000 });
+  await expect(page.getByPlaceholder("Manual student number")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry OCR Load" })).toBeVisible();
 });
 
 test("recovers scanner state after browser back", async ({ page }) => {
