@@ -117,7 +117,8 @@ export default async function SessionDetailPage({
               <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
                 <ConfirmSubmitButton
                   className="button danger"
-                  message="Delete this draft exam and its imported rooms and allocations? This cannot be undone."
+                  confirmationText={session.name}
+                  message={`Delete ${session.name} and its imported rooms and allocations? This cannot be undone.`}
                 >
                   <TrashIcon />
                   <span>Delete Draft</span>

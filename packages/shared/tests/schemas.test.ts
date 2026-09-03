@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   emailAddressSchema,
   emailAccessCodeRequestSchema,
+  deleteExamConfirmationSchema,
   examDateSchema,
   examStartTimeSchema,
   lookupRequestSchema,
@@ -24,6 +25,12 @@ test("accepts only complete 24-hour exam start times", () => {
   assert.equal(examStartTimeSchema.parse("23:59"), "23:59");
   assert.throws(() => examStartTimeSchema.parse("24:00"));
   assert.throws(() => examStartTimeSchema.parse("9:05"));
+});
+
+test("requires a bounded exam-name deletion confirmation", () => {
+  assert.equal(deleteExamConfirmationSchema.parse("  Test Exam  "), "Test Exam");
+  assert.throws(() => deleteExamConfirmationSchema.parse(""));
+  assert.throws(() => deleteExamConfirmationSchema.parse("x".repeat(201)));
 });
 
 test("normalizes room codes to one canonical case and spacing", () => {

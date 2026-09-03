@@ -1181,12 +1181,19 @@ export async function closeExamSession(sessionId: string) {
   }
 }
 
-export async function deleteExamSession(sessionId: string) {
+export async function deleteExamSession(
+  sessionId: string,
+  confirmationName: string,
+  actorUserId: string
+) {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
     const session = store.examSessions.find((item) => item.id === sessionId);
     if (!session) {
       throw new Error("Session not found.");
+    }
+    if (confirmationName !== session.name) {
+      throw new Error("Exam name confirmation does not match.");
     }
     if ((session.status || (session.published ? "active" : "draft")) !== "draft") {
       throw new Error(
@@ -1227,6 +1234,8 @@ export async function deleteExamSession(sessionId: string) {
   }
 
   const response = await getSupabaseAdmin().rpc("delete_draft_exam_session", {
+    p_actor_user_id: assertUuid(actorUserId, "Administrator ID"),
+    p_confirmation_name: confirmationName,
     p_exam_session_id: assertUuid(sessionId, "Exam session ID")
   });
   if (response.error) {

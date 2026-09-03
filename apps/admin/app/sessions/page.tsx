@@ -184,6 +184,7 @@ export default async function SessionsPage({
                       <form action={`/api/exam-sessions/${session.id}/delete`} method="post">
                         <ConfirmSubmitButton
                           className="button danger"
+                          confirmationText={session.name}
                           message={`Delete draft ${session.name}? This cannot be undone.`}
                         >
                           <TrashIcon />

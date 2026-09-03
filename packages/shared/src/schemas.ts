@@ -77,6 +77,7 @@ export const accessCodeSchema = z
   .toUpperCase()
   .regex(/^AMS-[A-Z0-9]{4}-[A-Z0-9]{4}$/, "A valid access code is required.");
 export const idempotencyKeySchema = requiredText(200, "Request identifier");
+export const deleteExamConfirmationSchema = requiredText(200, "Exam name confirmation");
 
 export const sessionImportRowSchema = z
   .object({

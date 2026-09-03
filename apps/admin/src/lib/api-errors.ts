@@ -66,6 +66,7 @@ function getKnownDomainStatus(error: unknown) {
     error.message.startsWith("Assign invigilators before publishing.") ||
     error.message.startsWith("Import verification metadata is missing.") ||
     error.message.startsWith("Imported roster verification failed:") ||
+    error.message.startsWith("Exam name confirmation does not match.") ||
     error.message.startsWith("No valid room assignments") ||
     error.message.startsWith("No assigned invigilators were found") ||
     error.message.startsWith("Select at least one failed email delivery") ||
