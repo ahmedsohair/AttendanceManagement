@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { roomAssignmentRequestSchema, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { updateExamRoomAssignments } from "@/lib/repository";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(
   request: Request,
@@ -29,8 +30,6 @@ export async function POST(
       roomAssignments: committedRoomAssignments
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to save room assignments.";
-    return NextResponse.json({ message }, { status: 400 });
+    return handleApiError(request, error, "Room-assignment update failed.");
   }
 }

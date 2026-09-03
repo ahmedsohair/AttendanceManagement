@@ -6,6 +6,8 @@ import { createAssignmentEmailJob } from "@/lib/email-delivery-repository";
 import { sendInvigilatorInstructionEmail } from "@/lib/invigilator-instruction-email";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
+import { API_ERROR_CODES, getRequestId } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const assignmentTemplateVersion = "assignment-v2";
 
@@ -55,7 +57,7 @@ export async function POST(
     const session = store.examSessions.find((item) => item.id === id);
 
     if (!session) {
-      return NextResponse.json({ message: "Exam session not found." }, { status: 404 });
+      return apiErrorResponse(request, API_ERROR_CODES.notFound, "Exam session not found.", { status: 404 });
     }
 
     const sessionRooms = store.rooms.filter((room) => room.examSessionId === id);
@@ -68,10 +70,7 @@ export async function POST(
       .filter((item) => item.rooms.length);
 
     if (!assignedInvigilators.length) {
-      return NextResponse.json(
-        { message: "No assigned invigilators were found for this exam." },
-        { status: 400 }
-      );
+      return apiErrorResponse(request, API_ERROR_CODES.validationError, "No assigned invigilators were found for this exam.", { status: 422 });
     }
 
     const appBaseUrl = getAppBaseUrl(request);
@@ -88,9 +87,12 @@ export async function POST(
         });
         sent += 1;
       } catch (error) {
-        failures.push(
-          `${item.user.email}: ${error instanceof Error ? error.message : "Email failed."}`
-        );
+        failures.push(item.user.email);
+        console.error("Invigilator instruction email failed.", {
+          requestId: getRequestId(request),
+          recipient: item.user.email,
+          error
+        });
       }
     }
 
@@ -101,7 +103,7 @@ export async function POST(
           failures,
           sent
         },
-        { status: sent ? 207 : 400 }
+        { status: sent ? 207 : 503 }
       );
     }
 
@@ -110,9 +112,6 @@ export async function POST(
       sent
     });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to send emails." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Instruction email request failed.");
   }
 }

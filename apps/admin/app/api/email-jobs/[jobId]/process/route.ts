@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { processEmailJobBatch } from "@/lib/email-job-processor";
+import { handleApiError } from "@/lib/api-response";
 
 function getAppBaseUrl(request: Request) {
   return (
@@ -28,9 +29,6 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to process email job." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Email job processing failed.");
   }
 }

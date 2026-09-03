@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { getEmailJob, listEmailDeliveries } from "@/lib/email-delivery-repository";
+import { API_ERROR_CODES } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
@@ -17,14 +19,11 @@ export async function GET(
     ]);
 
     if (!job) {
-      return NextResponse.json({ message: "Email job not found." }, { status: 404 });
+      return apiErrorResponse(request, API_ERROR_CODES.notFound, "Email job not found.", { status: 404 });
     }
 
     return NextResponse.json({ deliveries, job });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to read email job." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Email job read failed.");
   }
 }

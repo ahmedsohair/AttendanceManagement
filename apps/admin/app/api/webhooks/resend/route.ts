@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { recordEmailProviderEvent } from "@/lib/email-delivery-repository";
+import { API_ERROR_CODES } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 export const runtime = "nodejs";
 
@@ -32,17 +34,17 @@ function readSignatureHeaders(request: Request) {
 export async function POST(request: Request) {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!webhookSecret) {
-    return NextResponse.json({ message: "Webhook is not configured." }, { status: 503 });
+    return apiErrorResponse(request, API_ERROR_CODES.serviceUnavailable, "Webhook is not configured.", { status: 503 });
   }
 
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > maximumPayloadBytes) {
-    return NextResponse.json({ message: "Webhook payload is too large." }, { status: 413 });
+    return apiErrorResponse(request, API_ERROR_CODES.payloadTooLarge, "Webhook payload is too large.", { status: 413 });
   }
 
   const payload = await request.text();
   if (Buffer.byteLength(payload, "utf8") > maximumPayloadBytes) {
-    return NextResponse.json({ message: "Webhook payload is too large." }, { status: 413 });
+    return apiErrorResponse(request, API_ERROR_CODES.payloadTooLarge, "Webhook payload is too large.", { status: 413 });
   }
 
   let headers: ReturnType<typeof readSignatureHeaders>;
@@ -50,19 +52,19 @@ export async function POST(request: Request) {
     headers = readSignatureHeaders(request);
     new Webhook(webhookSecret).verify(payload, headers);
   } catch {
-    return NextResponse.json({ message: "Invalid webhook signature." }, { status: 401 });
+    return apiErrorResponse(request, API_ERROR_CODES.unauthenticated, "Invalid webhook signature.", { status: 401 });
   }
 
   let event: ResendWebhookEvent;
   try {
     event = JSON.parse(payload) as ResendWebhookEvent;
   } catch {
-    return NextResponse.json({ message: "Webhook payload is invalid." }, { status: 400 });
+    return apiErrorResponse(request, API_ERROR_CODES.malformedRequest, "Webhook payload is invalid.", { status: 400 });
   }
 
   const eventType = event.type?.trim();
   if (!eventType) {
-    return NextResponse.json({ message: "Webhook event type is missing." }, { status: 400 });
+    return apiErrorResponse(request, API_ERROR_CODES.validationError, "Webhook event type is missing.", { status: 422 });
   }
 
   try {
@@ -75,7 +77,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ duplicate: result.duplicate, received: true });
   } catch (error) {
-    console.error("Unable to persist verified Resend webhook event.", error);
-    return NextResponse.json({ message: "Unable to process webhook." }, { status: 500 });
+    return handleApiError(request, error, "Unable to persist verified Resend webhook event.");
   }
 }

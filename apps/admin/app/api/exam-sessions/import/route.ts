@@ -8,6 +8,8 @@ import {
 import { requireApiUser } from "@/lib/auth";
 import { parseSpreadsheetWithRowNumbers } from "@/lib/spreadsheet";
 import { importExamSession } from "@/lib/repository";
+import { API_ERROR_CODES, ApiRequestError } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const maxSpreadsheetBytes = 2 * 1024 * 1024;
 const maxSpreadsheetFiles = 10;
@@ -25,23 +27,17 @@ export async function POST(request: Request) {
     }
 
     if (!files.length) {
-      return NextResponse.json({ message: "At least one spreadsheet is required." }, { status: 400 });
+      return apiErrorResponse(request, API_ERROR_CODES.validationError, "At least one spreadsheet is required.", { status: 422 });
     }
 
     if (files.length > maxSpreadsheetFiles) {
-      return NextResponse.json(
-        { message: `Upload ${maxSpreadsheetFiles} spreadsheets or fewer.` },
-        { status: 400 }
-      );
+      return apiErrorResponse(request, API_ERROR_CODES.validationError, `Upload ${maxSpreadsheetFiles} spreadsheets or fewer.`, { status: 422 });
     }
 
     const parsedFiles: ImportFileWithRows[] = [];
     for (const [fileIndex, file] of files.entries()) {
       if (file.size > maxSpreadsheetBytes) {
-        return NextResponse.json(
-          { message: `${file.name || "Spreadsheet"} must be 2 MB or smaller.` },
-          { status: 400 }
-        );
+        return apiErrorResponse(request, API_ERROR_CODES.payloadTooLarge, `${file.name || "Spreadsheet"} must be 2 MB or smaller.`, { status: 413 });
       }
 
       try {
@@ -54,14 +50,19 @@ export async function POST(request: Request) {
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not read spreadsheet.";
-        return NextResponse.json(
-          { message: `${file.name || "Spreadsheet"}: ${message}` },
-          { status: 400 }
-        );
+        return apiErrorResponse(request, API_ERROR_CODES.validationError, `${file.name || "Spreadsheet"}: ${message}`, { status: 422 });
       }
     }
 
-    const rows = validateAndMergeImportFiles(parsedFiles);
+    let rows;
+    try {
+      rows = validateAndMergeImportFiles(parsedFiles);
+    } catch (error) {
+      throw new ApiRequestError(
+        error instanceof Error ? error.message : "Spreadsheet validation failed.",
+        422
+      );
+    }
 
     const payload = sessionImportPayloadSchema.parse({
       name: form.get("name"),
@@ -81,9 +82,6 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Import failed." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Exam spreadsheet import failed.");
   }
 }

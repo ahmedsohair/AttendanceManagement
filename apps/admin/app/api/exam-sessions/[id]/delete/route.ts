@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { deleteExamSession } from "@/lib/repository";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(
   request: Request,
@@ -19,9 +20,6 @@ export async function POST(
       }
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to delete session.";
-    const status = message === "Session not found." ? 404 : 400;
-    return NextResponse.json({ message }, { status });
+    return handleApiError(request, error, "Exam deletion failed.");
   }
 }

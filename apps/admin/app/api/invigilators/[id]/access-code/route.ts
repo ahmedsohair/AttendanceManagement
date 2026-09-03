@@ -5,6 +5,7 @@ import {
   activateInvigilatorAccessCode,
   stageInvigilatorAccessCode
 } from "@/lib/repository";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(
   request: Request,
@@ -21,10 +22,7 @@ export async function POST(
       status: result.status
     });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to generate access code." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Access-code generation failed.");
   }
 }
 
@@ -47,9 +45,6 @@ export async function PUT(
       status: result.status
     });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to activate access code." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Access-code activation failed.");
   }
 }

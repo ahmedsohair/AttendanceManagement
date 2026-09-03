@@ -3,11 +3,13 @@ import { buildExamSessionReport, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { readExamSessionStoreFast } from "@/lib/repository";
 import { buildWorkbookSheets } from "@/lib/spreadsheet";
+import { handleApiError } from "@/lib/api-response";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ examSessionId: string }> }
 ) {
+  try {
   await requireApiUser(request, { allowedRoles: ["admin"] });
   const { examSessionId: rawExamSessionId } = await params;
   const examSessionId = uuidSchema.parse(rawExamSessionId);
@@ -115,4 +117,7 @@ export async function GET(
       "Content-Disposition": `attachment; filename="attendance-${examSessionId}.xlsx"`
     }
   });
+  } catch (error) {
+    return handleApiError(request, error, "Attendance report export failed.");
+  }
 }

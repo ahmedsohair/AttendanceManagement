@@ -5,6 +5,7 @@ import {
 } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { retryFailedEmailDeliveries } from "@/lib/email-delivery-repository";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(
   request: Request,
@@ -19,9 +20,6 @@ export async function POST(
     const result = await retryFailedEmailDeliveries({ deliveryIds, jobId });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to retry emails." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Email delivery retry failed.");
   }
 }

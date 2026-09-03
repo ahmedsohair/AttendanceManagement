@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createInvigilatorRequestSchema } from "@algo-attendance/shared";
 import { getUserById, requireApiUser } from "@/lib/auth";
 import { createInvigilator } from "@/lib/repository";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   try {
@@ -26,8 +27,6 @@ export async function POST(request: Request) {
       user
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Unable to create invigilator.";
-    return NextResponse.json({ message }, { status: 400 });
+    return handleApiError(request, error, "Invigilator creation failed.");
   }
 }

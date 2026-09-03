@@ -8,6 +8,8 @@ import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-em
 import { recordInvigilatorAccessCodeEmailed } from "@/lib/repository";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { sendTrackedAccessCodeEmail } from "@/lib/tracked-access-code-email";
+import { API_ERROR_CODES } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 function getAppBaseUrl(request: Request) {
   return (
@@ -35,9 +37,11 @@ export async function POST(request: Request) {
 
     const suppliedIdempotencyKey = request.headers.get("idempotency-key");
     if (!suppliedIdempotencyKey) {
-      return NextResponse.json(
-        { message: "The email request identifier is required." },
-        { status: 400 }
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.validationError,
+        "The email request identifier is required.",
+        { status: 422 }
       );
     }
     const idempotencyKey = idempotencyKeySchema.parse(suppliedIdempotencyKey);
@@ -50,9 +54,6 @@ export async function POST(request: Request) {
     });
     return NextResponse.json(result, { status: result.job?.status === "processing" ? 202 : 200 });
   } catch (error) {
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to email access code." },
-      { status: 400 }
-    );
+    return handleApiError(request, error, "Access-code email request failed.");
   }
 }
