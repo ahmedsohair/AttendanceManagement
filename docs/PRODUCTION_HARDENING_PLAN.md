@@ -512,10 +512,18 @@ Implementation evidence (2026-09-03):
 
 ### 6.4 Protect destructive operations
 
-- [ ] Require explicit confirmation containing the exam name for permanent deletion.
-- [ ] Block deletion of active exams.
-- [ ] Prefer archive/soft-delete when audit history exists.
-- [ ] Record the admin user and timestamp for publish, close, reopen, assignment change, code rotation, and deletion.
+- [x] Require explicit confirmation containing the exam name for permanent deletion.
+- [x] Block deletion of active exams.
+- [x] Prefer archive/soft-delete when audit history exists.
+- [x] Record the admin user and timestamp for publish, close, reopen, assignment change, code rotation, and deletion.
+
+Implementation evidence (2026-09-03):
+
+- Draft deletion requires the exact exam name in the UI, API request, and locked database operation; the legacy one-argument deletion function is removed.
+- Only an admin actor can permanently delete a draft. Active exams must be closed, while closed exams and exams with attendance or incident history are retained.
+- The append-only `admin_audit_events` ledger records actor, timestamp, action, entity, exam, and safe operation details in the same transaction as each privileged database operation.
+- Service-role access to unaudited publish/close, assignment, and access-code rotation function signatures is revoked. Future closed-to-active transitions are classified as `exam_reopened`, although reopening is not currently offered by the app.
+- Staging typed-deletion and immutable-audit migrations passed their rollback-only test suites on 2026-09-03.
 
 ### Acceptance Criteria
 
