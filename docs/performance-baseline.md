@@ -134,3 +134,16 @@ All 150 requests succeeded. The attendance benchmark added 30 deterministic stag
 ## Current Conclusion
 
 The first measurements support region alignment as the lowest-risk initial performance change. Static delivery can remain globally cached while Node.js functions execute in Singapore near Supabase.
+
+## Staging Load and Soak Acceptance
+
+Captured on 3 September 2026 against the Singapore-aligned staging deployment. The test used all 20 seeded invigilator accounts, 10 rooms, and 1,000 unique synthetic students. It exercised authenticated lookup only and did not create or modify attendance records.
+
+| Workload | Requests | Concurrency | p50 | p95 | p99 | Maximum | Failures | RSS change |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Multi-room lookup load | 1,000 | 20 workers | 0.385 s | 0.613 s | 1.540 s | 3.894 s | 0 | -4 MiB |
+| Representative-device soak | 200 | 1 worker | 0.396 s | 0.536 s | 1.049 s | 1.119 s | 0 | +6 MiB |
+
+Both workloads passed their release gates. The concurrent gate requires zero errors, p95 no greater than 1.5 seconds, p99 no greater than 3 seconds, no request longer than 10 seconds, and client RSS growth no greater than 128 MiB. The soak gate requires zero errors, p95 no greater than 1 second, p99 no greater than 2 seconds, no request longer than 10 seconds, and client RSS growth no greater than 64 MiB.
+
+The measured RSS is the Node.js load-client process, not mobile Safari memory. Browser OCR memory remains part of physical-device acceptance. Supabase connection peaks and provider-measured Vercel function duration must be recorded separately from their dashboards for the same test timestamp (`2026-09-03T06:08:01Z`).

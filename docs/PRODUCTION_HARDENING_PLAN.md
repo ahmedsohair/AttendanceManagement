@@ -592,11 +592,20 @@ Automated staging evidence (2026-09-03):
 
 ### 7.4 Load and soak tests
 
-- [ ] Simulate 20 invigilators scanning concurrently.
-- [ ] Simulate 1,000 students across multiple rooms.
-- [ ] Run a 200-scan-per-device soak test.
-- [ ] Measure database connections, query latency, function duration, error rate, and memory.
-- [ ] Define failure thresholds that block release.
+- [x] Simulate 20 invigilators scanning concurrently.
+- [x] Simulate 1,000 students across multiple rooms.
+- [x] Run a 200-scan-per-device soak test.
+- [x] Measure request latency, error rate, and load-client memory.
+- [ ] Record provider-side database connections and Vercel function duration from their dashboards.
+- [x] Define failure thresholds that block release.
+
+Staging load evidence captured on 3 September 2026:
+
+- The read-only harness performed 1,000 unique student lookups across 10 rooms through 20 concurrent authenticated invigilator workers with zero failures. Latency was 385 ms p50, 613 ms p95, 1,540 ms p99, and 3,894 ms maximum; process RSS decreased by 4 MiB.
+- A representative authenticated device session then performed 200 sequential student lookups with zero failures. Latency was 396 ms p50, 536 ms p95, 1,049 ms p99, and 1,119 ms maximum; process RSS grew by 6 MiB.
+- Concurrent release gates are zero errors, p95 at most 1,500 ms, p99 at most 3,000 ms, maximum request time at most 10 seconds, and RSS growth at most 128 MiB. Soak gates are zero errors, p95 at most 1,000 ms, p99 at most 2,000 ms, maximum request time at most 10 seconds, and RSS growth at most 64 MiB.
+- The workload issued no attendance writes. Atomic and true concurrent mark behavior remains covered by the separate database and HTTP concurrency tests.
+- Database connection peaks and provider-measured function duration require timestamp-correlated Supabase and Vercel dashboard evidence; they are not exposed to the staging application key.
 
 ### 7.5 CI quality gates
 
