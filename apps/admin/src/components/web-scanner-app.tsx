@@ -1676,6 +1676,9 @@ export function WebScannerApp() {
             </details>
           ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
+          {!scanPaused && statusMessage ? (
+            <div className="web-camera-note">{statusMessage}</div>
+          ) : null}
           {cameraRecoveryNeeded ? (
             <button
               className="secondary"
