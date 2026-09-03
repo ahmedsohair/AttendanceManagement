@@ -479,12 +479,21 @@ Verification completed on staging on 3 September 2026:
 
 ### 6.2 Tighten input validation
 
-- [ ] Validate UUIDs at the API boundary.
-- [ ] Validate exam dates as real dates and start times as valid local times.
-- [ ] Normalize room codes consistently, with a documented case/whitespace policy.
-- [ ] Validate email addresses and reject control characters.
-- [ ] Reject duplicate uploaded files and conflicting duplicate students with actionable file/row messages.
-- [ ] Validate committed import counts before allowing publication.
+- [x] Validate UUIDs at the API boundary.
+- [x] Validate exam dates as real dates and start times as valid local times.
+- [x] Normalize room codes consistently, with a documented case/whitespace policy.
+- [x] Validate email addresses and reject control characters.
+- [x] Reject duplicate uploaded files and conflicting duplicate students with actionable file/row messages.
+- [x] Validate committed import counts before allowing publication.
+
+Verification completed on staging on 3 September 2026:
+
+- Shared strict schemas reject malformed UUIDs, impossible calendar dates, invalid 24-hour times, malformed emails, control characters, oversized values, unknown fields, and invalid access-code payloads.
+- Imported room codes follow one canonical policy: trim outer whitespace, collapse internal whitespace, and convert letters to uppercase.
+- Multi-file imports reject byte-identical files and report both filenames and worksheet row numbers for duplicate or conflicting students.
+- Publication compares committed import room/student counts with current database counts while holding the exam lock; legacy sessions received a one-time verification baseline.
+- The exam setup page now loads only invigilators and the selected draft's rooms and assignments, not historical attendance, incidents, or allocations.
+- Nine shared validation tests, admin/shared TypeScript checks, 21 scanner regressions, production builds, rollback-only database tests, and manual staging workflow checks pass.
 
 ### 6.3 Improve API contracts
 
@@ -658,3 +667,4 @@ Verification completed on staging on 3 September 2026:
 - [x] Phase 5 email reliability implementation and end-to-end staging delivery tracking completed.
 - [ ] Phase 5 DMARC enforcement completed after sufficient monitoring data is reviewed (intentionally deferred while the sending domain is new).
 - [x] Phase 6.1 admin pagination and bounded dashboard queries completed and verified on staging.
+- [x] Phase 6.2 strict API, import, and publication validation completed and verified on staging.
