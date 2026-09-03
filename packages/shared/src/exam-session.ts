@@ -1,4 +1,4 @@
-import type { ExamSession, ExamSessionStatus } from "./types";
+import type { ExamSession, ExamSessionStatus } from "./types.ts";
 
 export function getExamSessionStatus(session: ExamSession): ExamSessionStatus {
   if (session.status) {

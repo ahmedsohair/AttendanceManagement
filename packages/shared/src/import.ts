@@ -1,6 +1,6 @@
-import type { Room, SessionImportPayload, StudentAllocation } from "./types";
-import { normalizeRoomCode } from "./schemas";
-import { normalizeStudentId } from "./student-id";
+import type { Room, SessionImportPayload, StudentAllocation } from "./types.ts";
+import { normalizeRoomCode } from "./schemas.ts";
+import { normalizeStudentId } from "./student-id.ts";
 
 export interface NormalizedImport {
   rooms: Room[];

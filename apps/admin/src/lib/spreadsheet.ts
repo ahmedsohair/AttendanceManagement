@@ -106,6 +106,7 @@ export async function parseSpreadsheetWithRowNumbers(
         item[header] = cellToString(row.getCell(index + 1));
       }
     });
+    if (Object.values(item).every((value) => !String(value).trim())) return;
     rows.push({ values: item, rowNumber });
   });
 
