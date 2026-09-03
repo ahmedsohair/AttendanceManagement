@@ -554,13 +554,21 @@ Implementation evidence (2026-09-03):
 
 ### 7.2 API integration tests
 
-- [ ] Authentication and authorization for every route.
-- [ ] Correct-room mark, wrong-room redirect, wrong-room override, duplicate and not-found cases.
+- [x] Authentication and authorization for every route.
+- [x] Correct-room mark, wrong-room redirect, wrong-room override, duplicate and not-found cases.
 - [ ] Concurrent marks from multiple devices.
-- [ ] Idempotent retries after simulated timeouts.
-- [ ] Closed-exam and revoked-assignment behavior.
-- [ ] Atomic import and assignment rollback.
-- [ ] Rate limiting and structured errors.
+- [x] Idempotent retries after simulated timeouts.
+- [x] Closed-exam and revoked-assignment behavior.
+- [x] Atomic import and assignment rollback.
+- [x] Rate limiting and structured errors.
+
+Verification evidence (2026-09-03):
+
+- The deployed staging HTTP harness passed 19 unauthenticated-route checks, 14 invigilator-versus-admin authorization checks, and 10 functional/error-contract checks without changing application data.
+- Rollback-only atomic attendance tests cover correct-room marks, wrong-room redirects and overrides, duplicate attempts, unknown students, closed exams, and revoked room access.
+- Database idempotency tests reuse request identifiers after simulated client retries and reject reuse with a changed payload; scanner request tests retain the same identifier across timeout retries.
+- Atomic import and room-assignment tests prove failed, conflicting, incomplete, and stale writes leave no partial committed state.
+- Staging authentication rate limits were verified independently, and all tested API failures use the stable status, error-code, message, and request-ID contract.
 
 ### 7.3 Browser end-to-end tests
 
