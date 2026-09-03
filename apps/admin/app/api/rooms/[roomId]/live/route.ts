@@ -6,6 +6,8 @@ import { getRoomLiveState } from "@/lib/selectors";
 import { readStore } from "@/lib/store";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { logServerTiming } from "@/lib/timing";
+import { ApiRequestError, getApiErrorStatus } from "@/lib/api-errors";
+import { handleApiError } from "@/lib/api-response";
 
 async function getRoomExamSessionId(roomId: string) {
   const roomResponse = await getSupabaseAdmin()
@@ -19,7 +21,7 @@ async function getRoomExamSessionId(roomId: string) {
   }
 
   if (!roomResponse.data) {
-    throw new Error("Room not found.");
+    throw new ApiRequestError("Room not found.", 404);
   }
 
   return String(roomResponse.data.exam_session_id);
@@ -60,11 +62,8 @@ export async function GET(
     incidentCount = liveState.recentIncidents?.length;
     return NextResponse.json(liveState);
   } catch (error) {
-    status = 400;
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to load room state." },
-      { status: 400 }
-    );
+    status = getApiErrorStatus(error);
+    return handleApiError(request, error, "Room live-state request failed.");
   } finally {
     logServerTiming("api.rooms.live", startedAt, {
       status,

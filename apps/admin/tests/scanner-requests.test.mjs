@@ -95,6 +95,26 @@ test("distinguishes offline, expired-authentication, conflict, and server failur
   assert.equal(authExpired, 1);
 });
 
+test("preserves server error codes and correlation IDs", async () => {
+  const coordinator = createRequestCoordinator({
+    fetchImpl: async () => new Response(
+      JSON.stringify({
+        code: "VALIDATION_ERROR",
+        message: "Invalid room.",
+        requestId: "123e4567-e89b-42d3-a456-426614174000"
+      }),
+      { status: 422 }
+    )
+  });
+
+  await assert.rejects(coordinator.requestJson("validation", "/validation"), {
+    code: "VALIDATION_ERROR",
+    message: "Invalid room.",
+    requestId: "123e4567-e89b-42d3-a456-426614174000",
+    status: 422
+  });
+});
+
 test("cancelAll aborts every active scanner request", async () => {
   const coordinator = createRequestCoordinator({
     fetchImpl: (_input, init) => new Promise((_resolve, reject) => {

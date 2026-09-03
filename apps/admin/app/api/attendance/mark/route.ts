@@ -4,6 +4,7 @@ import { requireApiUserForRoom } from "@/lib/auth";
 import { applyAttendanceMark } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
 import { getApiErrorStatus } from "@/lib/api-errors";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
@@ -27,10 +28,7 @@ export async function POST(request: Request) {
     return NextResponse.json(response);
   } catch (error) {
     status = getApiErrorStatus(error);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to mark attendance." },
-      { status }
-    );
+    return handleApiError(request, error, "Attendance mark failed.");
   } finally {
     logServerTiming("api.attendance.mark", startedAt, { status });
   }

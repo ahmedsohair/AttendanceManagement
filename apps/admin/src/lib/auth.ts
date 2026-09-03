@@ -203,7 +203,7 @@ export async function requireApiUserForRoom(
   }
 
   if (roomResponse.data.exam_session_id !== options.examSessionId) {
-    throw new ApiRequestError("Room does not belong to this exam session.", 400);
+    throw new ApiRequestError("Room does not belong to this exam session.", 409);
   }
 
   if (user.role === "admin") {
@@ -287,7 +287,7 @@ export async function requireApiUserWithStore(
     }
 
     if (options.examSessionId && requestedRoom.examSessionId !== options.examSessionId) {
-      throw new ApiRequestError("Room does not belong to this exam session.", 400);
+      throw new ApiRequestError("Room does not belong to this exam session.", 409);
     }
 
     const accessibleRooms = listPublishedRoomsForUser(store, user.id);

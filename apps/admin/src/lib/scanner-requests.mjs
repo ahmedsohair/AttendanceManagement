@@ -3,12 +3,16 @@ export class ScannerRequestError extends Error {
    * @param {string} message
    * @param {"cancelled" | "timeout" | "offline" | "auth" | "conflict" | "server"} kind
    * @param {number | undefined} [status]
+   * @param {string | undefined} [code]
+   * @param {string | undefined} [requestId]
    */
-  constructor(message, kind, status) {
+  constructor(message, kind, status, code, requestId) {
     super(message);
     this.name = "ScannerRequestError";
     this.kind = kind;
     this.status = status;
+    this.code = code;
+    this.requestId = requestId;
   }
 }
 
@@ -87,19 +91,27 @@ export function createRequestCoordinator({
           payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
             ? payload.message
             : "Request failed.";
+        const errorCode = payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string"
+          ? payload.code
+          : undefined;
+        const requestId = payload && typeof payload === "object" && "requestId" in payload && typeof payload.requestId === "string"
+          ? payload.requestId
+          : response.headers.get("x-request-id") || undefined;
 
         if (response.status === 401) {
           onAuthExpired();
           throw new ScannerRequestError(
             "Your invigilator session has expired. Sign in again to continue.",
             "auth",
-            response.status
+            response.status,
+            errorCode,
+            requestId
           );
         }
         if (response.status === 409) {
-          throw new ScannerRequestError(serverMessage, "conflict", response.status);
+          throw new ScannerRequestError(serverMessage, "conflict", response.status, errorCode, requestId);
         }
-        throw new ScannerRequestError(serverMessage, "server", response.status);
+        throw new ScannerRequestError(serverMessage, "server", response.status, errorCode, requestId);
       }
 
       return /** @type {T} */ (payload);
@@ -109,7 +121,9 @@ export function createRequestCoordinator({
           timedOut
             ? "The request timed out. Check the connection and try again."
             : "Request cancelled.",
-          timedOut ? "timeout" : "cancelled"
+          timedOut ? "timeout" : "cancelled",
+          undefined,
+          timedOut ? "TIMEOUT" : undefined
         );
       }
       if (error instanceof ScannerRequestError) {
@@ -118,7 +132,9 @@ export function createRequestCoordinator({
       if (error instanceof TypeError) {
         throw new ScannerRequestError(
           "Unable to reach ExamPulse. Check your connection and try again.",
-          "offline"
+          "offline",
+          undefined,
+          "OFFLINE"
         );
       }
       throw error;

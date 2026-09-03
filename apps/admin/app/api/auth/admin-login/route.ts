@@ -4,6 +4,8 @@ import { adminLoginRequestSchema } from "@algo-attendance/shared";
 
 import { getUserById } from "@/lib/auth";
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
+import { API_ERROR_CODES } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const adminLoginLimits = {
   address: { limit: 30, windowSeconds: 600, blockSeconds: 900 },
@@ -28,9 +30,11 @@ export async function POST(request: NextRequest) {
   try {
     const parsedCredentials = adminLoginRequestSchema.safeParse(await request.json());
     if (!parsedCredentials.success) {
-      return NextResponse.json(
-        { message: "Enter a valid email address and password." },
-        { status: 400 }
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.validationError,
+        "Enter a valid email address and password.",
+        { status: 422 }
       );
     }
     const { email: normalizedEmail, password } = parsedCredentials.data;
@@ -41,12 +45,11 @@ export async function POST(request: NextRequest) {
       adminLoginLimits
     );
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { message: "Too many attempts. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) }
-        }
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.rateLimited,
+        "Too many attempts. Try again later.",
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
       );
     }
 
@@ -74,8 +77,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (error || !user) {
-      return NextResponse.json(
-        { message: "Invalid email or password." },
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.unauthenticated,
+        "Invalid email or password.",
         { status: 401 }
       );
     }
@@ -83,18 +88,16 @@ export async function POST(request: NextRequest) {
     const profile = await getUserById(user.id);
     if (!profile || profile.role !== "admin") {
       await supabase.auth.signOut();
-      return NextResponse.json(
-        { message: "Invalid email or password." },
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.unauthenticated,
+        "Invalid email or password.",
         { status: 401 }
       );
     }
 
     return response;
   } catch (error) {
-    console.error("Admin sign-in request failed.", error);
-    return NextResponse.json(
-      { message: "Unable to sign in. Try again shortly." },
-      { status: 500 }
-    );
+    return handleApiError(request, error, "Admin sign-in request failed.");
   }
 }

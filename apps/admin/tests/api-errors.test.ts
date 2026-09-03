@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   API_ERROR_CODES,
   ApiRequestError,
+  getApiClientMessage,
   getApiErrorCode,
   getApiErrorStatus,
   getRequestId
@@ -12,6 +13,17 @@ test("maps stable API errors to their HTTP status and code", () => {
   const error = new ApiRequestError("Not authenticated.", 401);
   assert.equal(getApiErrorStatus(error), 401);
   assert.equal(getApiErrorCode(error), API_ERROR_CODES.unauthenticated);
+});
+
+test("keeps internal diagnostics out of user-facing messages", () => {
+  assert.equal(
+    getApiClientMessage(new Error("permission denied for table users"), 500),
+    "An unexpected error occurred. Please try again."
+  );
+  assert.equal(
+    getApiClientMessage(new SyntaxError("Unexpected token at position 14"), 400),
+    "Request body must be valid JSON."
+  );
 });
 
 test("distinguishes malformed JSON from schema validation", () => {

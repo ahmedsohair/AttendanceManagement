@@ -3,6 +3,8 @@ import { emailAddressSchema } from "@algo-attendance/shared";
 
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { API_ERROR_CODES } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const resetPasswordLimits = {
   address: { limit: 20, windowSeconds: 3600, blockSeconds: 3600 },
@@ -25,12 +27,11 @@ export async function POST(request: Request) {
       resetPasswordLimits
     );
     if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { message: "Too many reset requests. Try again later." },
-        {
-          status: 429,
-          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) }
-        }
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.rateLimited,
+        "Too many reset requests. Try again later.",
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
       );
     }
 
@@ -65,10 +66,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, message: genericMessage });
   } catch (error) {
-    console.error("Password reset request failed.", error);
-    return NextResponse.json(
-      { message: "Unable to process the request. Try again later." },
-      { status: 503 }
-    );
+    return handleApiError(request, error, "Password reset request failed.", 503);
   }
 }

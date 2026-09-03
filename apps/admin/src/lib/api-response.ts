@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  ApiRequestError,
+  getApiClientMessage,
   getApiErrorCode,
   getApiErrorStatus,
   getRequestId,
@@ -37,10 +37,7 @@ export function handleApiError(
   const status = getApiErrorStatus(error, fallbackStatus);
   const code = getApiErrorCode(error, fallbackStatus);
   const requestId = getRequestId(request);
-  const isSafeError = error instanceof ApiRequestError || status < 500;
-  const message = isSafeError && error instanceof Error
-    ? error.message
-    : "An unexpected error occurred. Please try again.";
+  const message = getApiClientMessage(error, status);
 
   if (status >= 500) {
     console.error(context, { requestId, error });

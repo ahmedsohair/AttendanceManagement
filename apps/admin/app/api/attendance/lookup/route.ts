@@ -4,6 +4,7 @@ import { requireApiUserForRoom } from "@/lib/auth";
 import { lookupStudentFast } from "@/lib/repository";
 import { logServerTiming } from "@/lib/timing";
 import { getApiErrorStatus } from "@/lib/api-errors";
+import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
@@ -24,10 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ result });
   } catch (error) {
     status = getApiErrorStatus(error);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Lookup failed." },
-      { status }
-    );
+    return handleApiError(request, error, "Attendance lookup failed.");
   } finally {
     logServerTiming("api.attendance.lookup", startedAt, { status });
   }

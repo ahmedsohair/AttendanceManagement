@@ -78,3 +78,13 @@ export function getApiErrorCode(error: unknown, fallbackStatus = 500): ApiErrorC
   if (error instanceof Error && error.name === "ZodError") return API_ERROR_CODES.validationError;
   return getDefaultCode(getApiErrorStatus(error, fallbackStatus));
 }
+
+export function getApiClientMessage(error: unknown, status: number) {
+  if (error instanceof ApiRequestError) return error.message;
+  if (error instanceof SyntaxError) return "Request body must be valid JSON.";
+  if (error instanceof Error && error.name === "ZodError") return "Request validation failed.";
+  if (status === 409 && error instanceof Error) return error.message;
+  if (status === 503) return "The service is temporarily unavailable. Please try again.";
+  if (status >= 500) return "An unexpected error occurred. Please try again.";
+  return "The request could not be processed.";
+}

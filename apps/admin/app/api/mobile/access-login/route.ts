@@ -5,6 +5,8 @@ import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
 import { logServerTiming } from "@/lib/timing";
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
+import { API_ERROR_CODES, ApiRequestError, getApiErrorStatus } from "@/lib/api-errors";
+import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const accessLoginLimits = {
   address: { limit: 120, windowSeconds: 600, blockSeconds: 600 },
@@ -18,14 +20,14 @@ export async function POST(request: Request) {
   try {
     const parsedBody = accessCodeLoginRequestSchema.safeParse(await request.json());
     if (!parsedBody.success) {
-      throw new Error("Enter a valid invigilator access code.");
+      throw new ApiRequestError("Enter a valid invigilator access code.", 422);
     }
     const body = parsedBody.data;
     const accessCode = normalizeAccessCode(body.accessCode);
     const accessCodeHash = hashAccessCode(accessCode);
 
     if (!accessCode || !accessCodeHash) {
-      throw new Error("Enter a valid invigilator access code.");
+      throw new ApiRequestError("Enter a valid invigilator access code.", 422);
     }
 
     const rateLimit = await enforceAuthRateLimits(
@@ -36,12 +38,11 @@ export async function POST(request: Request) {
     );
     if (!rateLimit.allowed) {
       status = 429;
-      return NextResponse.json(
-        { message: "Too many attempts. Try again later." },
-        {
-          status,
-          headers: { "Retry-After": String(rateLimit.retryAfterSeconds) }
-        }
+      return apiErrorResponse(
+        request,
+        API_ERROR_CODES.rateLimited,
+        "Too many attempts. Try again later.",
+        { status, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
       );
     }
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
       );
 
       if (!user) {
-        throw new Error("Invalid access code.");
+        throw new ApiRequestError("Invalid access code.", 401);
       }
 
       return NextResponse.json({ email: user.email, user });
@@ -75,26 +76,15 @@ export async function POST(request: Request) {
     }
 
     if (!userResponse.data || userResponse.data.role !== "invigilator") {
-      throw new Error("Invalid access code.");
+      throw new ApiRequestError("Invalid access code.", 401);
     }
 
     return NextResponse.json({
       email: userResponse.data.email
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    const isCredentialError =
-      message === "Enter a valid invigilator access code." ||
-      message === "Invalid access code.";
-    status = isCredentialError ? 401 : 503;
-    return NextResponse.json(
-      {
-        message: isCredentialError
-          ? message
-          : "Unable to verify access code. Try again shortly."
-      },
-      { status }
-    );
+    status = getApiErrorStatus(error, 503);
+    return handleApiError(request, error, "Invigilator access-code login failed.", 503);
   } finally {
     logServerTiming("api.mobile.access-login", startedAt, { status });
   }

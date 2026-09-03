@@ -5,6 +5,8 @@ import { listPublishedRoomsForUser } from "@/lib/selectors";
 import { readStore } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { logServerTiming } from "@/lib/timing";
+import { getApiErrorStatus } from "@/lib/api-errors";
+import { handleApiError } from "@/lib/api-response";
 
 export async function GET(request: Request) {
   const startedAt = performance.now();
@@ -29,11 +31,8 @@ export async function GET(request: Request) {
     roomCount = rooms.length;
     return NextResponse.json({ rooms });
   } catch (error) {
-    status = 400;
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Unable to load rooms." },
-      { status: 400 }
-    );
+    status = getApiErrorStatus(error);
+    return handleApiError(request, error, "Mobile room-list request failed.");
   } finally {
     logServerTiming("api.mobile.my-rooms", startedAt, { status, roomCount });
   }
