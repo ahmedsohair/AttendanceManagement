@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fallbackLoginRequestSchema } from "@algo-attendance/shared";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { upsertFallbackUser } from "@/lib/auth";
 
@@ -15,11 +16,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = (await request.json()) as { email?: string; fullName?: string };
-    if (!body.email) {
-      return NextResponse.json({ message: "email is required" }, { status: 400 });
+    const parsedBody = fallbackLoginRequestSchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json({ message: "A valid email is required." }, { status: 400 });
     }
-
+    const body = parsedBody.data;
     const user = await upsertFallbackUser(body.email, body.fullName);
     return NextResponse.json({ user });
   } catch (error) {

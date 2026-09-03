@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUserForRoom, requireApiUserWithStore } from "@/lib/auth";
 import { getRoomLiveStateFast } from "@/lib/repository";
 import { getRoomLiveState } from "@/lib/selectors";
@@ -34,7 +35,8 @@ export async function GET(
   let incidentCount: number | undefined;
 
   try {
-    const { roomId } = await params;
+    const { roomId: rawRoomId } = await params;
+    const roomId = uuidSchema.parse(rawRoomId);
     if (isSupabaseConfigured()) {
       const examSessionId = await getRoomExamSessionId(roomId);
       await requireApiUserForRoom(request, {

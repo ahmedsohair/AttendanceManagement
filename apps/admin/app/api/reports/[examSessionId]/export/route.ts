@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildExamSessionReport } from "@algo-attendance/shared";
+import { buildExamSessionReport, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { readExamSessionStoreFast } from "@/lib/repository";
 import { buildWorkbookSheets } from "@/lib/spreadsheet";
@@ -9,7 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ examSessionId: string }> }
 ) {
   await requireApiUser(request, { allowedRoles: ["admin"] });
-  const { examSessionId } = await params;
+  const { examSessionId: rawExamSessionId } = await params;
+  const examSessionId = uuidSchema.parse(rawExamSessionId);
   const store = await readExamSessionStoreFast(examSessionId);
   const report = buildExamSessionReport(store, examSessionId);
 

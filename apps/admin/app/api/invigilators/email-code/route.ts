@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  emailAccessCodeRequestSchema,
+  idempotencyKeySchema
+} from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { sendInvigilatorAccessCodeEmail } from "@/lib/invigilator-instruction-email";
 import { recordInvigilatorAccessCodeEmailed } from "@/lib/repository";
@@ -16,53 +20,33 @@ function getAppBaseUrl(request: Request) {
 export async function POST(request: Request) {
   try {
     const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
-    const body = (await request.json()) as {
-      accessCode?: string;
-      email?: string;
-      fullName?: string;
-      userId?: string;
-    };
-    const accessCode = String(body.accessCode || "").trim();
-    const email = String(body.email || "").trim().toLowerCase();
-    const userId = String(body.userId || "").trim();
-
-    if (!accessCode || !email || !userId) {
-      return NextResponse.json(
-        { message: "Invigilator, access code, and email are required." },
-        { status: 400 }
-      );
-    }
+    const body = emailAccessCodeRequestSchema.parse(await request.json());
 
     if (!isSupabaseConfigured()) {
       await sendInvigilatorAccessCodeEmail({
-        accessCode,
+        accessCode: body.accessCode,
         appBaseUrl: getAppBaseUrl(request),
-        email,
-        fullName: String(body.fullName || "").trim()
+        email: body.email,
+        fullName: body.fullName
       });
-      await recordInvigilatorAccessCodeEmailed(userId, accessCode);
+      await recordInvigilatorAccessCodeEmailed(body.userId, body.accessCode);
       return NextResponse.json({ message: "Access code emailed." });
     }
 
-    const idempotencyKey = request.headers.get("idempotency-key")?.trim();
-    if (!idempotencyKey) {
+    const suppliedIdempotencyKey = request.headers.get("idempotency-key");
+    if (!suppliedIdempotencyKey) {
       return NextResponse.json(
         { message: "The email request identifier is required." },
         { status: 400 }
       );
     }
-    if (idempotencyKey.length > 200) {
-      return NextResponse.json(
-        { message: "The email request identifier is invalid." },
-        { status: 400 }
-      );
-    }
+    const idempotencyKey = idempotencyKeySchema.parse(suppliedIdempotencyKey);
     const result = await sendTrackedAccessCodeEmail({
-      accessCode,
+      accessCode: body.accessCode,
       appBaseUrl: getAppBaseUrl(request),
       idempotencyKey,
       requestedBy: admin.id,
-      userId
+      userId: body.userId
     });
     return NextResponse.json(result, { status: result.job?.status === "processing" ? 202 : 200 });
   } catch (error) {

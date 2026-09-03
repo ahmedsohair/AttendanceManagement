@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { getEmailJob, listEmailDeliveries } from "@/lib/email-delivery-repository";
 
@@ -8,7 +9,8 @@ export async function GET(
 ) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { jobId } = await params;
+    const { jobId: rawJobId } = await params;
+    const jobId = uuidSchema.parse(rawJobId);
     const [job, deliveries] = await Promise.all([
       getEmailJob(jobId),
       listEmailDeliveries(jobId)

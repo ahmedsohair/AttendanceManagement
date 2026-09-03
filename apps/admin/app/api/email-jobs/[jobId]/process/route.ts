@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { processEmailJobBatch } from "@/lib/email-job-processor";
 
@@ -17,7 +18,8 @@ export async function POST(
 ) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { jobId } = await params;
+    const { jobId: rawJobId } = await params;
+    const jobId = uuidSchema.parse(rawJobId);
     const result = await processEmailJobBatch({
       appBaseUrl: getAppBaseUrl(request),
       jobId,

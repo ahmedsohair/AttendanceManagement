@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
+import { adminLoginRequestSchema } from "@algo-attendance/shared";
 
 import { getUserById } from "@/lib/auth";
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
@@ -25,19 +26,14 @@ function getSupabaseSessionConfig() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
-
-    if (!email?.trim() || !password) {
+    const parsedCredentials = adminLoginRequestSchema.safeParse(await request.json());
+    if (!parsedCredentials.success) {
       return NextResponse.json(
-        { message: "Email and password are required." },
+        { message: "Enter a valid email address and password." },
         { status: 400 }
       );
     }
-
-    const normalizedEmail = email.trim().toLowerCase();
+    const { email: normalizedEmail, password } = parsedCredentials.data;
     const rateLimit = await enforceAuthRateLimits(
       request,
       "admin-login",

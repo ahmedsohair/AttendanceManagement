@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { accessCodeLoginRequestSchema } from "@algo-attendance/shared";
 import { hashAccessCode, normalizeAccessCode } from "@/lib/access-code";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
@@ -15,8 +16,12 @@ export async function POST(request: Request) {
   let status = 200;
 
   try {
-    const body = (await request.json()) as { accessCode?: string };
-    const accessCode = normalizeAccessCode(body.accessCode || "");
+    const parsedBody = accessCodeLoginRequestSchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      throw new Error("Enter a valid invigilator access code.");
+    }
+    const body = parsedBody.data;
+    const accessCode = normalizeAccessCode(body.accessCode);
     const accessCodeHash = hashAccessCode(accessCode);
 
     if (!accessCode || !accessCodeHash) {

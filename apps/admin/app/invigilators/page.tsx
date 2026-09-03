@@ -1,4 +1,11 @@
 import { randomUUID } from "node:crypto";
+import {
+  createInvigilatorRequestSchema,
+  emailAccessCodeRequestSchema,
+  idempotencyKeySchema,
+  updateInvigilatorRequestSchema,
+  uuidSchema
+} from "@algo-attendance/shared";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -58,18 +65,20 @@ async function getAccessCodeFlash(): Promise<AccessCodeFlash | null> {
 async function submitInvigilator(formData: FormData) {
   "use server";
 
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  let email = String(formData.get("email") || "").trim().toLowerCase();
   const submittedFullName = String(formData.get("fullName") || "").trim();
-  const fullName = submittedFullName || email.split("@")[0] || "Invigilator";
   let accessCode = "";
   let userId = "";
 
   try {
     await requireAdminPageUser();
-
-    if (!email) {
-      throw new Error("Email is required.");
-    }
+    const payload = createInvigilatorRequestSchema.parse({
+      email,
+      fullName: submittedFullName,
+      assignedRoomIds: []
+    });
+    email = payload.email;
+    const fullName = payload.fullName || email.split("@")[0] || "Invigilator";
 
     const result = await createInvigilatorRecord({
       email,
@@ -106,7 +115,8 @@ async function submitInvigilatorDetails(formData: FormData) {
 
   try {
     await requireAdminPageUser();
-    await updateInvigilatorDetails({ userId, email, fullName });
+    const payload = updateInvigilatorRequestSchema.parse({ userId, email, fullName });
+    await updateInvigilatorDetails(payload);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to update invigilator.";
@@ -136,27 +146,30 @@ async function submitAccessCodeEmail(formData: FormData) {
 
   try {
     const admin = await requireAdminPageUser();
-
-    if (!accessCode || !email || !userId || !idempotencyKey) {
-      throw new Error("Invigilator, access code, and email are required.");
-    }
+    const payload = emailAccessCodeRequestSchema.parse({
+      accessCode,
+      email,
+      fullName,
+      userId
+    });
+    const validatedIdempotencyKey = idempotencyKeySchema.parse(idempotencyKey);
 
     if (isSupabaseConfigured()) {
       await sendTrackedAccessCodeEmail({
-        accessCode,
+        accessCode: payload.accessCode,
         appBaseUrl: getAppBaseUrl(),
-        idempotencyKey,
+        idempotencyKey: validatedIdempotencyKey,
         requestedBy: admin.id,
-        userId
+        userId: payload.userId
       });
     } else {
       await sendInvigilatorAccessCodeEmail({
-        accessCode,
+        accessCode: payload.accessCode,
         appBaseUrl: getAppBaseUrl(),
-        email,
-        fullName
+        email: payload.email,
+        fullName: payload.fullName
       });
-      await recordInvigilatorAccessCodeEmailed(userId, accessCode);
+      await recordInvigilatorAccessCodeEmailed(payload.userId, payload.accessCode);
     }
   } catch (error) {
     const message =
@@ -177,7 +190,7 @@ async function submitInvigilatorDelete(formData: FormData) {
 
   try {
     await requireAdminPageUser();
-    await deleteInvigilator(userId);
+    await deleteInvigilator(uuidSchema.parse(userId));
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to delete invigilator.";

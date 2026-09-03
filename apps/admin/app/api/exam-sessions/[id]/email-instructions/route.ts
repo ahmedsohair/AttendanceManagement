@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { idempotencyKeySchema, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { createAssignmentEmailJob } from "@/lib/email-delivery-repository";
 import { sendInvigilatorInstructionEmail } from "@/lib/invigilator-instruction-email";
@@ -23,17 +24,14 @@ export async function POST(
 ) {
   try {
     const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const id = uuidSchema.parse(rawId);
 
     if (isSupabaseConfigured()) {
-      const suppliedIdempotencyKey = request.headers.get("idempotency-key")?.trim();
-      const idempotencyKey = suppliedIdempotencyKey || randomUUID();
-      if (idempotencyKey.length > 200) {
-        return NextResponse.json(
-          { message: "The email request identifier is invalid." },
-          { status: 400 }
-        );
-      }
+      const suppliedIdempotencyKey = request.headers.get("idempotency-key");
+      const idempotencyKey = suppliedIdempotencyKey
+        ? idempotencyKeySchema.parse(suppliedIdempotencyKey)
+        : randomUUID();
 
       const job = await createAssignmentEmailJob({
         examSessionId: id,

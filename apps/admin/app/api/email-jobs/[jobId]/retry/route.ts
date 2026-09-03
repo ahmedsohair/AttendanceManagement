@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  retryEmailDeliveriesRequestSchema,
+  uuidSchema
+} from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { retryFailedEmailDeliveries } from "@/lib/email-delivery-repository";
 
@@ -8,18 +12,9 @@ export async function POST(
 ) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { jobId } = await params;
-    const body = (await request.json()) as { deliveryIds?: unknown };
-    const deliveryIds = Array.isArray(body.deliveryIds)
-      ? body.deliveryIds.filter((value): value is string => typeof value === "string")
-      : [];
-
-    if (!deliveryIds.length || deliveryIds.length > 100) {
-      return NextResponse.json(
-        { message: "Select between 1 and 100 failed recipients to retry." },
-        { status: 400 }
-      );
-    }
+    const { jobId: rawJobId } = await params;
+    const jobId = uuidSchema.parse(rawJobId);
+    const { deliveryIds } = retryEmailDeliveriesRequestSchema.parse(await request.json());
 
     const result = await retryFailedEmailDeliveries({ deliveryIds, jobId });
     return NextResponse.json(result);

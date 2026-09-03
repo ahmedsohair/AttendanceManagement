@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { emailAddressSchema } from "@algo-attendance/shared";
 
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
 import { getSupabaseAdmin } from "@/lib/supabase";
@@ -11,14 +12,11 @@ const resetPasswordLimits = {
 const genericMessage =
   "If an eligible account exists, a password reset email will be sent shortly.";
 
-function isPlausibleEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as { email?: string };
-    const email = body.email?.trim().toLowerCase() || "";
+    const parsedEmail = emailAddressSchema.safeParse(body.email);
+    const email = parsedEmail.success ? parsedEmail.data : "";
 
     const rateLimit = await enforceAuthRateLimits(
       request,
@@ -36,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (isPlausibleEmail(email)) {
+    if (email) {
       const supabase = getSupabaseAdmin();
       const { data: profile, error: profileError } = await supabase
         .from("users")

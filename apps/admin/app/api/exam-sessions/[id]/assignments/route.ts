@@ -1,47 +1,23 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
+import { roomAssignmentRequestSchema, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import { updateExamRoomAssignments } from "@/lib/repository";
-
-type AssignmentPayload = {
-  expectedRoomAssignments?: Array<{
-    roomId?: string;
-    invigilatorIds?: string[];
-  }>;
-  roomAssignments?: Array<{
-    roomId?: string;
-    invigilatorIds?: string[];
-  }>;
-};
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const payload = (await request.json()) as AssignmentPayload;
-    const roomAssignments = (payload.roomAssignments || []).map((assignment) => ({
-      roomId: String(assignment.roomId || "").trim(),
-      invigilatorIds: (assignment.invigilatorIds || [])
-        .map((invigilatorId) => String(invigilatorId).trim())
-        .filter(Boolean)
-    }));
-    const expectedRoomAssignments = payload.expectedRoomAssignments
-      ? payload.expectedRoomAssignments.map((assignment) => ({
-          roomId: String(assignment.roomId || "").trim(),
-          invigilatorIds: (assignment.invigilatorIds || [])
-            .map((invigilatorId) => String(invigilatorId).trim())
-            .filter(Boolean)
-        }))
-      : undefined;
+    const { id: rawId } = await params;
+    const id = uuidSchema.parse(rawId);
+    const payload = roomAssignmentRequestSchema.parse(await request.json());
 
     const committedRoomAssignments = await updateExamRoomAssignments({
       examSessionId: id,
-      expectedRoomAssignments,
-      roomAssignments
+      expectedRoomAssignments: payload.expectedRoomAssignments,
+      roomAssignments: payload.roomAssignments
     });
 
     revalidatePath(`/sessions/${id}`);

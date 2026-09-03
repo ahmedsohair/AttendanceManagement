@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { activateAccessCodeRequestSchema, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
 import {
   activateInvigilatorAccessCode,
@@ -11,7 +12,8 @@ export async function POST(
 ) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const id = uuidSchema.parse(rawId);
     const result = await stageInvigilatorAccessCode(id);
     return NextResponse.json({
       accessCode: result.accessCode,
@@ -32,11 +34,12 @@ export async function PUT(
 ) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
-    const { id } = await params;
-    const body = (await request.json()) as { accessCode?: string };
+    const { id: rawId } = await params;
+    const id = uuidSchema.parse(rawId);
+    const body = activateAccessCodeRequestSchema.parse(await request.json());
     const result = await activateInvigilatorAccessCode(
       id,
-      String(body.accessCode || "")
+      body.accessCode
     );
 
     return NextResponse.json({

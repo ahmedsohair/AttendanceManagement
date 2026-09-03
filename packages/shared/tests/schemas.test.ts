@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   emailAddressSchema,
+  emailAccessCodeRequestSchema,
   examDateSchema,
   examStartTimeSchema,
   lookupRequestSchema,
   normalizeRoomCode,
+  retryEmailDeliveriesRequestSchema,
+  roomAssignmentRequestSchema,
   sessionImportPayloadSchema
 } from "../src/schemas.ts";
 
@@ -56,4 +59,40 @@ test("rejects non-UUID request identifiers and unknown request fields", () => {
   assert.deepEqual(lookupRequestSchema.parse(valid), valid);
   assert.throws(() => lookupRequestSchema.parse({ ...valid, roomId: "room-one" }));
   assert.throws(() => lookupRequestSchema.parse({ ...valid, unexpected: true }));
+});
+
+test("validates complete assignment snapshots", () => {
+  const roomId = "123e4567-e89b-42d3-a456-426614174000";
+  const invigilatorId = "123e4567-e89b-42d3-a456-426614174001";
+  assert.deepEqual(
+    roomAssignmentRequestSchema.parse({
+      roomAssignments: [{ roomId, invigilatorIds: [invigilatorId] }]
+    }),
+    { roomAssignments: [{ roomId, invigilatorIds: [invigilatorId] }] }
+  );
+  assert.throws(() =>
+    roomAssignmentRequestSchema.parse({
+      roomAssignments: [{ roomId: "not-a-uuid", invigilatorIds: [] }]
+    })
+  );
+});
+
+test("validates access-code email and retry payloads", () => {
+  const userId = "123e4567-e89b-42d3-a456-426614174000";
+  assert.equal(
+    emailAccessCodeRequestSchema.parse({
+      accessCode: "ams-abcd-2345",
+      email: "Person@Example.com",
+      userId
+    }).accessCode,
+    "AMS-ABCD-2345"
+  );
+  assert.throws(() =>
+    emailAccessCodeRequestSchema.parse({
+      accessCode: "AMS-INVALID",
+      email: "person@example.com",
+      userId
+    })
+  );
+  assert.throws(() => retryEmailDeliveriesRequestSchema.parse({ deliveryIds: ["invalid"] }));
 });
