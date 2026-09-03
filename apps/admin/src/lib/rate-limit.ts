@@ -2,6 +2,7 @@ import "server-only";
 
 import crypto from "node:crypto";
 import { assertDevelopmentFallbackAllowed, getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
+import { getRequestId } from "./api-errors";
 
 type RateLimitRule = {
   limit: number;
@@ -81,6 +82,7 @@ export async function enforceAuthRateLimits(
   const addressResult = await consumeLimit(addressHash, rules.address);
   if (!addressResult.allowed) {
     console.warn("Authentication rate limit enforced.", {
+      requestId: getRequestId(request),
       scope,
       dimension: "address",
       retryAfterSeconds: addressResult.retryAfterSeconds
@@ -91,6 +93,7 @@ export async function enforceAuthRateLimits(
   const identityResult = await consumeLimit(identityHash, rules.identity);
   if (!identityResult.allowed) {
     console.warn("Authentication rate limit enforced.", {
+      requestId: getRequestId(request),
       scope,
       dimension: "identity",
       retryAfterSeconds: identityResult.retryAfterSeconds

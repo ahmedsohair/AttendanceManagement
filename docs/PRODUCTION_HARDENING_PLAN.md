@@ -497,10 +497,18 @@ Verification completed on staging on 3 September 2026:
 
 ### 6.3 Improve API contracts
 
-- [ ] Define stable error codes for unauthenticated, forbidden, validation, conflict, timeout, offline, and internal errors.
-- [ ] Return correct HTTP statuses: 401, 403, 404, 409, 422, 429, and 500 where appropriate.
-- [ ] Keep user-safe messages separate from internal diagnostic details.
-- [ ] Add a correlation/request ID to responses and logs.
+- [x] Define stable error codes for unauthenticated, forbidden, validation, conflict, timeout, offline, and internal errors.
+- [x] Return correct HTTP statuses: 401, 403, 404, 409, 422, 429, and 500 where appropriate.
+- [x] Keep user-safe messages separate from internal diagnostic details.
+- [x] Add a correlation/request ID to responses and logs.
+
+Implementation evidence (2026-09-03):
+
+- Middleware now accepts only valid UUID request IDs or creates one, forwards it to every API route, and returns it in the `x-request-id` response header.
+- API failures use the stable `{ code, message, requestId }` contract while preserving the existing top-level `message` field for client compatibility.
+- Scanner request errors retain server error codes and request IDs; browser timeout and offline failures use explicit `TIMEOUT` and `OFFLINE` codes.
+- Known domain failures map to actionable 401/403/404/409/422/429 responses. Unknown database, workbook, and provider errors return a safe 500/503 message and log diagnostics with the request ID.
+- Five API-contract tests, 22 scanner regression tests, TypeScript validation, and the production build pass.
 
 ### 6.4 Protect destructive operations
 
