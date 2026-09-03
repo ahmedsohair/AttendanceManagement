@@ -33,6 +33,7 @@
     "test:staging-api": "powershell -ExecutionPolicy Bypass -File ./scripts/test-staging-api-contracts.ps1 -ConfirmStagingTest",
     "test:staging-concurrency": "powershell -ExecutionPolicy Bypass -File ./scripts/test-concurrent-attendance-staging.ps1 -ConfirmStagingTest",
     "test:staging-browser": "playwright test",
+    "test:staging-load": "powershell -ExecutionPolicy Bypass -File ./scripts/test-staging-load.ps1 -ConfirmStagingTest",
     "typecheck:web": "tsc -p packages/shared/tsconfig.json --noEmit --incremental false && tsc -p apps/admin/tsconfig.json --noEmit --incremental false",
     "verify:supabase": "node scripts/verify-supabase.mjs",
     "create:admin": "node --env-file-if-exists=.env.local --env-file-if-exists=.env scripts/create-admin.mjs"
