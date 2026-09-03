@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:scanner": "node --test tests/scanner-runtime.test.mjs tests/scanner-requests.test.mjs tests/scanner-ocr-runtime.test.mjs tests/scanner-outbox.test.mjs",
-    "test:api": "node --experimental-strip-types --test tests/api-errors.test.ts"
+    "test:api": "node --experimental-strip-types --test tests/api-errors.test.ts",
+    "test:server-unit": "node --experimental-strip-types --test tests/access-code.test.ts"
   },
   "dependencies": {
     "@algo-attendance/shared": "0.1.0",
