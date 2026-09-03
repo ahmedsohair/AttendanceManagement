@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { sessionImportPayloadSchema } from "@algo-attendance/shared";
+import {
+  sessionImportPayloadSchema,
+  validateAndMergeImportFiles,
+  type ImportFileWithRows
+} from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
-import { parseSpreadsheet } from "@/lib/spreadsheet";
+import { parseSpreadsheetWithRowNumbers } from "@/lib/spreadsheet";
 import { importExamSession } from "@/lib/repository";
 
 const maxSpreadsheetBytes = 2 * 1024 * 1024;
@@ -30,8 +35,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const rows = [];
-    for (const file of files) {
+    const parsedFiles: ImportFileWithRows[] = [];
+    for (const [fileIndex, file] of files.entries()) {
       if (file.size > maxSpreadsheetBytes) {
         return NextResponse.json(
           { message: `${file.name || "Spreadsheet"} must be 2 MB or smaller.` },
@@ -40,7 +45,13 @@ export async function POST(request: Request) {
       }
 
       try {
-        rows.push(...(await parseSpreadsheet(Buffer.from(await file.arrayBuffer()))));
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileName = `${(file.name || "Spreadsheet").replace(/[\u0000-\u001f\u007f]/g, "_")} (file ${fileIndex + 1})`;
+        parsedFiles.push({
+          checksum: createHash("sha256").update(buffer).digest("hex"),
+          fileName,
+          rows: await parseSpreadsheetWithRowNumbers(buffer)
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Could not read spreadsheet.";
         return NextResponse.json(
@@ -49,6 +60,8 @@ export async function POST(request: Request) {
         );
       }
     }
+
+    const rows = validateAndMergeImportFiles(parsedFiles);
 
     const payload = sessionImportPayloadSchema.parse({
       name: form.get("name"),

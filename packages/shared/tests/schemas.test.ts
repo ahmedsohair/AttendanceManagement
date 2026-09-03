@@ -11,6 +11,7 @@ import {
   roomAssignmentRequestSchema,
   sessionImportPayloadSchema
 } from "../src/schemas.ts";
+import { validateAndMergeImportFiles } from "../src/import-validation.ts";
 
 test("accepts only real ISO exam dates", () => {
   assert.equal(examDateSchema.parse("2028-02-29"), "2028-02-29");
@@ -95,4 +96,60 @@ test("validates access-code email and retry payloads", () => {
     })
   );
   assert.throws(() => retryEmailDeliveriesRequestSchema.parse({ deliveryIds: ["invalid"] }));
+});
+
+test("rejects identical import files with actionable names", () => {
+  const row = {
+    student_id: "1234567",
+    student_name: "Student One",
+    room: "ROOM A",
+    zone: "A"
+  };
+  assert.throws(
+    () =>
+      validateAndMergeImportFiles([
+        { checksum: "same", fileName: "first.xlsx (file 1)", rows: [{ row, rowNumber: 2 }] },
+        { checksum: "same", fileName: "second.xlsx (file 2)", rows: [{ row, rowNumber: 2 }] }
+      ]),
+    /second\.xlsx.*duplicates first\.xlsx/
+  );
+});
+
+test("reports both file rows for conflicting students", () => {
+  assert.throws(
+    () =>
+      validateAndMergeImportFiles([
+        {
+          checksum: "one",
+          fileName: "ug.xlsx (file 1)",
+          rows: [
+            {
+              row: {
+                student_id: "1234567",
+                student_name: "Student One",
+                room: "Room A",
+                zone: "A"
+              },
+              rowNumber: 7
+            }
+          ]
+        },
+        {
+          checksum: "two",
+          fileName: "pg.xlsx (file 2)",
+          rows: [
+            {
+              row: {
+                student_id: "1234567",
+                student_name: "Student One",
+                room: "Room B",
+                zone: "B"
+              },
+              rowNumber: 12
+            }
+          ]
+        }
+      ]),
+    /1234567.*ug\.xlsx.*row 7.*ROOM A.*pg\.xlsx.*row 12.*ROOM B/
+  );
 });

@@ -73,7 +73,14 @@ function normalizeHeader(value: string) {
   return aliases[compact] || value.trim().toLowerCase();
 }
 
-export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow[]> {
+export type ParsedSpreadsheetRow = {
+  row: SessionImportRow;
+  rowNumber: number;
+};
+
+export async function parseSpreadsheetWithRowNumbers(
+  buffer: Buffer
+): Promise<ParsedSpreadsheetRow[]> {
   const workbook = await readWorkbook(buffer);
   const worksheet = workbook.worksheets[0];
 
@@ -87,7 +94,7 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
     headers[columnNumber - 1] = normalizeHeader(cellToString(cell));
   });
 
-  const rows: Record<string, unknown>[] = [];
+  const rows: Array<{ values: Record<string, unknown>; rowNumber: number }> = [];
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) {
       return;
@@ -99,7 +106,7 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
         item[header] = cellToString(row.getCell(index + 1));
       }
     });
-    rows.push(item);
+    rows.push({ values: item, rowNumber });
   });
 
   if (!rows.length) {
@@ -110,40 +117,47 @@ export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow
     throw new Error(`Spreadsheet has too many rows. Maximum allowed is ${maxImportRows}.`);
   }
 
-  const normalizedRows = rows.map((row, index) => {
+  const normalizedRows = rows.map(({ values, rowNumber }) => {
     const normalized: Record<string, string> = {};
-    for (const [key, value] of Object.entries(row)) {
+    for (const [key, value] of Object.entries(values)) {
       const normalizedValue = String(value).trim();
       if (normalizedValue.length > maxCellLength) {
-        throw new Error(`Row ${index + 2} has a cell longer than ${maxCellLength} characters.`);
+        throw new Error(`Row ${rowNumber} has a cell longer than ${maxCellLength} characters.`);
       }
       normalized[key.trim().toLowerCase()] = normalizedValue;
     }
-    return normalized;
+    return { rowNumber, values: normalized };
   });
 
   for (const column of requiredColumns) {
-    if (!(column in normalizedRows[0])) {
+    if (!(column in normalizedRows[0].values)) {
       throw new Error(`Missing required column: ${column}`);
     }
   }
 
-  return normalizedRows.map((row, index) => {
+  return normalizedRows.map(({ values: row, rowNumber }) => {
     for (const column of requiredColumns) {
       if (!row[column]) {
-        throw new Error(`Row ${index + 2} is missing ${column}`);
+        throw new Error(`Row ${rowNumber} is missing ${column}`);
       }
     }
 
     return {
-      student_id: normalizeStudentId(row.student_id),
-      student_name: row.student_name || normalizeStudentId(row.student_id),
-      room: row.room,
-      zone: row.zone,
-      course_code: row.course_code || undefined,
-      program: row.program || undefined
+      row: {
+        student_id: normalizeStudentId(row.student_id),
+        student_name: row.student_name || normalizeStudentId(row.student_id),
+        room: row.room,
+        zone: row.zone,
+        course_code: row.course_code || undefined,
+        program: row.program || undefined
+      },
+      rowNumber
     };
   });
+}
+
+export async function parseSpreadsheet(buffer: Buffer): Promise<SessionImportRow[]> {
+  return (await parseSpreadsheetWithRowNumbers(buffer)).map((item) => item.row);
 }
 
 export async function buildWorkbookSheets(data: {
