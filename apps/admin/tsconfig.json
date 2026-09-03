@@ -13,6 +13,7 @@
       ]
     },
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "incremental": true,
     "isolatedModules": true

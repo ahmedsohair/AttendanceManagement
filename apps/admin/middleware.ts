@@ -14,12 +14,27 @@ function getSupabaseSessionConfig() {
 }
 
 export async function middleware(request: NextRequest) {
+  const suppliedRequestId = request.headers.get("x-request-id")?.trim();
+  const requestId = suppliedRequestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(suppliedRequestId)
+    ? suppliedRequestId
+    : crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-request-id", requestId);
+
+  const createNextResponse = () => {
+    const nextResponse = NextResponse.next({
+      request: { headers: requestHeaders }
+    });
+    nextResponse.headers.set("x-request-id", requestId);
+    return nextResponse;
+  };
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return createNextResponse();
+  }
+
   const authConfig = getSupabaseSessionConfig();
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers
-    }
-  });
+  let response = createNextResponse();
 
   if (!authConfig) {
     return response;
@@ -35,9 +50,7 @@ export async function middleware(request: NextRequest) {
           request.cookies.set(cookie.name, cookie.value);
         }
 
-        response = NextResponse.next({
-          request
-        });
+        response = createNextResponse();
 
         for (const cookie of cookiesToSet) {
           response.cookies.set(cookie.name, cookie.value, cookie.options);
@@ -65,5 +78,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"]
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
 };
