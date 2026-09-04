@@ -5,8 +5,8 @@ import { getRoomLiveStateFast } from "@/lib/repository";
 import { getRoomLiveState } from "@/lib/selectors";
 import { readStore } from "@/lib/store";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
-import { logServerTiming } from "@/lib/timing";
-import { ApiRequestError, getApiErrorStatus } from "@/lib/api-errors";
+import { logApiTiming } from "@/lib/timing";
+import { ApiRequestError, getApiErrorCode, getApiErrorStatus } from "@/lib/api-errors";
 import { handleApiError } from "@/lib/api-response";
 
 async function getRoomExamSessionId(roomId: string) {
@@ -33,8 +33,7 @@ export async function GET(
 ) {
   const startedAt = performance.now();
   let status = 200;
-  let presentCount: number | undefined;
-  let incidentCount: number | undefined;
+  let code = "OK";
 
   try {
     const { roomId: rawRoomId } = await params;
@@ -47,8 +46,6 @@ export async function GET(
         examSessionId
       });
       const roomState = await getRoomLiveStateFast(roomId);
-      presentCount = roomState.summary?.presentCount;
-      incidentCount = roomState.recentIncidents?.length;
       return NextResponse.json(roomState);
     }
 
@@ -58,17 +55,12 @@ export async function GET(
     });
     const store = authorizedStore || (await readStore());
     const liveState = getRoomLiveState(store, roomId);
-    presentCount = liveState.summary?.presentCount;
-    incidentCount = liveState.recentIncidents?.length;
     return NextResponse.json(liveState);
   } catch (error) {
     status = getApiErrorStatus(error);
+    code = getApiErrorCode(error);
     return handleApiError(request, error, "Room live-state request failed.");
   } finally {
-    logServerTiming("api.rooms.live", startedAt, {
-      status,
-      presentCount,
-      incidentCount
-    });
+    logApiTiming(request, startedAt, status, code);
   }
 }

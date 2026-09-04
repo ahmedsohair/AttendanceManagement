@@ -3,9 +3,9 @@ import { accessCodeLoginRequestSchema } from "@algo-attendance/shared";
 import { hashAccessCode, normalizeAccessCode } from "@/lib/access-code";
 import { getSupabaseAdmin, isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
-import { logServerTiming } from "@/lib/timing";
+import { logApiTiming } from "@/lib/timing";
 import { enforceAuthRateLimits } from "@/lib/rate-limit";
-import { API_ERROR_CODES, ApiRequestError, getApiErrorStatus } from "@/lib/api-errors";
+import { API_ERROR_CODES, ApiRequestError, getApiErrorCode, getApiErrorStatus } from "@/lib/api-errors";
 import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
 const accessLoginLimits = {
@@ -16,6 +16,7 @@ const accessLoginLimits = {
 export async function POST(request: Request) {
   const startedAt = performance.now();
   let status = 200;
+  let code = "OK";
 
   try {
     const parsedBody = accessCodeLoginRequestSchema.safeParse(await request.json());
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     );
     if (!rateLimit.allowed) {
       status = 429;
+      code = API_ERROR_CODES.rateLimited;
       return apiErrorResponse(
         request,
         API_ERROR_CODES.rateLimited,
@@ -84,8 +86,9 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     status = getApiErrorStatus(error, 503);
+    code = getApiErrorCode(error, 503);
     return handleApiError(request, error, "Invigilator access-code login failed.", 503);
   } finally {
-    logServerTiming("api.mobile.access-login", startedAt, { status });
+    logApiTiming(request, startedAt, status, code);
   }
 }

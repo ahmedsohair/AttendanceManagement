@@ -102,3 +102,30 @@ test("telemetry fails closed on unrecognized paths and field values", () => {
   assert.equal(record.status, 500);
   assert.doesNotMatch(JSON.stringify(record), /secret/);
 });
+
+test("scanner telemetry preserves safe routes and classified failure codes", () => {
+  const routes = ["/api/mobile/access-login", "/api/mobile/my-rooms",
+    "/api/rooms/123e4567-e89b-42d3-a456-426614174000/live"];
+  const failures = [
+    new ApiRequestError("Invalid access code.", 401),
+    new ApiRequestError("Not allowed.", 403),
+    new ApiRequestError("Too many attempts.", 429),
+    new Error("private database diagnostic")
+  ];
+  for (const route of routes) {
+    for (const error of failures) {
+      const status = getApiErrorStatus(error, 503);
+      const code = getApiErrorCode(error, 503);
+      const record = buildApiTelemetry({
+        event: "api.request", requestId: "123e4567-e89b-42d3-a456-426614174000",
+        url: `https://example.test${route}?accessCode=secret`, method: "GET",
+        status, code
+      });
+      assert.equal(record.route, route.startsWith("/api/rooms/") ? "/api/rooms/:id/live" : route);
+      assert.equal(record.status, status);
+      assert.equal(record.code, code);
+      assert.notEqual(record.code, "UNKNOWN");
+      assert.doesNotMatch(JSON.stringify(record), /secret|private database/);
+    }
+  }
+});

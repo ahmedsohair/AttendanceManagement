@@ -645,6 +645,7 @@ First implementation slice (4 September 2026):
 - Shared 5xx API handling no longer logs raw exception objects. Error records intentionally omit raw messages, stacks, request bodies, credentials, query strings, and student identifiers.
 - Dynamic route identifiers are replaced by `:id`, and unknown paths/field values fail closed. Generated request IDs remain stable across repeated calls for the same Request object even without middleware.
 - New tests cover correlation stability, field allowlisting, and rejection of sensitive/unknown telemetry values. Remaining API route timing, other logging call sites, client tracking, dashboards, and alerts are not yet complete.
+- Local follow-up: access-code login, assigned-room loading, and room live-state refresh now use the same privacy-safe request timing format. Rate-limit early returns and caught errors retain their result codes; room identifiers and query strings are excluded. Added scanner route/error classification coverage. This slice is not pushed or deployed while the dependency-audit gate is unresolved; Phase 8 remains incomplete.
 
 - [ ] Add structured server logs with request ID, route, duration, result code, region, and safe contextual identifiers.
 - [ ] Never log access codes, passwords, tokens, full spreadsheet contents, or unnecessary student data.
