@@ -1,8 +1,10 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { requireApiUser } from "@/lib/auth";
 import { handleApiError } from "@/lib/api-response";
 
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   try {
     const user = await requireApiUser(request, {
       allowedRoles: ["admin", "invigilator"]
@@ -13,3 +15,5 @@ export async function GET(request: Request) {
     return handleApiError(request, error, "User profile request failed.");
   }
 }
+
+export const GET = observeApiHandler(handleGET, logApiTiming);

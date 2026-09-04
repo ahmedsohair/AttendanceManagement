@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { adminLoginRequestSchema } from "@algo-attendance/shared";
@@ -26,7 +28,7 @@ function getSupabaseSessionConfig() {
   return { url, publishableKey };
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   try {
     const parsedCredentials = adminLoginRequestSchema.safeParse(await request.json());
     if (!parsedCredentials.success) {
@@ -101,3 +103,5 @@ export async function POST(request: NextRequest) {
     return handleApiError(request, error, "Admin sign-in request failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

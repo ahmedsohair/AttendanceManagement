@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { roomAssignmentRequestSchema, uuidSchema } from "@algo-attendance/shared";
@@ -5,7 +7,7 @@ import { requireApiUser } from "@/lib/auth";
 import { updateExamRoomAssignments } from "@/lib/repository";
 import { handleApiError } from "@/lib/api-response";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -34,3 +36,5 @@ export async function POST(
     return handleApiError(request, error, "Room-assignment update failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

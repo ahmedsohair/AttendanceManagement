@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { recordEmailProviderEvent } from "@/lib/email-delivery-repository";
@@ -31,7 +33,7 @@ function readSignatureHeaders(request: Request) {
   };
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();
   if (!webhookSecret) {
     return apiErrorResponse(request, API_ERROR_CODES.serviceUnavailable, "Webhook is not configured.", { status: 503 });
@@ -80,3 +82,5 @@ export async function POST(request: Request) {
     return handleApiError(request, error, "Unable to persist verified Resend webhook event.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

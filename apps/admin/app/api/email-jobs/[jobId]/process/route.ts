@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { uuidSchema } from "@algo-attendance/shared";
@@ -13,7 +15,7 @@ function getAppBaseUrl(request: Request) {
   );
 }
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
@@ -32,3 +34,5 @@ export async function POST(
     return handleApiError(request, error, "Email job processing failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

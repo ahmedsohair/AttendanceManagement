@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
@@ -5,7 +7,7 @@ import { getEmailJob, listEmailDeliveries } from "@/lib/email-delivery-repositor
 import { API_ERROR_CODES } from "@/lib/api-errors";
 import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
-export async function GET(
+async function handleGET(
   request: Request,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
@@ -27,3 +29,5 @@ export async function GET(
     return handleApiError(request, error, "Email job read failed.");
   }
 }
+
+export const GET = observeApiHandler(handleGET, logApiTiming);

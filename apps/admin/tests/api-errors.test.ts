@@ -1,5 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { observeApiHandler } from "../src/lib/api-observer.ts";
+
+test("API observation preserves response identity, cookies, body and thrown errors", async () => {
+  const response = new Response("private data", { status: 207, headers: { "set-cookie": "session=private" } });
+  const request = new Request("https://example.test");
+  const handler = observeApiHandler(async (_request: Request, id: number) => { assert.equal(id, 5); return response; }, () => { throw new Error("log failure"); });
+  assert.equal(await handler(request, 5), response);
+  assert.equal(response.bodyUsed, false);
+  assert.equal(response.headers.get("set-cookie"), "session=private");
+  const failure = new Error("private");
+  const broken = observeApiHandler(async () => { throw failure; }, () => undefined);
+  await assert.rejects(broken(request), (error) => error === failure);
+});
 import { buildApiTelemetry, telemetryRoute } from "../src/lib/telemetry.ts";
 import {
   API_ERROR_CODES,

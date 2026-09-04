@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { buildExamSessionReport, classifyAttendanceStatus, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
@@ -5,7 +7,7 @@ import { readExamSessionStoreFast } from "@/lib/repository";
 import { buildWorkbookSheets } from "@/lib/spreadsheet";
 import { handleApiError } from "@/lib/api-response";
 
-export async function GET(
+async function handleGET(
   request: Request,
   { params }: { params: Promise<{ examSessionId: string }> }
 ) {
@@ -117,3 +119,5 @@ export async function GET(
     return handleApiError(request, error, "Attendance report export failed.");
   }
 }
+
+export const GET = observeApiHandler(handleGET, logApiTiming);

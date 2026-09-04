@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { activateAccessCodeRequestSchema, uuidSchema } from "@algo-attendance/shared";
 import { requireApiUser } from "@/lib/auth";
@@ -7,7 +9,7 @@ import {
 } from "@/lib/repository";
 import { handleApiError } from "@/lib/api-response";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -26,7 +28,7 @@ export async function POST(
   }
 }
 
-export async function PUT(
+async function handlePUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -49,3 +51,6 @@ export async function PUT(
     return handleApiError(request, error, "Access-code activation failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);
+export const PUT = observeApiHandler(handlePUT, logApiTiming);

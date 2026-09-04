@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import {
   emailAccessCodeRequestSchema,
@@ -19,7 +21,7 @@ function getAppBaseUrl(request: Request) {
   );
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const body = emailAccessCodeRequestSchema.parse(await request.json());
@@ -57,3 +59,5 @@ export async function POST(request: Request) {
     return handleApiError(request, error, "Access-code email request failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

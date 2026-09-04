@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import {
   retryEmailDeliveriesRequestSchema,
@@ -7,7 +9,7 @@ import { requireApiUser } from "@/lib/auth";
 import { retryFailedEmailDeliveries } from "@/lib/email-delivery-repository";
 import { handleApiError } from "@/lib/api-response";
 
-export async function POST(
+async function handlePOST(
   request: Request,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
@@ -23,3 +25,5 @@ export async function POST(
     return handleApiError(request, error, "Email delivery retry failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

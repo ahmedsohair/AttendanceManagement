@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { fallbackLoginRequestSchema } from "@algo-attendance/shared";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -5,7 +7,7 @@ import { upsertFallbackUser } from "@/lib/auth";
 import { API_ERROR_CODES } from "@/lib/api-errors";
 import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     if (process.env.NODE_ENV === "production") {
       return apiErrorResponse(request, API_ERROR_CODES.notFound, "Not found.", { status: 404 });
@@ -26,3 +28,5 @@ export async function POST(request: Request) {
     return handleApiError(request, error, "Development login failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

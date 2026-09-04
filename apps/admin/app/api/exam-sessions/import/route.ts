@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
@@ -14,7 +16,7 @@ import { apiErrorResponse, handleApiError } from "@/lib/api-response";
 const maxSpreadsheetBytes = 2 * 1024 * 1024;
 const maxSpreadsheetFiles = 10;
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     await requireApiUser(request, { allowedRoles: ["admin"] });
     const form = await request.formData();
@@ -85,3 +87,5 @@ export async function POST(request: Request) {
     return handleApiError(request, error, "Exam spreadsheet import failed.");
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);

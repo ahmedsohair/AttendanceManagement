@@ -1,3 +1,5 @@
+import { observeApiHandler } from "@/lib/api-observer";
+import { logApiTiming } from "@/lib/timing";
 import { NextResponse } from "next/server";
 import { emailAddressSchema } from "@algo-attendance/shared";
 
@@ -14,7 +16,7 @@ const resetPasswordLimits = {
 const genericMessage =
   "If an eligible account exists, a password reset email will be sent shortly.";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = (await request.json()) as { email?: string };
     const parsedEmail = emailAddressSchema.safeParse(body.email);
@@ -69,3 +71,5 @@ export async function POST(request: Request) {
     return handleApiError(request, error, "Password reset request failed.", 503);
   }
 }
+
+export const POST = observeApiHandler(handlePOST, logApiTiming);
