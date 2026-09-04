@@ -658,6 +658,8 @@ Local privacy follow-up (not deployed): assignment-email fallback failures no lo
 
 ### 8.2 Dashboards and alerts
 
+Verified staging checkpoint: runtime `e9e41c1` deployed successfully on 4 September 2026; GitHub run `33836864576` passed the complete release gate, using a live OSV audit after npm timed out. Public scanner load, health-page login protection, receiver authorization, authenticated synthetic lookup/heartbeat acceptance and invalid-payload rejection passed. Alerts remain disabled; no mark or email was submitted. Admin verification of persisted health metrics and actual inbox/cooldown/scheduler evidence remain pending. See `docs/PHASE_8_ACTIVATION.md` for the next step; do not repeat environment setup.
+
 Activation checkpoint (4 September 2026): owner reports the monitoring staging migration completed and all seven monitoring variables saved, with secrets retained privately. The owner's redeployment preceded the code push, so it did not establish live Phase 8 acceptance. The audit blocker has been addressed with a tested fail-closed OSV fallback; native npm subsequently returned a passing critical-threshold report, and independent OSV verification found zero critical / 25 non-critical advisories across 781 production package/version pairs. See `docs/DEPENDENCY_AUDIT.md` for limits and outstanding non-critical triage. No production deployment is authorized by this checkpoint.
 
 Implementation update (4 September 2026, local only; supersedes earlier implementation-pending notes):

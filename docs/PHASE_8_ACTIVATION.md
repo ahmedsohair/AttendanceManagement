@@ -1,5 +1,16 @@
 # Phase 8: activation and acceptance
 
+## Live checkpoint: 4 September 2026
+
+- Owner reports the staging migration and seven monitoring variables saved; alert sending remains disabled.
+- Runtime commit `e9e41c1` pushed to `hardening/staging`. [GitHub run 33836864576](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/33836864576) passed all checks, including build/tests, temporary migrations, secret scan and the critical dependency gate. GitHub exercised the live OSV fallback successfully after npm timed out.
+- [Staging deployment](https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/49oLNDGs5heo3qmwyipsjZgVev2T) reported success. No merge to `main` or production promotion performed.
+- Live `/scan`: 200. Unauthenticated `/health`: 307 to login. Unauthenticated scanner telemetry: 401. Alert check while disabled: 404.
+- Synthetic invigilator sign-in and existing-student lookup: successful (200). Authenticated heartbeat accepted (204), invalid telemetry rejected (422). The temporary test session was signed out. No attendance or incident mark and no email were submitted.
+- A 204 confirms receiver acceptance, not successful after-response persistence. **Next:** administrator opens `/health` to verify stored observations, followed by controlled alert inbox/cooldown and scheduler checks. Performance comparison, runbook drills and deferred physical-device acceptance remain outstanding.
+
+Earlier sections below describe the original local implementation boundaries; this checkpoint records subsequent staging progress.
+
 ## Implementation and safety boundaries
 
 Local implementation now includes a protected `/health` page, bounded service-only operational storage, authenticated scanner heartbeats, API completion timing, sampled client errors/OCR timings, and a protected alert check with a shared 15-minute per-category cooldown. Monitoring is disabled by default. No production migration, deployment, account change, or real alert was performed during implementation.
