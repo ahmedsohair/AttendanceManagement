@@ -13,6 +13,12 @@ on:
 permissions:
   contents: read
 
+env:
+  npm_config_fetch_timeout: "30000"
+  npm_config_fetch_retries: "1"
+  npm_config_fetch_retry_mintimeout: "1000"
+  npm_config_fetch_retry_maxtimeout: "5000"
+
 concurrency:
   group: web-release-${{ github.ref }}
   cancel-in-progress: true
@@ -28,7 +34,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck:web
       - run: npm run test:web
       - run: npm --workspace @algo-attendance/admin run build
@@ -43,8 +49,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Audit dependencies (fail closed on registry errors)
+        timeout-minutes: 3
+        run: npm audit --omit=dev --audit-level=critical
 
   secret-scan:
     name: Secret scan
