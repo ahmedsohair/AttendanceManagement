@@ -50,9 +50,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Audit dependencies (fail closed on registry errors)
-        timeout-minutes: 3
-        run: npm audit --omit=dev --audit-level=critical
+      - run: npm run test:audit
+      - name: Audit dependencies (npm with fail-closed OSV fallback)
+        timeout-minutes: 6
+        run: npm run audit:dependencies
 
   secret-scan:
     name: Secret scan

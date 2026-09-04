@@ -12,7 +12,7 @@ Stored diagnostics exclude student details, credentials, request bodies, raw err
 
 ## Staging activation order
 
-1. Keep production unchanged. Obtain a passing release gate for the intended staging commit before deployment; the previous npm audit registry timeout is not a security pass. Never bypass the audit on network errors.
+1. Keep production unchanged. Obtain a passing release gate for the intended staging commit before deployment. `npm run audit:dependencies` now uses native npm with a fresh, fail-closed OSV audit only on service/network failure; see `DEPENDENCY_AUDIT.md`. Neither network timeouts nor invalid reports count as a security pass.
 2. Apply the additive migration with the existing staging-only database connection variable:
 
 ```powershell

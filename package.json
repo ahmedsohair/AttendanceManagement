@@ -20,6 +20,8 @@
     "packages/*"
   ],
   "scripts": {
+    "audit:dependencies": "node scripts/audit-dependencies.mjs",
+    "test:audit": "node --test scripts/tests/audit-dependencies.test.mjs",
     "dev:admin": "npm --workspace @algo-attendance/admin run dev",
     "dev:mobile": "npm --workspace @algo-attendance/mobile run start",
     "build:mobile:configure": "npm --prefix apps/mobile run build:configure",
