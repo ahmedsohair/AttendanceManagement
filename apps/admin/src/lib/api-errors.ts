@@ -92,9 +92,17 @@ export class ApiRequestError extends Error {
   }
 }
 
+const generatedRequestIds = new WeakMap<Request, string>();
+
 export function getRequestId(request: Request) {
   const supplied = request.headers.get("x-request-id")?.trim();
-  return supplied && REQUEST_ID_PATTERN.test(supplied) ? supplied : crypto.randomUUID();
+  if (supplied && REQUEST_ID_PATTERN.test(supplied)) return supplied;
+  let generated = generatedRequestIds.get(request);
+  if (!generated) {
+    generated = crypto.randomUUID();
+    generatedRequestIds.set(request, generated);
+  }
+  return generated;
 }
 
 export function getApiErrorStatus(error: unknown, fallbackStatus = 500) {

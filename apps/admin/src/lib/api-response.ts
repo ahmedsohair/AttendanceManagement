@@ -6,6 +6,7 @@ import {
   getRequestId,
   type ApiErrorCode
 } from "./api-errors";
+import { buildApiTelemetry } from "./telemetry";
 
 type ErrorResponseOptions = {
   headers?: HeadersInit;
@@ -31,7 +32,7 @@ export function apiErrorResponse(
 export function handleApiError(
   request: Request,
   error: unknown,
-  context: string,
+  _context: string,
   fallbackStatus = 500
 ) {
   const status = getApiErrorStatus(error, fallbackStatus);
@@ -40,7 +41,10 @@ export function handleApiError(
   const message = getApiClientMessage(error, status);
 
   if (status >= 500) {
-    console.error(context, { requestId, error });
+    console.error(JSON.stringify(buildApiTelemetry({
+      event: "api.error", requestId, url: request.url, method: request.method,
+      status, code, region: process.env.VERCEL_REGION
+    })));
   }
 
   return NextResponse.json(

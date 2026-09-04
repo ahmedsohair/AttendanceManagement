@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { markAttendanceRequestSchema, normalizeStudentId } from "@algo-attendance/shared";
 import { requireApiUserForRoom } from "@/lib/auth";
 import { applyAttendanceMark } from "@/lib/repository";
-import { logServerTiming } from "@/lib/timing";
-import { getApiErrorStatus } from "@/lib/api-errors";
+import { logApiTiming } from "@/lib/timing";
+import { getApiErrorStatus, getApiErrorCode } from "@/lib/api-errors";
 import { handleApiError } from "@/lib/api-response";
 
 export async function POST(request: Request) {
   const startedAt = performance.now();
   let status = 200;
+  let code = "OK";
 
   try {
     const parsedBody = markAttendanceRequestSchema.parse(await request.json());
@@ -25,11 +26,13 @@ export async function POST(request: Request) {
       ...body,
       userId: user.id
     }, store);
+    code = response.result.status;
     return NextResponse.json(response);
   } catch (error) {
     status = getApiErrorStatus(error);
+    code = getApiErrorCode(error);
     return handleApiError(request, error, "Attendance mark failed.");
   } finally {
-    logServerTiming("api.attendance.mark", startedAt, { status });
+    logApiTiming(request, startedAt, status, code);
   }
 }

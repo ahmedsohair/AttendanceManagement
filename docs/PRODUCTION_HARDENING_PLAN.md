@@ -623,7 +623,7 @@ CI evidence captured on 3 September 2026:
 - A disposable PostgreSQL 17 service recreates the minimum Supabase role/auth primitives, applies the base schema and all 17 migrations in filename order, reapplies every migration to verify idempotency, and confirms all seven core application tables exist.
 - The critical audit gate reports existing lower-severity transitive advisories but blocks any critical runtime advisory. Unsafe forced downgrades remain prohibited.
 - Playwright was upgraded from 1.51.1 to 1.55.1 to remove its browser-download certificate advisory; all eight staging browser tests passed afterward.
-- Required-check enforcement still needs to be enabled in repository/deployment settings so a failed `Release gate` prevents promotion rather than merely reporting failure.
+- On 4 September 2026, the owner confirmed adding `Release gate` to the staging project's Vercel Deployment Checks. Promotion enforcement still needs verification; repository branch protection is a separate setting and has not been confirmed.
 
 ### Acceptance Criteria
 
@@ -638,6 +638,13 @@ CI evidence captured on 3 September 2026:
 **Goal:** Detect failures before invigilators report them and make incidents diagnosable.
 
 ### 8.1 Structured telemetry
+
+First implementation slice (4 September 2026):
+
+- Lookup and mark completion logs now emit allowlisted JSON with `event`, `requestId`, canonical `route`, `method`, `status`, `code`, `durationMs`, and `region`.
+- Shared 5xx API handling no longer logs raw exception objects. Error records intentionally omit raw messages, stacks, request bodies, credentials, query strings, and student identifiers.
+- Dynamic route identifiers are replaced by `:id`, and unknown paths/field values fail closed. Generated request IDs remain stable across repeated calls for the same Request object even without middleware.
+- New tests cover correlation stability, field allowlisting, and rejection of sensitive/unknown telemetry values. Remaining API route timing, other logging call sites, client tracking, dashboards, and alerts are not yet complete.
 
 - [ ] Add structured server logs with request ID, route, duration, result code, region, and safe contextual identifiers.
 - [ ] Never log access codes, passwords, tokens, full spreadsheet contents, or unnecessary student data.
