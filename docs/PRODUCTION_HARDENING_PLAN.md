@@ -652,6 +652,8 @@ First implementation slice (4 September 2026):
 - [ ] Add client error tracking for scanner crashes and unhandled promise rejections.
 - [ ] Track OCR load, initialization, prediction, lookup, mark, sync, and camera recovery timings.
 
+Local privacy follow-up (not deployed): assignment-email fallback failures no longer log recipient addresses or raw provider exceptions. Assignment-email completion logs distinguish queued (202), partial failure (207), unavailable (503), and validation/authentication outcomes. Admin response contents and delivery behaviour are unchanged. Other logging sites and monitoring remain to be completed.
+
 ### 8.2 Dashboards and alerts
 
 - [ ] Dashboard p50/p95/p99 lookup and mark latency.

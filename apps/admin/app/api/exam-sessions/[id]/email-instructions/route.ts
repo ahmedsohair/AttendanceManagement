@@ -6,8 +6,10 @@ import { createAssignmentEmailJob } from "@/lib/email-delivery-repository";
 import { sendInvigilatorInstructionEmail } from "@/lib/invigilator-instruction-email";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { readStore } from "@/lib/store";
-import { API_ERROR_CODES, getRequestId } from "@/lib/api-errors";
+import { API_ERROR_CODES, getApiErrorCode, getApiErrorStatus, getRequestId } from "@/lib/api-errors";
 import { apiErrorResponse, handleApiError } from "@/lib/api-response";
+import { buildApiTelemetry } from "@/lib/telemetry";
+import { logApiTiming } from "@/lib/timing";
 
 const assignmentTemplateVersion = "assignment-v2";
 
@@ -24,6 +26,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startedAt = performance.now();
+  let status = 200;
+  let code = "OK";
   try {
     const admin = await requireApiUser(request, { allowedRoles: ["admin"] });
     const { id: rawId } = await params;
@@ -42,6 +47,7 @@ export async function POST(
         templateVersion: assignmentTemplateVersion
       });
 
+      status = 202;
       return NextResponse.json(
         {
           job,
@@ -49,7 +55,7 @@ export async function POST(
             ? `${job.totalCount} invigilator email(s) queued.`
             : "This email request is already queued."
         },
-        { status: 202 }
+        { status }
       );
     }
 
@@ -57,6 +63,8 @@ export async function POST(
     const session = store.examSessions.find((item) => item.id === id);
 
     if (!session) {
+      status = 404;
+      code = API_ERROR_CODES.notFound;
       return apiErrorResponse(request, API_ERROR_CODES.notFound, "Exam session not found.", { status: 404 });
     }
 
@@ -70,6 +78,8 @@ export async function POST(
       .filter((item) => item.rooms.length);
 
     if (!assignedInvigilators.length) {
+      status = 422;
+      code = API_ERROR_CODES.validationError;
       return apiErrorResponse(request, API_ERROR_CODES.validationError, "No assigned invigilators were found for this exam.", { status: 422 });
     }
 
@@ -86,24 +96,30 @@ export async function POST(
           session
         });
         sent += 1;
-      } catch (error) {
+      } catch {
         failures.push(item.user.email);
-        console.error("Invigilator instruction email failed.", {
+        console.error(JSON.stringify(buildApiTelemetry({
+          event: "api.error",
           requestId: getRequestId(request),
-          recipient: item.user.email,
-          error
-        });
+          url: request.url,
+          method: request.method,
+          status: 503,
+          code: API_ERROR_CODES.serviceUnavailable,
+          region: process.env.VERCEL_REGION
+        })));
       }
     }
 
     if (failures.length) {
+      status = sent ? 207 : 503;
+      code = API_ERROR_CODES.serviceUnavailable;
       return NextResponse.json(
         {
           message: `Sent ${sent} email(s). ${failures.length} failed.`,
           failures,
           sent
         },
-        { status: sent ? 207 : 503 }
+        { status }
       );
     }
 
@@ -112,6 +128,10 @@ export async function POST(
       sent
     });
   } catch (error) {
+    status = getApiErrorStatus(error);
+    code = getApiErrorCode(error);
     return handleApiError(request, error, "Instruction email request failed.");
+  } finally {
+    logApiTiming(request, startedAt, status, code);
   }
 }

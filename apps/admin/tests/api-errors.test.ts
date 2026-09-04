@@ -129,3 +129,19 @@ test("scanner telemetry preserves safe routes and classified failure codes", () 
     }
   }
 });
+
+test("email telemetry retains partial failure status without recipient or provider data", () => {
+  const input = {
+    event: "api.request" as const,
+    requestId: "123e4567-e89b-42d3-a456-426614174000",
+    url: "https://example.test/api/exam-sessions/123e4567-e89b-42d3-a456-426614174000/email-instructions?token=private",
+    method: "POST", status: 207, code: API_ERROR_CODES.serviceUnavailable,
+    recipient: "private@example.test", error: new Error("private provider response"),
+    failures: ["private@example.test"]
+  };
+  const record = buildApiTelemetry(input);
+  assert.equal(record.route, "/api/exam-sessions/:id/email-instructions");
+  assert.equal(record.status, 207);
+  assert.equal(record.code, "SERVICE_UNAVAILABLE");
+  assert.doesNotMatch(JSON.stringify(record), /private|recipient|provider|failures/);
+});
