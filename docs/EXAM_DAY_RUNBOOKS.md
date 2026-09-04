@@ -157,4 +157,4 @@ For each incident record: owner; environment/deployment; start/end time with tim
 | Post-closure queue | Yes, Retry/Acknowledge controls | Not run here | Closed conflict and evidence preservation |
 | Manual fallback | Procedure drafted | Not run here | Tabletop and institutional approval |
 
-No commands that modify infrastructure or business data were run while preparing this document. Phase 8 dashboards, alerts, client tracking, and controlled alert-firing tests remain separate unfinished work.
+No production infrastructure or business data was modified while preparing these runbooks. The dashboard, alert-check pipeline and client telemetry are now implemented locally; activation and controlled alert-firing instructions are in `PHASE_8_ACTIVATION.md`. Local automated tests do not replace the controlled rehearsals listed above. Existing-session containment and operator/institutional sign-off remain outstanding.

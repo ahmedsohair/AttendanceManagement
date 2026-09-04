@@ -658,6 +658,18 @@ Local privacy follow-up (not deployed): assignment-email fallback failures no lo
 
 ### 8.2 Dashboards and alerts
 
+Implementation update (4 September 2026, local only; supersedes earlier implementation-pending notes):
+
+- [x] Additive service-only operational tables, bounded ingestion/pruning and atomic alert cooldown implemented; migrations applied twice and rollback tests passed in disposable PostgreSQL 17.
+- [x] Read-only admin `/health` page implemented with 15-minute API percentiles/error/auth counts, sampled scanner outcomes and recent heartbeat queue summaries. Disabled/unavailable/truncated states are explicit.
+- [x] Protected Resend alert check and opt-in external scheduler workflow implemented, with bounded requests, deduplication, provider-acceptance/unknown states, and no unsafe retries.
+- [x] Remaining business API handlers instrumented without reading response bodies or changing cookies, exports, business outcomes or error propagation.
+- [ ] Staging migration/deployment, actual page and heartbeat acceptance, authorized inbox/cooldown evidence, independent scheduler availability notification, monitoring-overhead comparison and runbook drills.
+
+See `docs/PHASE_8_ACTIVATION.md` for the exact activation order and remaining evidence. Build, type-check, web regressions and local SQL checks passed. These are implementation checks, not live operational sign-off. Default flags remain off; production is unchanged. Phase 8 remains open until external acceptance is recorded, alongside owner-deferred physical-device tests.
+
+Owner-confirmed operational-alert recipient: `ahmad.sohair@gmail.com`. Sender implementation is complete locally; activation and staging delivery verification remain pending. No alert has been sent or enabled by recording this address.
+
 Local implementation checkpoint: `npm.cmd run telemetry:summary -- <JSONL path>` now summarizes allowlisted request completion logs by route/method/region, with p50/p95/p99, sample counts, 5xx rates, authentication/authorization/rate-limit counts, partial responses, and outcome codes. See `docs/API_TELEMETRY_REPORT.md`. This is a tested offline diagnostic, not a deployed dashboard or alert system. Real staging-export verification and live monitoring acceptance remain pending; boxes below intentionally remain open.
 
 - [ ] Dashboard p50/p95/p99 lookup and mark latency.
