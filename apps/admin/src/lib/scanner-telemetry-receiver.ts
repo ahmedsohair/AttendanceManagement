@@ -5,7 +5,7 @@ type Dependencies = {
   enabled: () => boolean;
   authorize: (request: Request) => Promise<{ id: string }>;
   allow: (request: Request, userId: string) => Promise<boolean>;
-  log: (report: NonNullable<ReturnType<typeof validateScannerReport>>, request: Request) => void;
+  log: (report: NonNullable<ReturnType<typeof validateScannerReport>>, request: Request, userId: string) => void;
 };
 
 export function createScannerTelemetryReceiver(dependencies: Dependencies) {
@@ -38,7 +38,7 @@ export function createScannerTelemetryReceiver(dependencies: Dependencies) {
       for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
       const report = validateScannerReport(JSON.parse(new TextDecoder().decode(data)));
       if (!report) return new Response(null, { status: 422 });
-      dependencies.log(report, request);
+      dependencies.log(report, request, user.id);
       return new Response(null, { status: 204 });
     } catch (error) {
       return new Response(null, { status: getApiErrorStatus(error, 503) });

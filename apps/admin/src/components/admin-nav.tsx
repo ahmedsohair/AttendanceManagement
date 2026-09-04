@@ -8,7 +8,8 @@ const navItems = [
   { href: "/sessions", label: "Exams", mark: "E" },
   { href: "/invigilators", label: "Invigilators", mark: "I" },
   { href: "/attendance", label: "Attendance", mark: "A" },
-  { href: "/incidents", label: "Incidents", mark: "!" }
+  { href: "/incidents", label: "Incidents", mark: "!" },
+  { href: "/health", label: "Health", mark: "H" }
 ];
 
 function isActivePath(pathname: string, href: string) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { measureScannerOperation, reportScannerEvent } from "@/lib/scanner-telemetry";
+import { measureScannerOperation, reportScannerEvent, setScannerHealth } from "@/lib/scanner-telemetry";
 import type {
   LookupResult,
   MarkAttendanceRequest,
@@ -327,6 +327,13 @@ export function WebScannerApp() {
     [liveState, optimisticStats]
   );
   const outboxCounts = useMemo(() => summarizeOutbox(outboxItems), [outboxItems]);
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_SCANNER_TELEMETRY_ENABLED !== "true") return;
+    try {
+      setScannerHealth(user ? { deviceId: getDeviceId(), pending: outboxCounts.total - outboxCounts.conflict, conflicts: outboxCounts.conflict } : undefined);
+    } catch { /* Storage may be unavailable; attendance must remain usable. */ }
+    return () => setScannerHealth();
+  }, [user, outboxCounts]);
   const backendLabel = {
     checking: "Checking backend",
     online: "Backend connected",

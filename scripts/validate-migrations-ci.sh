@@ -36,3 +36,4 @@ if [[ "$table_count" != "7" ]]; then
 fi
 
 echo "All migrations applied twice against temporary PostgreSQL; 7 core tables verified."
+psql "${psql_args[@]}" --file supabase/tests/operational_monitoring_staging.sql

@@ -4,6 +4,9 @@ export type ScannerOutcome = "ok" | "error" | "cancelled";
 export type ScannerMetric = { event: ScannerEvent; outcome: ScannerOutcome; durationMs: number | null };
 const browsers = ["safari", "chrome", "edge", "firefox", "other"];
 const devices = ["ios", "android", "other"];
+export type ScannerHealth = { deviceId: string; pending: number; conflicts: number };
+let scannerHealth: ScannerHealth | undefined;
+export function setScannerHealth(health?: ScannerHealth) { scannerHealth = health; }
 
 export function scannerPlatform(userAgent: string) {
   return {
@@ -16,9 +19,19 @@ export function scannerPlatform(userAgent: string) {
 export function validateScannerReport(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const report = value as Record<string, unknown>;
-  if (Object.keys(report).some((key) => !["version", "browser", "device", "events"].includes(key)) ||
+  if (Object.keys(report).some((key) => !["version", "browser", "device", "events", "health"].includes(key)) ||
       report.version !== 1 || !browsers.includes(report.browser as string) || !devices.includes(report.device as string) ||
-      !Array.isArray(report.events) || !report.events.length || report.events.length > 20) return null;
+      !Array.isArray(report.events) || report.events.length > 20) return null;
+  let health: ScannerHealth | undefined;
+  if (report.health !== undefined) {
+    if (!report.health || typeof report.health !== "object" || Array.isArray(report.health)) return null;
+    const h = report.health as Record<string, unknown>;
+    if (Object.keys(h).some((key) => !["deviceId", "pending", "conflicts"].includes(key)) ||
+        typeof h.deviceId !== "string" || !/^[a-zA-Z0-9.-]{10,100}$/.test(h.deviceId) ||
+        ![h.pending, h.conflicts].every((n) => typeof n === "number" && Number.isInteger(n) && n >= 0 && n <= 100000)) return null;
+    health = h as ScannerHealth;
+  }
+  if (!report.events.length && !health) return null;
   const events: ScannerMetric[] = [];
   for (const raw of report.events) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -28,7 +41,7 @@ export function validateScannerReport(value: unknown) {
         !(metric.durationMs === null || (typeof metric.durationMs === "number" && Number.isInteger(metric.durationMs) && metric.durationMs >= 0 && metric.durationMs <= 600000))) return null;
     events.push({ event: metric.event as ScannerEvent, outcome: metric.outcome as ScannerOutcome, durationMs: metric.durationMs as number | null });
   }
-  return { version: 1, browser: report.browser as string, device: report.device as string, events };
+  return { version: 1, browser: report.browser as string, device: report.device as string, events, ...(health ? { health } : {}) };
 }
 
 export function createScannerReporter({
@@ -55,12 +68,13 @@ export function createScannerReporter({
       if (validateScannerReport({ version: 1, ...platform, events: [metric] })) queue.push(metric);
     },
     async flush() {
-      if (stopped || sending || !queue.length || sent >= 2) return;
+      if (now() - windowStart >= 60000) { windowStart = now(); sent = 0; samples.clear(); }
+      if (stopped || sending || (!queue.length && !scannerHealth) || sent >= 2) return;
       const events = queue;
       queue = [];
       sending = true;
       sent += 1;
-      try { await send({ version: 1, ...platform, events }); }
+      try { await send({ version: 1, ...platform, events, ...(scannerHealth ? { health: scannerHealth } : {}) }); }
       catch { /* Telemetry is lossy: never retry through the attendance outbox. */ }
       finally { sending = false; }
     },

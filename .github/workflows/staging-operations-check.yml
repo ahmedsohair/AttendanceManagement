@@ -1,0 +1,24 @@
+name: Staging operations check
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: staging-operations-check
+  cancel-in-progress: false
+jobs:
+  check:
+    if: vars.STAGING_OPS_CHECK_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node scripts/check-staging-operations.mjs
+        env:
+          OPS_CHECK_URL: https://exampulse-stagings.vercel.app/api/operations/check
+          OPS_CHECK_SECRET: ${{ secrets.STAGING_OPS_CHECK_SECRET }}

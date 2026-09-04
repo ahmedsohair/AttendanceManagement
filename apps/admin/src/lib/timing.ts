@@ -1,9 +1,10 @@
 import "server-only";
 import { getRequestId } from "./api-errors";
 import { buildApiTelemetry } from "./telemetry";
+import { persistOperations } from "./ops-monitoring";
 
 export function logApiTiming(request: Request, startedAt: number, status: number, code: string) {
-  console.info(JSON.stringify(buildApiTelemetry({
+  const record = buildApiTelemetry({
     event: "api.request",
     requestId: getRequestId(request),
     url: request.url,
@@ -12,7 +13,9 @@ export function logApiTiming(request: Request, startedAt: number, status: number
     status,
     code,
     region: process.env.VERCEL_REGION
-  })));
+  });
+  console.info(JSON.stringify(record));
+  persistOperations("api", record);
 }
 
 type TimingFields = Record<string, string | number | boolean | null | undefined>;
