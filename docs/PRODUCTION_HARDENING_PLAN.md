@@ -658,7 +658,7 @@ Local privacy follow-up (not deployed): assignment-email fallback failures no lo
 
 ### 8.2 Dashboards and alerts
 
-Verified staging checkpoint: runtime `e9e41c1` deployed successfully on 4 September 2026; GitHub run `33836864576` passed the complete release gate, using a live OSV audit after npm timed out. Public scanner load, health-page login protection, receiver authorization, authenticated synthetic lookup/heartbeat acceptance and invalid-payload rejection passed. Alerts remain disabled; no mark or email was submitted. Admin verification of persisted health metrics and actual inbox/cooldown/scheduler evidence remain pending. See `docs/PHASE_8_ACTIVATION.md` for the next step; do not repeat environment setup.
+Verified staging checkpoint: runtime `e9e41c1` deployed successfully on 4 September 2026; GitHub run `33836864576` passed the complete release gate, using a live OSV audit after npm timed out. Public scanner load, health-page login protection, receiver authorization, authenticated synthetic lookup/heartbeat acceptance and invalid-payload rejection passed. The owner's `/health` screenshot at `2026-09-04T04:32:32.981Z` confirms persisted API metrics and the earlier heartbeat (now older than 90 seconds). Alerts were subsequently enabled: controlled inbox delivery and immediate repeat suppression passed, with no attendance changes. Scheduled execution and independent failure notification remain outstanding. See `docs/PHASE_8_ACTIVATION.md` for evidence and remaining acceptance; do not repeat environment setup.
 
 Activation checkpoint (4 September 2026): owner reports the monitoring staging migration completed and all seven monitoring variables saved, with secrets retained privately. The owner's redeployment preceded the code push, so it did not establish live Phase 8 acceptance. The audit blocker has been addressed with a tested fail-closed OSV fallback; native npm subsequently returned a passing critical-threshold report, and independent OSV verification found zero critical / 25 non-critical advisories across 781 production package/version pairs. See `docs/DEPENDENCY_AUDIT.md` for limits and outstanding non-critical triage. No production deployment is authorized by this checkpoint.
 
@@ -668,11 +668,13 @@ Implementation update (4 September 2026, local only; supersedes earlier implemen
 - [x] Read-only admin `/health` page implemented with 15-minute API percentiles/error/auth counts, sampled scanner outcomes and recent heartbeat queue summaries. Disabled/unavailable/truncated states are explicit.
 - [x] Protected Resend alert check and opt-in external scheduler workflow implemented, with bounded requests, deduplication, provider-acceptance/unknown states, and no unsafe retries.
 - [x] Remaining business API handlers instrumented without reading response bodies or changing cookies, exports, business outcomes or error propagation.
-- [ ] Staging migration/deployment, actual page and heartbeat acceptance, authorized inbox/cooldown evidence, independent scheduler availability notification, monitoring-overhead comparison and runbook drills.
+- [x] Staging migration/deployment and persisted page/heartbeat observations verified (owner migration report and live checks).
+- [x] Controlled staging alert reached the owner's inbox; first check accepted=1, unknown=0, suppressed=0; immediate repeat accepted=0, unknown=0, suppressed=1. Missing authorization rejected with 401 after activation. Evidence: `docs/PHASE_8_ACTIVATION.md`.
+- [ ] Independent scheduler availability notification, monitoring-overhead comparison and runbook drills.
 
 See `docs/PHASE_8_ACTIVATION.md` for the exact activation order and remaining evidence. Build, type-check, web regressions and local SQL checks passed. These are implementation checks, not live operational sign-off. Default flags remain off; production is unchanged. Phase 8 remains open until external acceptance is recorded, alongside owner-deferred physical-device tests.
 
-Owner-confirmed operational-alert recipient: `ahmad.sohair@gmail.com`. Sender implementation is complete locally; activation and staging delivery verification remain pending. No alert has been sent or enabled by recording this address.
+Owner-confirmed operational-alert recipient: `ahmad.sohair@gmail.com`. Staging alerts enabled and controlled inbox delivery/repeat suppression verified on 4 September 2026. Production remains unchanged.
 
 Local implementation checkpoint: `npm.cmd run telemetry:summary -- <JSONL path>` now summarizes allowlisted request completion logs by route/method/region, with p50/p95/p99, sample counts, 5xx rates, authentication/authorization/rate-limit counts, partial responses, and outcome codes. See `docs/API_TELEMETRY_REPORT.md`. This is a tested offline diagnostic, not a deployed dashboard or alert system. Real staging-export verification and live monitoring acceptance remain pending; boxes below intentionally remain open.
 

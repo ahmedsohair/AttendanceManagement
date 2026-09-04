@@ -2,7 +2,7 @@
 
 ## Status and Ownership
 
-Prepared 4 September 2026 against source baseline `84c770d`. These procedures are documented, not operationally rehearsed. They do not establish Phase 8 acceptance. UI labels and available features must be checked against the deployed revision before exam day; local hardening work has not all been deployed.
+Prepared 4 September 2026 against source baseline `84c770d`; staging subsequently deployed runtime `e9e41c1`. Automated recovery checks and live alert delivery were exercised on 4 September; see `PHASE_8_REMAINING_ACCEPTANCE.md` for exact evidence and limitations. The full operator/browser rehearsals below are not complete and do not establish Phase 8 acceptance. UI labels and available features must be checked against the deployed revision before exam day.
 
 Incident owner: Ahmed / designated application administrator. Room invigilators report to their room team leader; the owner coordinates technical recovery and reconciliation. Only an authorized administrator may change deployments, credentials, assignments, or exam data. This document grants no permission to perform those changes.
 

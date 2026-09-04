@@ -2,12 +2,15 @@
 
 ## Live checkpoint: 4 September 2026
 
-- Owner reports the staging migration and seven monitoring variables saved; alert sending remains disabled.
+- Owner reports the staging migration and seven monitoring variables saved; subsequently enabled staging alerts and redeployed for the controlled test below.
 - Runtime commit `e9e41c1` pushed to `hardening/staging`. [GitHub run 33836864576](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/33836864576) passed all checks, including build/tests, temporary migrations, secret scan and the critical dependency gate. GitHub exercised the live OSV fallback successfully after npm timed out.
 - [Staging deployment](https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/49oLNDGs5heo3qmwyipsjZgVev2T) reported success. No merge to `main` or production promotion performed.
 - Live `/scan`: 200. Unauthenticated `/health`: 307 to login. Unauthenticated scanner telemetry: 401. Alert check while disabled: 404.
 - Synthetic invigilator sign-in and existing-student lookup: successful (200). Authenticated heartbeat accepted (204), invalid telemetry rejected (422). The temporary test session was signed out. No attendance or incident mark and no email were submitted.
-- A 204 confirms receiver acceptance, not successful after-response persistence. **Next:** administrator opens `/health` to verify stored observations, followed by controlled alert inbox/cooldown and scheduler checks. Performance comparison, runbook drills and deferred physical-device acceptance remain outstanding.
+- Owner screenshot captured at `2026-09-04T04:32:32.981Z` confirms persisted lookup/admin-login metrics and the earlier heartbeat on `/health`. The heartbeat is correctly shown as older than 90 seconds, rather than currently active. One request per route is insufficient for performance conclusions.
+- Controlled alert test: after activation, an unauthenticated check returned 401. One synthetic `boundary_error` report was accepted at `2026-09-04T04:46:10.961Z` (204); the temporary synthetic login session was signed out. Owner supplied check results: first `checked / accepted=1 / unknown=0 / suppressed=0`; second `checked / accepted=0 / unknown=0 / suppressed=1`. Owner confirmed receipt at `ahmad.sohair@gmail.com`. Live inbox delivery and immediate repeat suppression passed; this does not test sending again after cooldown expiry. No attendance records were changed.
+- **Next:** establish scheduled checks and independent failure notification. Performance comparison, runbook drills and deferred physical-device acceptance remain outstanding.
+- Follow-up: the monitoring-enabled 1,200-lookup test passed with zero failures (concurrent p95 440 ms, sequential p95 433 ms). Existing 70 web tests, three new persistence-boundary tests, three scheduler-process tests and type-check passed. See `PHASE_8_REMAINING_ACCEPTANCE.md` for historical baseline, test limitations and the exact external-access blockers. GitHub was inspected: no scheduler secret/enablement variable and no workflow on `main`; no scheduled operation is being claimed.
 
 Earlier sections below describe the original local implementation boundaries; this checkpoint records subsequent staging progress.
 
