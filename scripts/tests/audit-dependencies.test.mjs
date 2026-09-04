@@ -22,6 +22,8 @@ test('npm critical findings and malformed reports never pass or trigger fallback
   assert.equal(nativeOutcome({ status: 0, stdout: '{}' }), 'invalid');
   assert.equal(nativeOutcome({ stdout: JSON.stringify({ error: { code: 'FETCH_ERROR' } }) }), 'unavailable');
   assert.equal(nativeOutcome({ error: { code: 'ETIMEDOUT' } }), 'unavailable');
+  assert.equal(nativeOutcome({ status: 1, stdout: '{"error":{}}', stderr: 'npm warn audit network timeout at: https://registry.npmjs.org/-/npm/v1/security/audits/quick\n' }), 'unavailable');
+  assert.equal(nativeOutcome({ status: 1, stdout: '{}', stderr: 'unrelated timeout' }), 'invalid');
 });
 const queries = [{ package: { ecosystem: 'npm', name: 'example' }, version: '1.0.0' }];
 test('OSV follows pagination, deduplicates advisories and preserves critical classification', async () => {

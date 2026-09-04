@@ -32,6 +32,9 @@ export function nativeOutcome(result) {
   }
   const unavailable = ['FETCH_ERROR', 'ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'E503', 'E502', 'E504', 'E429'];
   if (result.error?.code === 'ETIMEDOUT' || unavailable.includes(report?.error?.code)) return 'unavailable';
+  // Some npm 10 releases omit error.code from JSON for audit transport timeouts.
+  const auditTimeout = /npm warn audit network timeout at: https:\/\/registry\.npmjs\.org\/-\/npm\/v1\/security\/(?:advisories\/bulk|audits\/quick)(?:\s|$)/;
+  if (result.status !== 0 && auditTimeout.test(result.stderr || '')) return 'unavailable';
   return 'invalid';
 }
 
@@ -112,7 +115,12 @@ async function main() {
   });
   const outcome = nativeOutcome(result);
   if (outcome === 'pass') { console.log('npm dependency audit passed at the critical threshold.'); return; }
-  if (outcome !== 'unavailable') throw new Error(`npm dependency audit blocked: ${outcome}.`);
+  if (outcome !== 'unavailable') {
+    let report;
+    try { report = JSON.parse(result.stdout); } catch { /* Report shape only, never raw command output. */ }
+    console.error(JSON.stringify({ nativeExit: result.status, jsonReport: Boolean(report), hasMetadata: Boolean(report?.metadata), hasError: Boolean(report?.error) }));
+    throw new Error(`npm dependency audit blocked: ${outcome}.`);
+  }
   console.log('npm audit service unavailable; performing a fresh OSV production-lockfile audit (not skipping).');
   const request = createOsvRequest();
   const canary = await auditOsv([{ package: { ecosystem: 'npm', name: 'minimist' }, version: '1.2.5' }], request);
