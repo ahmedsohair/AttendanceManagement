@@ -664,6 +664,8 @@ Local privacy follow-up (not deployed): assignment-email fallback failures no lo
 
 ### 8.3 Operational runbooks
 
+Documentation checkpoint (4 September 2026): `docs/EXAM_DAY_RUNBOOKS.md` now covers all eight scenarios below, including owners, immediate fallback, recovery checks, privacy/environment safeguards, and rehearsal gaps. This is documentation-only; no controlled drills or production changes were performed. The boxes remain open until operational verification, including existing-session containment for compromised codes, is complete. Phase 8 is not complete.
+
 - [ ] Scanner unavailable or model CDN unavailable.
 - [ ] Supabase paused, degraded, or unreachable.
 - [ ] Vercel deployment/domain failure.
