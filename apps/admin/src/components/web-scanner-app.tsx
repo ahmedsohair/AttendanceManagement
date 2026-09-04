@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { measureScannerOperation, reportScannerEvent } from "@/lib/scanner-telemetry";
 import type {
   LookupResult,
   MarkAttendanceRequest,
@@ -340,7 +341,11 @@ export function WebScannerApp() {
     init?: RequestInit,
     timeoutMs = 10000
   ): Promise<T> => {
-    return requestCoordinatorRef.current!.requestJson<T>(key, input, init, timeoutMs);
+    const operation = () => requestCoordinatorRef.current!.requestJson<T>(key, input, init, timeoutMs);
+    if (key === "lookup") return measureScannerOperation("lookup", operation);
+    if (key.startsWith("mark-")) return measureScannerOperation("mark", operation);
+    if (key.startsWith("outbox-")) return measureScannerOperation("sync", operation);
+    return operation();
   }, []);
 
   const cancelRequests = useCallback((...keys: string[]) => {
@@ -1100,14 +1105,14 @@ export function WebScannerApp() {
     resetForNextScan();
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const stream = await measureScannerOperation("camera", () => navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
         audio: false
-      });
+      }));
       streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0] as TorchMediaTrack | undefined;
       if (videoTrack) {
@@ -1115,6 +1120,7 @@ export function WebScannerApp() {
           if (!selectedRoomRef.current) {
             return;
           }
+          reportScannerEvent("camera", "error");
           stopOcrLoop();
           streamRef.current = null;
           if (videoRef.current) {
@@ -1269,14 +1275,14 @@ export function WebScannerApp() {
     context.putImageData(imageData, 0, 0);
 
     setOcrStatus("Reading red box with ONNX OCR...");
-    const [result] = await ocrWorkerRef.current.predict(canvas, {
+    const [result] = await measureScannerOperation("ocr_prediction", () => ocrWorkerRef.current!.predict(canvas, {
       textDetLimitSideLen: 640,
       textDetLimitType: "max",
       textDetThresh: 0.25,
       textDetBoxThresh: 0.35,
       textDetUnclipRatio: 1.6,
       textRecScoreThresh: 0.15
-    });
+    }));
     const recognizedText = (result?.items || []).map((item) => item.text).join(" ");
     const candidate = extractStudentIdCandidate(recognizedText);
 
@@ -1331,11 +1337,12 @@ export function WebScannerApp() {
       });
     }
 
-    return withTimeout(
-      ocrLoadPromiseRef.current,
+    const pendingWorker = ocrLoadPromiseRef.current;
+    return measureScannerOperation("ocr_init", () => withTimeout(
+      pendingWorker,
       onnxModelTimeoutMs,
       "ONNX OCR model loading"
-    );
+    ));
   }
 
   async function retryOcrLoad() {

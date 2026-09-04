@@ -1,6 +1,7 @@
 "use client";
 
-import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Component, type ReactNode } from "react";
+import { reportScannerEvent } from "@/lib/scanner-telemetry";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
 
 type ScannerErrorBoundaryProps = {
@@ -25,11 +26,8 @@ export class ScannerErrorBoundary extends Component<
     return { failed: true };
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Scanner recovery boundary caught an unexpected error.", {
-      name: error.name,
-      componentStack: info.componentStack
-    });
+  componentDidCatch() {
+    reportScannerEvent("boundary_error", "error");
   }
 
   private tryAgain = () => {

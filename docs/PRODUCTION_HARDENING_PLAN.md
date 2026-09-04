@@ -639,6 +639,8 @@ CI evidence captured on 3 September 2026:
 
 ### 8.1 Structured telemetry
 
+Scanner implementation checkpoint: an opt-in client reporter now captures sanitized boundary/runtime/rejection categories and sampled lookup, mark, sync, OCR initialization/prediction and camera acquisition metrics. A same-origin authenticated, rate-limited receiver validates bounded payloads before logging. See `docs/SCANNER_TELEMETRY.md` for exact coverage, limits, staging flags and outstanding work. Default disabled; no deployed verification or crash-rate claim. Physical browser-process crashes remain outside guaranteed capture. The npm dependency audit retry still timed out; the gate remains enforced.
+
 First implementation slice (4 September 2026):
 
 - Lookup and mark completion logs now emit allowlisted JSON with `event`, `requestId`, canonical `route`, `method`, `status`, `code`, `durationMs`, and `region`.
