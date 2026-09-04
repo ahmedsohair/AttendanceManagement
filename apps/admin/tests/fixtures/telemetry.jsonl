@@ -1,0 +1,3 @@
+{"event":"api.request","requestId":"123e4567-e89b-42d3-a456-426614174000","route":"/api/attendance/lookup","method":"POST","region":"sin1","status":200,"code":"ready_to_mark","durationMs":125}
+{"event":"api.request","requestId":"123e4567-e89b-42d3-a456-426614174001","route":"/api/attendance/mark","method":"POST","region":"sin1","status":503,"code":"SERVICE_UNAVAILABLE","durationMs":2500}
+{"event":"api.error","requestId":"123e4567-e89b-42d3-a456-426614174001","route":"/api/attendance/mark","method":"POST","region":"sin1","status":503,"code":"SERVICE_UNAVAILABLE"}

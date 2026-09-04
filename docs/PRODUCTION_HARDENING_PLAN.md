@@ -656,6 +656,8 @@ Local privacy follow-up (not deployed): assignment-email fallback failures no lo
 
 ### 8.2 Dashboards and alerts
 
+Local implementation checkpoint: `npm.cmd run telemetry:summary -- <JSONL path>` now summarizes allowlisted request completion logs by route/method/region, with p50/p95/p99, sample counts, 5xx rates, authentication/authorization/rate-limit counts, partial responses, and outcome codes. See `docs/API_TELEMETRY_REPORT.md`. This is a tested offline diagnostic, not a deployed dashboard or alert system. Real staging-export verification and live monitoring acceptance remain pending; boxes below intentionally remain open.
+
 - [ ] Dashboard p50/p95/p99 lookup and mark latency.
 - [ ] Dashboard API error rates and authentication failures.
 - [ ] Dashboard OCR load failures by browser/device.
