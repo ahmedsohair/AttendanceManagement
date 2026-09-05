@@ -136,7 +136,7 @@ test("cancelled delayed lookup cannot reopen review", async ({ page }) => {
   await page.getByPlaceholder("Manual student number").fill("9000991");
   await page.getByRole("button", { name: "Lookup", exact: true }).evaluate((button) => { button.click(); button.click(); });
   await expect.poll(() => f.lookups.length).toBe(1);
-  await review(page).getByRole("button", { name: "Cancel Scan" }).click();
+  await review(page).getByRole("button", { name: "Cancel review" }).click();
   f.lookup = (id) => result(id);
   await lookup(page, "9000992");
   release();

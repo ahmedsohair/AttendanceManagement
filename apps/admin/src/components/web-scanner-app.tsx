@@ -221,6 +221,10 @@ export function WebScannerApp() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const scanRegionRef = useRef<HTMLDivElement | null>(null);
   const manualInputRef = useRef<HTMLInputElement | null>(null);
+  const manualModeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const reviewDialogRef = useRef<HTMLDialogElement | null>(null);
+  const reviewHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const reviewReturnFocusRef = useRef<HTMLElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
@@ -243,6 +247,8 @@ export function WebScannerApp() {
   const historyGuardActiveRef = useRef(false);
   const historyGuardIdRef = useRef("");
   const lastBackHandledAtRef = useRef(0);
+  const establishedAuthRef = useRef(false);
+  const markOutcomeRef = useRef<"none" | "submitted">("none");
   const markIdempotencyRef = useRef<ReturnType<typeof createIdempotencyTracker> | null>(null);
   const lastCandidateRef = useRef<{ value: string; count: number; seenAt: number } | null>(
     null
@@ -285,6 +291,7 @@ export function WebScannerApp() {
   >("checking");
 
   authExpiryHandlerRef.current = () => {
+    const hadEstablishedSession = establishedAuthRef.current || Boolean(userRef.current);
     reviewGuardRef.current.invalidate();
     lookupPendingRef.current = false;
     busyRef.current = false;
@@ -297,6 +304,7 @@ export function WebScannerApp() {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    establishedAuthRef.current = false;
     userRef.current = null;
     selectedRoomRef.current = null;
     setUser(null);
@@ -306,7 +314,11 @@ export function WebScannerApp() {
     setCameraActive(false);
     setTorchEnabled(false);
     setTorchSupported(false);
-    setStatusMessage("Your invigilator session has expired. Sign in again to continue.");
+    setStatusMessage(
+      hadEstablishedSession
+        ? "Your invigilator session has expired. Sign in again to continue."
+        : ""
+    );
   };
 
   if (!requestCoordinatorRef.current) {
@@ -392,7 +404,9 @@ export function WebScannerApp() {
     return visibleItems;
   }, [getOutbox]);
 
-  const resetForNextScan = useCallback(() => {
+  const resetForNextScan = useCallback((options: { restoreFocus?: boolean } = {}) => {
+    const focusTarget = options.restoreFocus ? reviewReturnFocusRef.current : null;
+    reviewDialogRef.current?.close();
     reviewGuardRef.current.invalidate();
     requestCoordinatorRef.current?.cancel("lookup");
     lookupPendingRef.current = false;
@@ -408,7 +422,35 @@ export function WebScannerApp() {
     scanPausedRef.current = false;
     setScanPaused(false);
     lastCandidateRef.current = null;
+    markOutcomeRef.current = "none";
+    reviewReturnFocusRef.current = null;
+    if (focusTarget) {
+      window.setTimeout(() => {
+        if (
+          componentActiveRef.current &&
+          !scanPausedRef.current &&
+          focusTarget.isConnected
+        ) {
+          focusTarget.focus({ preventScroll: true });
+        }
+      }, 0);
+    }
   }, []);
+
+  const dismissReview = useCallback(() => {
+    if (markPendingRef.current) {
+      setStatusMessage("Attendance is still being submitted. Please wait.");
+      return;
+    }
+
+    const submitted = markOutcomeRef.current === "submitted";
+    resetForNextScan({ restoreFocus: true });
+    setStatusMessage(
+      submitted
+        ? "Attendance submitted. Continue with the next student."
+        : "Scan cancelled. Continue with the next student."
+    );
+  }, [resetForNextScan]);
 
   function editStudentId(value: string) {
     reviewGuardRef.current.invalidate();
@@ -427,6 +469,7 @@ export function WebScannerApp() {
 
   const loadCurrentUser = useCallback(async () => {
     const payload = await requestJson<{ user: User }>("current-user", "/api/auth/me");
+    establishedAuthRef.current = true;
     userRef.current = payload.user;
     setUser(payload.user);
     return payload.user;
@@ -679,6 +722,7 @@ export function WebScannerApp() {
           return;
         }
 
+        establishedAuthRef.current = true;
         userRef.current = payload.user;
         setUser(payload.user);
         await loadRooms();
@@ -866,12 +910,21 @@ export function WebScannerApp() {
       }
       lastBackHandledAtRef.current = now;
 
-      const action = getScannerBackAction({
-        busy: busyRef.current,
-        lookupPending: lookupPendingRef.current,
-        scanPaused: scanPausedRef.current,
-        hasRoom: Boolean(selectedRoomRef.current)
-      });
+      const action = markPendingRef.current
+        ? getScannerBackAction({
+            busy: true,
+            lookupPending: false,
+            scanPaused: scanPausedRef.current,
+            hasRoom: Boolean(selectedRoomRef.current)
+          })
+        : lookupPendingRef.current
+          ? "cancel-review"
+          : getScannerBackAction({
+              busy: busyRef.current,
+              lookupPending: false,
+              scanPaused: scanPausedRef.current,
+              hasRoom: Boolean(selectedRoomRef.current)
+            });
 
       if (action === "wait") {
         pushScannerHistoryGuard();
@@ -880,9 +933,8 @@ export function WebScannerApp() {
       }
 
       if (action === "cancel-review") {
-        resetForNextScan();
+        dismissReview();
         pushScannerHistoryGuard();
-        setStatusMessage("Scan cancelled. Continue with the next student.");
         return;
       }
 
@@ -903,15 +955,43 @@ export function WebScannerApp() {
       historyGuardActiveRef.current = false;
       window.removeEventListener("popstate", handleBrowserBack);
     };
-  }, [initializeScannerHistory, pushScannerHistoryGuard, resetForNextScan, stopCamera, user]);
+  }, [dismissReview, initializeScannerHistory, pushScannerHistoryGuard, resetForNextScan, stopCamera, user]);
+
+  useEffect(() => {
+    const dialog = reviewDialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    if (!scanPaused) {
+      if (dialog.open) {
+        dialog.close();
+      }
+      return;
+    }
+
+    if (!dialog.open) {
+      dialog.showModal();
+      window.setTimeout(() => {
+        if (dialog.open && scanPausedRef.current) {
+          reviewHeadingRef.current?.focus({ preventScroll: true });
+        }
+      }, 0);
+    }
+  }, [scanPaused]);
 
   async function signIn() {
+    if (busyRef.current) {
+      return;
+    }
+
     const normalizedCode = normalizeAccessCode(accessCode);
     if (!normalizedCode) {
       setStatusMessage("Enter your invigilator access code.");
       return;
     }
 
+    busyRef.current = true;
     setBusy(true);
     setStatusMessage("");
     try {
@@ -943,6 +1023,7 @@ export function WebScannerApp() {
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Unable to sign in.");
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
@@ -954,6 +1035,7 @@ export function WebScannerApp() {
       await getSupabaseBrowserClient().auth.signOut();
     } finally {
       stopCamera();
+      establishedAuthRef.current = false;
       setUser(null);
       setRooms([]);
       setSelectedRoom(null);
@@ -964,7 +1046,7 @@ export function WebScannerApp() {
 
   async function lookupStudent(nextStudentId: string, source: "ocr" | "manual" = "ocr") {
     const currentRoom = selectedRoomRef.current;
-    if (!currentRoom || markPendingRef.current) {
+    if (!currentRoom || markPendingRef.current || lookupPendingRef.current) {
       return;
     }
 
@@ -973,6 +1055,10 @@ export function WebScannerApp() {
       return;
     }
 
+    reviewReturnFocusRef.current = source === "manual"
+      ? manualInputRef.current
+      : manualModeButtonRef.current;
+    markOutcomeRef.current = "none";
     const token = reviewGuardRef.current.begin({
       studentId: normalizedId, roomId: currentRoom.id,
       examSessionId: currentRoom.examSessionId, source
@@ -1054,6 +1140,7 @@ export function WebScannerApp() {
     const normalizedId = review.studentId;
     const ownsReview = () => componentActiveRef.current && reviewGuardRef.current.owns(review.generation);
     markPendingRef.current = true;
+    markOutcomeRef.current = "none";
     busyRef.current = true;
     setBusy(true);
     let queuedRequestId: string | null = null;
@@ -1116,6 +1203,7 @@ export function WebScannerApp() {
       await refreshOutbox();
       if (!ownsReview()) return;
       applyMarkSuccess(payload, normalizedId);
+      markOutcomeRef.current = "submitted";
       reviewGuardRef.current.consume(review.generation);
       markIdempotencyRef.current?.clear();
       window.setTimeout(() => { if (ownsReview()) resetForNextScan(); }, 180);
@@ -1136,6 +1224,7 @@ export function WebScannerApp() {
           await refreshOutbox();
           if (!ownsReview()) return;
           reviewGuardRef.current.consume(review.generation);
+          markOutcomeRef.current = "submitted";
           setBackendState(navigator.onLine ? "unreachable" : "offline");
           setStatusMessage("Saved on this device. Attendance is pending synchronization.");
           setLocalRecentChips((current) => [{
@@ -1474,17 +1563,30 @@ export function WebScannerApp() {
             Use the same access code as the Android app. This scanner works from
             Safari or Chrome using the browser camera.
           </p>
-          <input
-            autoCapitalize="characters"
-            autoComplete="one-time-code"
-            value={accessCode}
-            onChange={(event) => setAccessCode(event.target.value)}
-            placeholder="AMS-XXXX-XXXX"
-          />
-          <button type="button" onClick={signIn} disabled={busy}>
-            {busy ? "Signing in..." : "Sign In"}
-          </button>
-          {statusMessage ? <p className="pill warn">{statusMessage}</p> : null}
+          <form
+            className="web-login-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void signIn();
+            }}
+          >
+            <div className="web-scanner-field">
+              <label htmlFor="scanner-access-code">Access code</label>
+              <input
+                id="scanner-access-code"
+                autoCapitalize="characters"
+                autoComplete="one-time-code"
+                value={accessCode}
+                onChange={(event) => setAccessCode(event.target.value)}
+                placeholder="AMS-XXXX-XXXX"
+                aria-describedby={statusMessage ? "scanner-login-status" : undefined}
+              />
+            </div>
+            <button type="submit" disabled={busy}>
+              {busy ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+          {statusMessage ? <p id="scanner-login-status" className="pill warn" role="alert">{statusMessage}</p> : null}
         </section>
       </div>
     );
@@ -1655,23 +1757,29 @@ export function WebScannerApp() {
         </div>
 
         <div className="web-camera-bottom">
-          <div className="web-manual-row">
-            <input
-              ref={manualInputRef}
-              value={studentId}
-              onChange={(event) => editStudentId(event.target.value)}
-              inputMode="numeric"
-              placeholder="Manual student number"
-            />
-            <button
-              className="secondary"
-              type="button"
-              onClick={() => lookupStudent(studentId, "manual")}
-              disabled={busy}
-            >
+          <form
+            className="web-manual-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void lookupStudent(studentId, "manual");
+            }}
+          >
+            <div className="web-scanner-field">
+              <label htmlFor="scanner-manual-student-id">Student number</label>
+              <input
+                id="scanner-manual-student-id"
+                ref={manualInputRef}
+                value={studentId}
+                onChange={(event) => editStudentId(event.target.value)}
+                inputMode="numeric"
+                placeholder="Manual student number"
+                aria-describedby={statusMessage ? "scanner-status" : undefined}
+              />
+            </div>
+            <button className="secondary" type="submit" disabled={busy}>
               Lookup
             </button>
-          </div>
+          </form>
           <div className="web-camera-actions">
             <button
               className="secondary"
@@ -1684,6 +1792,7 @@ export function WebScannerApp() {
             <button
               className="secondary"
               type="button"
+              ref={manualModeButtonRef}
               onClick={() => manualInputRef.current?.focus()}
             >
               Manual Mode
@@ -1764,7 +1873,7 @@ export function WebScannerApp() {
           ) : null}
           {torchMessage ? <div className="web-camera-note">{torchMessage}</div> : null}
           {!scanPaused && statusMessage ? (
-            <div className="web-camera-note">{statusMessage}</div>
+            <div id="scanner-status" className="web-camera-note" aria-live="polite">{statusMessage}</div>
           ) : null}
           {cameraRecoveryNeeded ? (
             <button
@@ -1790,9 +1899,44 @@ export function WebScannerApp() {
       </div>
 
       {scanPaused ? (
-        <div className="web-review-sheet">
+        <dialog
+          ref={reviewDialogRef}
+          className="web-review-sheet"
+          aria-labelledby="scanner-review-title"
+          aria-describedby="scanner-review-context"
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") {
+              return;
+            }
+
+            const focusable = Array.from(
+              event.currentTarget.querySelectorAll<HTMLElement>(
+                "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex='-1'])"
+              )
+            ).filter((element) => element.getClientRects().length > 0);
+            if (!focusable.length) {
+              event.preventDefault();
+              return;
+            }
+
+            const active = document.activeElement;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && (active === first || !event.currentTarget.contains(active))) {
+              event.preventDefault();
+              last.focus();
+            } else if (!event.shiftKey && (active === last || !event.currentTarget.contains(active))) {
+              event.preventDefault();
+              first.focus();
+            }
+          }}
+          onCancel={(event) => {
+            event.preventDefault();
+            dismissReview();
+          }}
+        >
           <div className={`web-review-card state-${reviewTone}`}>
-            <h2>
+            <h2 id="scanner-review-title" ref={reviewHeadingRef} tabIndex={-1}>
               {lookupPending
                 ? "Checking student..."
                 : reviewEdited ? "Look up edited student number"
@@ -1806,6 +1950,9 @@ export function WebScannerApp() {
                       ? "Student not found"
                       : "Review scan"}
             </h2>
+            <p id="scanner-review-context" className="sr-only">
+              Check the returned student details before choosing an attendance action. Cancel review returns to scanning without cancelling a submitted attendance.
+            </p>
             {lastLookup ? (
               <div style={{ overflowWrap: "anywhere" }}>
                 <p><strong>{"allocation" in lastLookup ? lastLookup.allocation.studentName?.trim() || "Name unavailable" : "Name unavailable"}</strong></p>
@@ -1820,45 +1967,56 @@ export function WebScannerApp() {
                 ) : null}
               </div>
             ) : null}
-            <input
-              value={studentId}
-              onChange={(event) => editStudentId(event.target.value)}
-              inputMode="numeric"
-              placeholder="Student number"
-              readOnly={busy && !lookupPending}
-            />
-            {lastLookup?.status === "ready_to_mark" || lastLookup?.status === "wrong_room" ? <textarea
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              placeholder="Comments (optional)"
-              rows={3}
-              disabled={busy || !reviewActionable}
-            /> : comment ? <p className="subtle">Draft comment retained for re-lookup. Continue Scan discards it without saving.</p> : null}
-            {statusMessage ? <p className="subtle">{statusMessage}</p> : null}
-            <div className="inline-actions">
+            <form
+              className="web-review-lookup-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void lookupStudent(studentId, lastSource);
+              }}
+            >
+              <div className="web-scanner-field">
+                <label htmlFor="scanner-review-student-id">Student number</label>
+                <input
+                  id="scanner-review-student-id"
+                  value={studentId}
+                  onChange={(event) => editStudentId(event.target.value)}
+                  inputMode="numeric"
+                  placeholder="Student number"
+                  readOnly={busy && !lookupPending}
+                />
+              </div>
               {lookupPending ? (
-                <>
-                  <button className="secondary" type="button" disabled>
-                    Checking...
-                  </button>
-                  <button
-                    className="secondary"
-                    type="button"
-                    onClick={resetForNextScan}
-                  >
-                    Cancel Scan
-                  </button>
-                </>
+                <button className="secondary" type="submit" disabled>
+                  Checking...
+                </button>
               ) : (
                 <button
                   className="secondary"
-                  type="button"
-                  onClick={() => lookupStudent(studentId, lastSource)}
+                  type="submit"
                   disabled={busy || !normalizeStudentId(studentId)}
                 >
                   Lookup Edited ID
                 </button>
               )}
+            </form>
+            {lastLookup?.status === "ready_to_mark" || lastLookup?.status === "wrong_room" ? (
+              <div className="web-scanner-field">
+                <label htmlFor="scanner-review-comment">Comment (optional)</label>
+                <textarea
+                  id="scanner-review-comment"
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Comments (optional)"
+                  rows={3}
+                  disabled={busy || !reviewActionable}
+                />
+              </div>
+            ) : comment ? <p className="subtle">Draft comment retained for re-lookup. Continue Scan discards it without saving.</p> : null}
+            {statusMessage ? <p id="scanner-review-status" className="subtle" aria-live="polite">{statusMessage}</p> : null}
+            <div className="inline-actions">
+              <button className="secondary" type="button" onClick={dismissReview}>
+                Cancel review
+              </button>
               {lastLookup?.status === "ready_to_mark" ? (
                 <button type="button" onClick={() => markStudent()} disabled={busy || !reviewActionable}>
                   Mark Present
@@ -1894,13 +2052,13 @@ export function WebScannerApp() {
               ) : null}
               {lastLookup?.status === "already_marked" ||
               lastLookup?.status === "student_not_found" ? (
-                <button type="button" onClick={resetForNextScan} disabled={busy}>
+                <button type="button" onClick={() => resetForNextScan()} disabled={busy}>
                   Continue Scan
                 </button>
               ) : null}
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
     </div>
   );
