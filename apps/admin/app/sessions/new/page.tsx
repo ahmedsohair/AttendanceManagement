@@ -19,7 +19,12 @@ export default async function NewSessionPage({
   const params = (await searchParams) || {};
   const parsedSessionId = uuidSchema.safeParse(params.sessionId);
   const sessionId = parsedSessionId.success ? parsedSessionId.data : undefined;
-  const store = await readExamSetupStoreFast(sessionId);
+  let store: Awaited<ReturnType<typeof readExamSetupStoreFast>>;
+  try {
+    store = await readExamSetupStoreFast(sessionId);
+  } catch {
+    return <div className="card" role="alert">Unable to load exam setup and staffing. No assignment snapshot is available. <a href={sessionId ? `/sessions/new?sessionId=${encodeURIComponent(sessionId)}` : "/sessions/new"}>Reload setup to retry</a></div>;
+  }
   const session = sessionId
     ? store.examSessions.find((item) => item.id === sessionId)
     : null;
@@ -90,6 +95,7 @@ export default async function NewSessionPage({
           </div>
           <ExamAssignmentWizard
             initialInvigilators={invigilators}
+            populatedRoomIds={store.populatedRoomIds}
             mode="setup"
             rooms={sessionRooms}
             sessionId={session.id}

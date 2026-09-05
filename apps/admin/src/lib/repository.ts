@@ -18,6 +18,7 @@ import {
 import { generateAccessCode, hashAccessCode } from "./access-code";
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { nextId, nowIso, readStore, writeStore } from "./store";
+import { readExamStaffingSnapshot, readPopulatedRoomIds } from "./exam-staffing-read";
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -1599,29 +1600,37 @@ export async function listMobileRoomsForUserFast(user: User) {
   });
 }
 
-export async function readExamSessionStoreFast(examSessionId: string): Promise<DataStore> {
+type ExamStaffingStore = DataStore & { populatedRoomIds?: string[] };
+
+export async function readExamSessionStoreFast(examSessionId: string): Promise<ExamStaffingStore> {
   if (!isSupabaseConfigured()) {
-    return readStore();
+    const store = await readStore();
+    const roomIds = new Set(store.rooms.filter((room) => room.examSessionId === examSessionId).map((room) => room.id));
+    return {
+      ...store,
+      users: store.users.map((user) => ({
+        ...user,
+        assignedRoomIds: user.assignedRoomIds.filter((roomId) => roomIds.has(roomId))
+      })),
+      populatedRoomIds: store.studentAllocations
+        .filter((allocation) => allocation.examSessionId === examSessionId).map((allocation) => allocation.roomId)
+    };
   }
 
   const supabase = getSupabaseAdmin();
   const [
     sessionResponse,
-    roomsResponse,
+    staffing,
     allocationsResponse,
     attendanceResponse,
-    incidentsResponse,
-    usersResponse
+    incidentsResponse
   ] = await Promise.all([
     supabase
       .from("exam_sessions")
       .select("id, name, exam_date, start_time, published, status, created_at")
       .eq("id", examSessionId)
       .maybeSingle(),
-    supabase
-      .from("rooms")
-      .select("id, exam_session_id, code, display_name, capacity")
-      .eq("exam_session_id", examSessionId),
+    readExamStaffingSnapshot(supabase, examSessionId),
     supabase
       .from("student_allocations")
       .select("id, exam_session_id, student_id, student_name, room_id, zone, course_code, program")
@@ -1633,30 +1642,27 @@ export async function readExamSessionStoreFast(examSessionId: string): Promise<D
     supabase
       .from("incidents")
       .select("id, exam_session_id, student_id, room_id, expected_room_id, user_id, incident_type, details, created_at")
-      .eq("exam_session_id", examSessionId),
-    supabase.from("users").select("id, email, full_name, role")
+      .eq("exam_session_id", examSessionId)
   ]);
 
   for (const response of [
     sessionResponse,
-    roomsResponse,
     allocationsResponse,
     attendanceResponse,
-    incidentsResponse,
-    usersResponse
+    incidentsResponse
   ]) {
     if (response.error) {
       throw new Error(response.error.message);
     }
   }
 
-  const users = (usersResponse.data || []).map((user) =>
+  const users = staffing.users.map((user) =>
     userWithAssignments({
       id: String(user.id),
       email: String(user.email),
       full_name: String(user.full_name),
       role: user.role as User["role"]
-    })
+    }, staffing.assignedRoomsByUser.get(String(user.id)) || [])
   );
 
   if (!sessionResponse.data) {
@@ -1670,17 +1676,21 @@ export async function readExamSessionStoreFast(examSessionId: string): Promise<D
     };
   }
 
+  const session = mapSupabaseSession(sessionResponse.data);
   return {
     users,
-    examSessions: [mapSupabaseSession(sessionResponse.data)],
-    rooms: (roomsResponse.data || []).map(mapSupabaseRoom),
+    examSessions: [session],
+    rooms: staffing.rooms.map(mapSupabaseRoom),
+    populatedRoomIds: (session.status || (session.published ? "active" : "draft")) === "draft"
+      ? await readPopulatedRoomIds(supabase, examSessionId, staffing.rooms.map((room) => String(room.id)))
+      : undefined,
     studentAllocations: (allocationsResponse.data || []).map(mapSupabaseAllocation),
     attendanceEvents: (attendanceResponse.data || []).map(mapSupabaseAttendance),
     incidents: (incidentsResponse.data || []).map(mapSupabaseIncident)
   };
 }
 
-export async function readExamSetupStoreFast(examSessionId?: string): Promise<DataStore> {
+export async function readExamSetupStoreFast(examSessionId?: string): Promise<ExamStaffingStore> {
   if (!isSupabaseConfigured()) {
     const store = await readStore();
     const roomIds = new Set(
@@ -1691,6 +1701,7 @@ export async function readExamSetupStoreFast(examSessionId?: string): Promise<Da
         : []
     );
     return {
+      populatedRoomIds: store.studentAllocations.filter((allocation) => allocation.examSessionId === examSessionId).map((allocation) => allocation.roomId),
       users: store.users
         .filter((user) => user.role === "invigilator")
         .map((user) => ({
@@ -1710,10 +1721,7 @@ export async function readExamSetupStoreFast(examSessionId?: string): Promise<Da
   }
 
   const supabase = getSupabaseAdmin();
-  const usersPromise = supabase
-    .from("users")
-    .select("id, email, full_name, role")
-    .eq("role", "invigilator");
+  const staffingPromise = readExamStaffingSnapshot(supabase, examSessionId, true);
   const sessionPromise = examSessionId
     ? supabase
         .from("exam_sessions")
@@ -1721,45 +1729,23 @@ export async function readExamSetupStoreFast(examSessionId?: string): Promise<Da
         .eq("id", examSessionId)
         .maybeSingle()
     : Promise.resolve({ data: null, error: null });
-  const roomsPromise = examSessionId
-    ? supabase
-        .from("rooms")
-        .select("id, exam_session_id, code, display_name, capacity")
-        .eq("exam_session_id", examSessionId)
-    : Promise.resolve({ data: [], error: null });
-  const [usersResponse, sessionResponse, roomsResponse] = await Promise.all([
-    usersPromise,
-    sessionPromise,
-    roomsPromise
+  const [staffing, sessionResponse] = await Promise.all([
+    staffingPromise,
+    sessionPromise
   ]);
 
-  for (const response of [usersResponse, sessionResponse, roomsResponse]) {
+  for (const response of [sessionResponse]) {
     if (response.error) {
       throw new Error(response.error.message);
     }
   }
 
-  const roomIds = (roomsResponse.data || []).map((room) => String(room.id));
-  const assignmentsResponse = roomIds.length
-    ? await supabase
-        .from("room_assignments")
-        .select("room_id, user_id")
-        .in("room_id", roomIds)
-    : { data: [], error: null };
-  if (assignmentsResponse.error) {
-    throw new Error(assignmentsResponse.error.message);
-  }
-
-  const assignedRoomsByUser = new Map<string, string[]>();
-  for (const assignment of assignmentsResponse.data || []) {
-    const userId = String(assignment.user_id);
-    const assignedRoomIds = assignedRoomsByUser.get(userId) || [];
-    assignedRoomIds.push(String(assignment.room_id));
-    assignedRoomsByUser.set(userId, assignedRoomIds);
-  }
-
+  const session = sessionResponse.data ? mapSupabaseSession(sessionResponse.data) : null;
   return {
-    users: (usersResponse.data || []).map((user) =>
+    populatedRoomIds: examSessionId && session && (session.status || (session.published ? "active" : "draft")) === "draft"
+      ? await readPopulatedRoomIds(supabase, examSessionId, staffing.rooms.map((room) => String(room.id)))
+      : undefined,
+    users: staffing.users.map((user) =>
       userWithAssignments(
         {
           id: String(user.id),
@@ -1767,11 +1753,11 @@ export async function readExamSetupStoreFast(examSessionId?: string): Promise<Da
           full_name: String(user.full_name),
           role: user.role as User["role"]
         },
-        assignedRoomsByUser.get(String(user.id)) || []
+        staffing.assignedRoomsByUser.get(String(user.id)) || []
       )
     ),
-    examSessions: sessionResponse.data ? [mapSupabaseSession(sessionResponse.data)] : [],
-    rooms: (roomsResponse.data || []).map(mapSupabaseRoom),
+    examSessions: session ? [session] : [],
+    rooms: staffing.rooms.map(mapSupabaseRoom),
     studentAllocations: [],
     attendanceEvents: [],
     incidents: []

@@ -908,6 +908,56 @@ button.icon-button.danger:hover {
 .assignment-workflow {
   display: grid;
   gap: 18px;
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.room-access-panel,
+.assignment-workflow * {
+  min-width: 0;
+}
+
+.assignment-workflow :is(.pill, button, strong, .subtle) {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.assignment-workflow .room-assignment-card > .pill {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.setup-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.setup-field input {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@container (max-width: 760px) {
+  .assignment-workflow .assignment-board,
+  .assignment-workflow .review-room-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .assignment-workflow .assignment-workflow-header,
+  .assignment-workflow .assignment-panel-title,
+  .assignment-workflow .assignment-sticky-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .assignment-workflow .room-list-panel {
+    position: static;
+  }
+
+  .assignment-workflow .assignment-sticky-bar {
+    position: static;
+  }
 }
 
 .room-access-panel .assignment-workflow {
@@ -1002,12 +1052,16 @@ button.icon-button.danger:hover {
 
 .inline-create-panel {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
   gap: 10px;
   padding: 12px;
   border: 1px solid rgba(0, 112, 234, 0.24);
   border-radius: var(--radius);
   background: #eef5ff;
+}
+
+.inline-create-panel > button {
+  grid-column: 1 / -1;
 }
 
 .selected-staff-strip {

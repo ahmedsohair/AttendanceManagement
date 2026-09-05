@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ExamSessionStatus, Room, User } from "@algo-attendance/shared";
 import { CopyButton } from "./copy-button";
+import { examReadiness } from "../lib/exam-readiness";
 
 type ExamAssignmentWizardProps = {
   initialInvigilators: User[];
@@ -11,6 +12,7 @@ type ExamAssignmentWizardProps = {
   sessionId: string;
   sessionName: string;
   sessionStatus: ExamSessionStatus;
+  populatedRoomIds?: string[];
 };
 
 type Notice = {
@@ -35,6 +37,12 @@ function buildAssignmentRecord(
   assignments: Array<{ roomId: string; invigilatorIds: string[] }>
 ) {
   const record = Object.fromEntries(rooms.map((room) => [room.id, [] as string[]]));
+  if (!Array.isArray(assignments) || assignments.length !== rooms.length ||
+      new Set(assignments.map((assignment) => assignment.roomId)).size !== rooms.length ||
+      assignments.some((assignment) => !(assignment.roomId in record) ||
+        !Array.isArray(assignment.invigilatorIds) || assignment.invigilatorIds.some((id) => typeof id !== "string"))) {
+    throw new Error("The committed assignment snapshot is incomplete. Reload before making further changes.");
+  }
 
   for (const assignment of assignments) {
     if (assignment.roomId in record) {
@@ -92,14 +100,27 @@ function wait(milliseconds: number) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-export function ExamAssignmentWizard({
+export function ExamAssignmentWizard(props: ExamAssignmentWizardProps) {
+  return <ExamAssignmentEditor key={`${props.sessionId}:${props.sessionStatus === "closed" ? "closed" : "editable"}`} {...props} />;
+}
+
+function ExamAssignmentEditor({
   initialInvigilators,
   mode = "manage",
-  rooms,
+  rooms: incomingRooms,
   sessionId,
   sessionName,
-  sessionStatus
+  sessionStatus,
+  populatedRoomIds
 }: ExamAssignmentWizardProps) {
+  const fieldId = useId();
+  const operation = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const [rooms, setRooms] = useState(incomingRooms);
   const [assignments, setAssignments] = useState(() =>
     buildInitialAssignments(rooms, initialInvigilators)
   );
@@ -127,6 +148,27 @@ export function ExamAssignmentWizard({
   const [isEmailingCode, setIsEmailingCode] = useState(false);
   const [emailReport, setEmailReport] = useState<EmailReport | null>(null);
   const [selectedFailedDeliveries, setSelectedFailedDeliveries] = useState<string[]>([]);
+  const incomingSnapshot = JSON.stringify([incomingRooms, initialInvigilators]);
+  const [seenSnapshot, setSeenSnapshot] = useState(incomingSnapshot);
+  const [refreshPending, setRefreshPending] = useState(false);
+  const busy = isSaving || isPublishing || isCreating || isEmailing || isEmailingCode;
+
+  // A refresh must never silently replace the baseline behind local edits.
+  // A different exam remounts the editor; clean same-exam refreshes adopt one snapshot.
+  if (seenSnapshot !== incomingSnapshot) {
+    setSeenSnapshot(incomingSnapshot);
+    if (!dirty && !busy) {
+      const snapshot = buildInitialAssignments(incomingRooms, initialInvigilators);
+      setRooms(incomingRooms);
+      setInvigilators(initialInvigilators);
+      setAssignments(snapshot);
+      setSavedAssignments(snapshot);
+      setSelectedRoomId((current) => incomingRooms.some((room) => room.id === current) ? current : incomingRooms[0]?.id || "");
+      setRefreshPending(false);
+    } else {
+      setRefreshPending(true);
+    }
+  }
 
   const selectedRoom = rooms.find((room) => room.id === selectedRoomId) || rooms[0];
   const isSetupMode = mode === "setup";
@@ -151,9 +193,12 @@ export function ExamAssignmentWizard({
     0
   );
   const unassignedRooms = rooms.filter((room) => !(assignments[room.id] || []).length);
+  const readiness = examReadiness(rooms.map((room) => room.id), assignments, populatedRoomIds);
+  const needsRoster = !rooms.length || (populatedRoomIds !== undefined &&
+    rooms.some((room) => !populatedRoomIds.includes(room.id)));
 
   function toggleRoomInvigilator(roomId: string, invigilatorId: string) {
-    if (isReadOnly) {
+    if (isReadOnly || busy || operation.current) {
       return;
     }
 
@@ -173,6 +218,8 @@ export function ExamAssignmentWizard({
   }
 
   function saveAssignments() {
+    if (isReadOnly || busy || operation.current || !dirty) return;
+    operation.current = true;
     setIsSaving(true);
     void (async () => {
       try {
@@ -180,6 +227,7 @@ export function ExamAssignmentWizard({
       } catch {
         // saveAssignmentsRequest already exposes the error in the notice area.
       } finally {
+        operation.current = false;
         setIsSaving(false);
       }
     })();
@@ -213,9 +261,11 @@ export function ExamAssignmentWizard({
       }
 
       const committedAssignments = buildAssignmentRecord(rooms, payload.roomAssignments);
+      if (!mounted.current) return;
       setAssignments(committedAssignments);
       setSavedAssignments(committedAssignments);
       setDirty(false);
+      setRefreshPending(false);
       setNotice({ tone: "ok", text: "Room assignments saved." });
     } catch (error) {
       setNotice({
@@ -227,10 +277,11 @@ export function ExamAssignmentWizard({
   }
 
   function createInvigilator() {
-    if (!selectedRoom || isReadOnly) {
+    if (!selectedRoom || isReadOnly || busy || operation.current) {
       return;
     }
 
+    operation.current = true;
     setIsCreating(true);
     void (async () => {
       try {
@@ -285,39 +336,46 @@ export function ExamAssignmentWizard({
           text: error instanceof Error ? error.message : "Unable to create invigilator."
         });
       } finally {
+        operation.current = false;
         setIsCreating(false);
       }
     })();
   }
 
   function publishExam() {
+    if (!canPublish || !readiness.ready || busy || operation.current) return;
+    operation.current = true;
     setIsPublishing(true);
     void (async () => {
       try {
         if (dirty) {
           await saveAssignmentsRequest();
         }
+        if (!mounted.current) return;
 
         const response = await fetch(`/api/exam-sessions/${sessionId}/publish`, {
           method: "POST"
         });
 
-        if (!response.ok && response.headers.get("content-type")?.includes("json")) {
+        if (!response.ok) {
           await readJsonResponse(response);
         }
 
-        window.location.assign(`/sessions/${sessionId}`);
+        if (mounted.current) window.location.assign(`/sessions/${sessionId}`);
       } catch (error) {
         setNotice({
           tone: "warn",
           text: error instanceof Error ? error.message : "Unable to publish exam."
         });
         setIsPublishing(false);
+      } finally {
+        operation.current = false;
       }
     })();
   }
 
   function emailInvigilators() {
+    if (busy || operation.current || isReadOnly) return;
     if (dirty) {
       setNotice({
         tone: "warn",
@@ -496,20 +554,32 @@ export function ExamAssignmentWizard({
           </h2>
           <div className="subtle">
             {isSetupMode
-              ? `${assignedCount} of ${rooms.length} room(s) have staff assigned.`
+              ? `${assignedCount} of ${rooms.length} room(s) have staff assigned${dirty ? " in unsaved changes" : ""}.`
               : isReadOnly
                 ? `${assignedCount} of ${rooms.length} room(s) had assigned staff when reviewed.`
-                : `${assignedCount} of ${rooms.length} room(s) currently have assigned staff.`}
+                : `${assignedCount} of ${rooms.length} room(s) ${dirty ? "have staff in unsaved changes" : "currently have assigned staff"}.`}
           </div>
         </div>
-        <div className={unassignedRooms.length ? "pill warn" : "pill ok"}>
-          {unassignedRooms.length
+        <div className={!rooms.length || unassignedRooms.length ? "pill warn" : "pill ok"}>
+          {!rooms.length ? "No rooms available" : unassignedRooms.length
             ? `${unassignedRooms.length} unassigned room(s)`
             : "All rooms assigned"}
         </div>
       </div>
 
-      {notice ? <p className={`pill ${notice.tone} toast-message`}>{notice.text}</p> : null}
+      {notice ? <p id={`${fieldId}-notice`} role="status" className={`pill ${notice.tone} toast-message`}>{notice.text}</p> : null}
+      {refreshPending ? (
+        <p role="status" className="subtle">
+          New staffing data is available. Your edits and original save baseline have been kept.
+          Reload to discard local edits and review the latest assignments.
+        </p>
+      ) : null}
+      {canPublish ? (
+        <p id={`${fieldId}-readiness`} className="subtle" role="status">
+          {readiness.message}{" "}
+          {needsRoster ? <a href="/sessions/new">Import roster as a new draft</a> : null}
+        </p>
+      ) : null}
 
       {emailReport ? (
         <div className="email-delivery-report">
@@ -705,7 +775,7 @@ export function ExamAssignmentWizard({
                 </div>
                 <button
                   className="secondary"
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || busy}
                   type="button"
                   onClick={() => setShowCreatePanel((current) => !current)}
                 >
@@ -715,29 +785,42 @@ export function ExamAssignmentWizard({
 
               {showCreatePanel ? (
                 <div className="inline-create-panel">
-                  <input
-                    type="email"
-                    value={newEmail}
-                    placeholder="Email address"
-                    onChange={(event) => setNewEmail(event.target.value)}
-                  />
-                  <input
-                    value={newName}
-                    placeholder="Full name (optional)"
-                    onChange={(event) => setNewName(event.target.value)}
-                  />
-                  <button disabled={isCreating || !newEmail.trim()} type="button" onClick={createInvigilator}>
+                  <label className="setup-field">
+                    <span>Email address</span>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      placeholder="Email address"
+                      disabled={isReadOnly || busy}
+                      aria-describedby={notice?.tone === "warn" ? `${fieldId}-notice` : undefined}
+                      onChange={(event) => setNewEmail(event.target.value)}
+                    />
+                  </label>
+                  <label className="setup-field">
+                    <span>Full name (optional)</span>
+                    <input
+                      value={newName}
+                      placeholder="Full name (optional)"
+                      disabled={isReadOnly || busy}
+                      aria-describedby={notice?.tone === "warn" ? `${fieldId}-notice` : undefined}
+                      onChange={(event) => setNewName(event.target.value)}
+                    />
+                  </label>
+                  <button disabled={isReadOnly || busy || !newEmail.trim()} type="button" onClick={createInvigilator}>
                     {isCreating ? "Creating..." : `Create & Add To ${selectedRoom.code}`}
                   </button>
                 </div>
               ) : null}
 
-              <input
-                type="search"
-                value={query}
-                placeholder="Search invigilators"
-                onChange={(event) => setQuery(event.target.value)}
-              />
+              <label className="setup-field">
+                <span>Search invigilators</span>
+                <input
+                  type="search"
+                  value={query}
+                  placeholder="Search invigilators"
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </label>
 
               <div className="selected-staff-strip">
                 {assignedInvigilatorIds.length ? (
@@ -748,6 +831,7 @@ export function ExamAssignmentWizard({
                       <button
                         key={userId}
                         className="staff-chip"
+                        disabled={isReadOnly || busy}
                         type="button"
                         onClick={() => toggleRoomInvigilator(selectedRoom.id, userId)}
                       >
@@ -771,7 +855,7 @@ export function ExamAssignmentWizard({
                     >
                       <input
                         type="checkbox"
-                        disabled={isReadOnly}
+                        disabled={isReadOnly || busy}
                         checked={checked}
                         onChange={() =>
                           toggleRoomInvigilator(selectedRoom.id, invigilator.id)
@@ -799,7 +883,7 @@ export function ExamAssignmentWizard({
               ? "Closed exam assignments"
               : dirty
                 ? "Unsaved assignment changes"
-                : "Assignments up to date"}
+                : !rooms.length ? "No rooms available" : "Assignments up to date"}
           </strong>
           <span className="subtle">
             {isReadOnly
@@ -811,7 +895,7 @@ export function ExamAssignmentWizard({
           <div className="inline-actions">
           <button
             className="secondary"
-            disabled={isSaving || !dirty}
+            disabled={busy || !dirty}
             type="button"
             onClick={saveAssignments}
           >
@@ -819,7 +903,7 @@ export function ExamAssignmentWizard({
           </button>
           <button
             className="secondary"
-            disabled={isSaving || isEmailing || dirty || !assignedCount}
+            disabled={busy || dirty || !assignedCount}
             title={dirty ? "Save assignments before emailing" : "Email assigned invigilators"}
             type="button"
             onClick={emailInvigilators}
@@ -829,7 +913,7 @@ export function ExamAssignmentWizard({
           {isSetupMode ? (
             <button
               className="secondary"
-              disabled={isSaving}
+              disabled={busy || !rooms.length}
               type="button"
               onClick={() => setReviewMode(true)}
             >
@@ -838,7 +922,8 @@ export function ExamAssignmentWizard({
           ) : null}
           {canPublish ? (
             <button
-              disabled={isSaving || isPublishing}
+              disabled={busy || !readiness.ready}
+              aria-describedby={`${fieldId}-readiness`}
               title={dirty ? "Save assignments and publish exam" : "Publish exam"}
               type="button"
               onClick={publishExam}

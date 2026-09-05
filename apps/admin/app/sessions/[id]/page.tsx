@@ -24,7 +24,12 @@ export default async function SessionDetailPage({
   const { id } = await params;
   const notices = (await searchParams) || {};
   const searchTerm = (notices.q || "").trim().toLowerCase();
-  const store = await readExamSessionStoreFast(id);
+  let store: Awaited<ReturnType<typeof readExamSessionStoreFast>>;
+  try {
+    store = await readExamSessionStoreFast(id);
+  } catch {
+    return <div className="card" role="alert">Unable to load this exam and its staffing. No assignment snapshot is available. <a href={`/sessions/${id}`}>Reload exam to retry</a></div>;
+  }
   const session = store.examSessions.find((item) => item.id === id);
 
   if (!session) {
@@ -152,6 +157,7 @@ export default async function SessionDetailPage({
       {sessionStatus === "draft" ? (
         <ExamAssignmentWizard
           initialInvigilators={invigilators}
+          populatedRoomIds={store.populatedRoomIds}
           mode="setup"
           rooms={sessionRooms}
           sessionId={session.id}
@@ -184,6 +190,7 @@ export default async function SessionDetailPage({
           </summary>
           <ExamAssignmentWizard
             initialInvigilators={invigilators}
+            populatedRoomIds={store.populatedRoomIds}
             mode="manage"
             rooms={sessionRooms}
             sessionId={session.id}

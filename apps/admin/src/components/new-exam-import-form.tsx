@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export function NewExamImportForm() {
+  const fieldId = useId();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -47,16 +48,43 @@ export function NewExamImportForm() {
 
   return (
     <>
-      <form className="form-grid" onSubmit={handleSubmit}>
-        <input name="name" placeholder="Exam name" required />
-        <input name="examDate" type="date" required />
-        <input name="startTime" type="time" required />
-        <input name="files" type="file" accept=".xlsx,.csv" multiple required />
+      <form
+        className="form-grid"
+        onSubmit={handleSubmit}
+        aria-describedby={message ? `${fieldId}-error` : undefined}
+      >
+        <label className="setup-field">
+          <span>Exam name</span>
+          <input name="name" placeholder="Exam name" required aria-describedby={message ? `${fieldId}-error` : undefined} />
+        </label>
+        <label className="setup-field">
+          <span>Exam date</span>
+          <input name="examDate" type="date" required aria-describedby={message ? `${fieldId}-error` : undefined} />
+        </label>
+        <label className="setup-field">
+          <span>Exam start time</span>
+          <input name="startTime" type="time" required aria-describedby={message ? `${fieldId}-error` : undefined} />
+        </label>
+        <label className="setup-field">
+          <span>Roster files</span>
+          <input
+            name="files"
+            type="file"
+            accept=".xlsx,.csv"
+            multiple
+            required
+            aria-describedby={`${fieldId}-files${message ? ` ${fieldId}-error` : ""}`}
+          />
+        </label>
+        <p id={`${fieldId}-files`} className="subtle">
+          Upload .xlsx or .csv files with student_id, student_name, room and zone columns.
+          Optional: course_code, program. Duplicate student IDs within the same exam import are rejected.
+        </p>
         <button type="submit" disabled={busy}>
           {busy ? "Importing..." : "Upload Exam Spreadsheet(s)"}
         </button>
       </form>
-      {message ? <p className="pill warn">{message}</p> : null}
+      {message ? <p id={`${fieldId}-error`} role="status" className="pill warn">{message}</p> : null}
     </>
   );
 }
