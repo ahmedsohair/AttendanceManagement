@@ -46,6 +46,24 @@ async function fixture(page) {
   return fixture;
 }
 const review = (page) => page.locator(".web-review-sheet");
+
+test("wrong-room review remains reachable on a small phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const f = await fixture(page);
+  f.lookup = (id) => result(id, "wrong_room");
+  await lookup(page, "9000992");
+  const card = await review(page).locator(".web-review-card").boundingBox();
+  expect(card.y).toBeGreaterThanOrEqual(0);
+  expect(card.y + card.height).toBeLessThanOrEqual(667);
+  const heading = review(page).getByRole("heading", { name: "Wrong room detected" });
+  await heading.scrollIntoViewIfNeeded();
+  await expect(heading).toBeInViewport();
+  const action = review(page).getByRole("button", { name: "Mark present in TEST-A" });
+  await action.scrollIntoViewIfNeeded();
+  await expect(action).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 async function lookup(page, id) {
   await page.getByPlaceholder("Manual student number", { exact: true }).fill(id);
   await page.getByRole("button", { name: "Lookup", exact: true }).click();

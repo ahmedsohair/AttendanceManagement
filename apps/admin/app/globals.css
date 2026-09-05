@@ -1622,6 +1622,10 @@ button.icon-button.danger:hover {
 
 .web-review-card {
   display: grid;
+  min-height: 0;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   gap: 12px;
   border-radius: 28px;
   border: 1px solid var(--line);

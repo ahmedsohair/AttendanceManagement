@@ -1,5 +1,13 @@
 # B1 Handoff
 
+## Independent Review: 5 September 2026
+
+Parent reviewed canonical write construction, stale lookup/finalizer ownership, synchronous duplicate marking, outbox completion and delayed reset ownership. No remaining blocking functional finding was identified in that review.
+
+The parent added a 375 x 667 viewport regression: the wrong-room card originally extended to y=788, outside the viewport. The card now has a viewport-bounded height and internal vertical scrolling. The strengthened layout test and all nine existing mocked browser cases passed together (10/10) after this correction. The change is limited to review-card containment; dialog accessibility remains B3.
+
+Approved for local integration into `hardening/staging`. Live staging, physical devices and broader visual acceptance remain pending. The earlier agent-only boundaries below describe the original handoff, not a prohibition on the authorized parent integration.
+
 ## Workspace and Scope
 
 - Worktree: `C:/dev/AlgoAttendance-ux-b1`; branch: `ux/student-review-b1`.
