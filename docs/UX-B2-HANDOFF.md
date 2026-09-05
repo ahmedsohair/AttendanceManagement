@@ -1,5 +1,11 @@
 # B2 Handoff: Accurate Exam Staffing and Readiness
 
+## Staging Deployment
+
+Commit `3d0318c` pushed to `hardening/staging`. [GitHub release run 33957135215](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/33957135215) passed all gates. [Vercel staging deployment](https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/A6ViKf8xWMjvJW3AH15E817ZgdnD) succeeded.
+
+Public scanner/login returned 200. Unauthenticated setup and seeded exam-detail URLs returned 307 to login with their next paths preserved. Parent has no authenticated staging admin session, so this does not verify live assignment summaries or persisted save/publication. Those remain pending alongside device checks. No production deployment or business-data mutation performed.
+
 ## Independent Parent Review
 
 Parent reviewed selected-exam assignment filtering, deterministic paging/bounds/error propagation, per-room allocation readiness, committed save baselines, dirty refresh retention, stale-scope navigation guards and unchanged server write contracts. No blocking B2 finding identified.

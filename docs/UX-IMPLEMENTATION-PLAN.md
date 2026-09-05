@@ -14,6 +14,8 @@
 
 ### Agreed Sequencing
 
+Delegation preference: subsequent bounded batches use `gpt-5.6-luna` with `xhigh` reasoning, as requested by the owner; parent retains independent review/integration. B3 is assigned to Mendel in `C:/dev/AlgoAttendance-ux-b3` on `ux/scanner-accessibility-b3`, starting at `3d0318c`. B2 release gate/deployment passed; authenticated admin staging acceptance remains pending. No B3 deployment is authorized by its delegation alone.
+
 Updated user decision (5 September 2026): begin UX/UI work while the remaining Phase 8 operational checks are pending. This supersedes the earlier sequencing preference to finish Phase 8 first. Phase 8 remains open; this does not waive the release gate or deferred physical-device acceptance.
 
 Implement behaviour-sensitive UX repairs under the main agent's supervision, starting with B1 in a separate worktree. Use Impeccable for subsequent bounded visual polish, with before/after screenshots. Preserve ExamPulse's identity and core functionality. Review diffs and regression tests before integration; the delegated agent must not independently deploy or change business rules, API contracts, scanner lifecycle, or dependencies without review. Start scanner identity binding before polishing that review interface.
