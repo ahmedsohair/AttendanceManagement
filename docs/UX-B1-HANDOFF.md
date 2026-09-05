@@ -1,5 +1,13 @@
 # B1 Handoff
 
+## Deployed Verification: 5 September 2026
+
+- Commit `409660e` passed the full [GitHub release gate](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/33941444774).
+- [Vercel staging deployment](https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/EYWuruAmmyKuYX9mE2wYssHx9Htj) succeeded; the staging domain serves B1 client code.
+- Live Chromium at 375 x 667, with camera deliberately unavailable: synthetic Test Invigilator 01 sign-in passed; student 9000991 returned Ready to mark; editing to 9000992 invalidated the old action; fresh lookup returned Wrong room detected; the card fit the viewport. Zero attendance requests sent (the mark endpoint was blocked as an additional guard).
+- The test's cleanup click on page Back was intercepted by the review overlay, so the overall script exited nonzero after the successful assertions. Browser closure completed, but UI sign-out was not reached. This corroborates the existing B3 review-dismissal limitation and must not be described as a fully passing end-to-end script.
+- Actual mark/redirect writes and physical-device acceptance remain unverified. Existing mocked write-path tests passed separately. Production was not changed.
+
 ## Independent Review: 5 September 2026
 
 Parent reviewed canonical write construction, stale lookup/finalizer ownership, synchronous duplicate marking, outbox completion and delayed reset ownership. No remaining blocking functional finding was identified in that review.
