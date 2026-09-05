@@ -5,3 +5,10 @@ export function formatAuditTime(value: string) {
     timeZone: "Australia/Sydney"
   }).format(new Date(value));
 }
+
+export function formatScannerDuplicateTime(value: string) {
+  if (!value?.trim() || !Number.isFinite(new Date(value).getTime())) {
+    return "Time unavailable";
+  }
+  return `${formatAuditTime(value)} (Australia/Sydney)`;
+}

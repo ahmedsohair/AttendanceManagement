@@ -9,6 +9,9 @@ import type {
   User
 } from "@algo-attendance/shared";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
+import { normalizeStudentId } from "@algo-attendance/shared";
+import { createReviewGuard } from "@/lib/scanner-review.mjs";
+import { formatScannerDuplicateTime } from "@/lib/audit-time";
 import {
   ScannerRequestError,
   createIdempotencyTracker,
@@ -235,6 +238,8 @@ export function WebScannerApp() {
   const busyRef = useRef(false);
   const scanPausedRef = useRef(false);
   const lookupPendingRef = useRef(false);
+  const reviewGuardRef = useRef(createReviewGuard());
+  const markPendingRef = useRef(false);
   const historyGuardActiveRef = useRef(false);
   const historyGuardIdRef = useRef("");
   const lastBackHandledAtRef = useRef(0);
@@ -252,6 +257,7 @@ export function WebScannerApp() {
   const [comment, setComment] = useState("");
   const [lastSource, setLastSource] = useState<"ocr" | "manual">("ocr");
   const [lastLookup, setLastLookup] = useState<LookupResult | null>(null);
+  const [reviewEdited, setReviewEdited] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -279,6 +285,12 @@ export function WebScannerApp() {
   >("checking");
 
   authExpiryHandlerRef.current = () => {
+    reviewGuardRef.current.invalidate();
+    lookupPendingRef.current = false;
+    busyRef.current = false;
+    setBusy(false);
+    setLookupPending(false);
+    setLastLookup(null);
     ocrLoopRef.current?.stop();
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -381,6 +393,12 @@ export function WebScannerApp() {
   }, [getOutbox]);
 
   const resetForNextScan = useCallback(() => {
+    reviewGuardRef.current.invalidate();
+    requestCoordinatorRef.current?.cancel("lookup");
+    lookupPendingRef.current = false;
+    busyRef.current = false;
+    setBusy(false);
+    setReviewEdited(false);
     markIdempotencyRef.current?.clear();
     setStudentId("");
     setComment("");
@@ -391,6 +409,21 @@ export function WebScannerApp() {
     setScanPaused(false);
     lastCandidateRef.current = null;
   }, []);
+
+  function editStudentId(value: string) {
+    reviewGuardRef.current.invalidate();
+    cancelRequests("lookup");
+    lookupPendingRef.current = false;
+    busyRef.current = false;
+    setLookupPending(false);
+    setBusy(false);
+    setStudentId(value);
+    setLastLookup(null);
+    if (scanPausedRef.current) {
+      setReviewEdited(true);
+      setStatusMessage("Student number changed. Look up again before marking attendance.");
+    }
+  }
 
   const loadCurrentUser = useCallback(async () => {
     const payload = await requestJson<{ user: User }>("current-user", "/api/auth/me");
@@ -669,6 +702,7 @@ export function WebScannerApp() {
     componentActiveRef.current = true;
     return () => {
       componentActiveRef.current = false;
+      reviewGuardRef.current.invalidate();
       cancelAllRequests();
       stopOcrLoop();
       releaseCameraStream(false);
@@ -682,6 +716,7 @@ export function WebScannerApp() {
   }, [cancelAllRequests, releaseCameraStream, stopOcrLoop]);
 
   const stopCamera = useCallback(() => {
+    resetForNextScan();
     cancelRequests("lookup", "live-state");
     stopOcrLoop();
     releaseCameraStream();
@@ -691,7 +726,7 @@ export function WebScannerApp() {
     setScanPaused(false);
     selectedRoomRef.current = null;
     setSelectedRoom(null);
-  }, [cancelRequests, releaseCameraStream, stopOcrLoop]);
+  }, [cancelRequests, releaseCameraStream, stopOcrLoop, resetForNextScan]);
 
   useEffect(() => {
     const pauseScanner = () => {
@@ -929,15 +964,24 @@ export function WebScannerApp() {
 
   async function lookupStudent(nextStudentId: string, source: "ocr" | "manual" = "ocr") {
     const currentRoom = selectedRoomRef.current;
-    if (!currentRoom) {
+    if (!currentRoom || markPendingRef.current) {
       return;
     }
 
-    const normalizedId = nextStudentId.trim();
+    const normalizedId = normalizeStudentId(nextStudentId);
     if (!normalizedId) {
       return;
     }
 
+    const token = reviewGuardRef.current.begin({
+      studentId: normalizedId, roomId: currentRoom.id,
+      examSessionId: currentRoom.examSessionId, source
+    });
+    if (!token) return;
+    const ownsReview = () => componentActiveRef.current && reviewGuardRef.current.owns(token.generation);
+    busyRef.current = true;
+    lookupPendingRef.current = true;
+    setReviewEdited(false);
     setBusy(true);
     setLastSource(source);
     setStudentId(normalizedId);
@@ -962,6 +1006,11 @@ export function WebScannerApp() {
         8000
       );
 
+      if (!ownsReview()) return;
+      if (!reviewGuardRef.current.accept(token, payload.result)) {
+        setStatusMessage("Student details did not match this lookup. Look up again.");
+        return;
+      }
       setLastLookup(payload.result);
       if (payload.result.status === "ready_to_mark") {
         setStatusMessage("Student is in the correct room.");
@@ -970,47 +1019,56 @@ export function WebScannerApp() {
           `Wrong room. Expected ${payload.result.expectedRoom.code}, zone ${payload.result.allocation.zone}.`
         );
       } else if (payload.result.status === "already_marked") {
-        setStatusMessage(`Already marked at ${payload.result.attendance.createdAt}.`);
+        setStatusMessage(`Already marked: ${formatScannerDuplicateTime(payload.result.attendance.createdAt)}.`);
       } else {
         setStatusMessage("Student not found. Edit the number if OCR misread it, then look up again.");
       }
     } catch (error) {
+      if (!ownsReview()) return;
       if (!(error instanceof ScannerRequestError && error.kind === "cancelled")) {
         setStatusMessage(error instanceof Error ? error.message : "Lookup failed.");
       }
     } finally {
-      setLookupPending(false);
-      setBusy(false);
+      if (ownsReview()) {
+        reviewGuardRef.current.finish(token.generation);
+        lookupPendingRef.current = false;
+        busyRef.current = false;
+        setLookupPending(false);
+        setBusy(false);
+      }
     }
   }
 
-  async function markStudent(overrides: Partial<MarkAttendanceRequest> = {}) {
+  async function markStudent(overrides: Partial<Pick<MarkAttendanceRequest, "action" | "overrideWrongRoom">> = {}) {
     const currentRoom = selectedRoomRef.current;
     const currentUser = userRef.current;
-    if (!currentRoom || !currentUser) {
+    if (!currentRoom || !currentUser || markPendingRef.current) {
       return;
     }
 
-    const normalizedId = (overrides.studentId || studentId).trim();
-    if (!normalizedId) {
-      setStatusMessage("No student number selected.");
-      return;
-    }
-
+    const review = reviewGuardRef.current.claim({
+      studentId: normalizeStudentId(studentId), roomId: currentRoom.id,
+      examSessionId: currentRoom.examSessionId
+    }, overrides);
+    if (!review) return;
+    const normalizedId = review.studentId;
+    const ownsReview = () => componentActiveRef.current && reviewGuardRef.current.owns(review.generation);
+    markPendingRef.current = true;
+    busyRef.current = true;
     setBusy(true);
     let queuedRequestId: string | null = null;
     try {
       const deviceId = getDeviceId();
-      const action = overrides.action || "mark_present";
+      const action = review.action;
       const nextComment = comment.trim() || undefined;
       const fingerprint = JSON.stringify({
         examSessionId: currentRoom.examSessionId,
         roomId: currentRoom.id,
         studentId: normalizedId,
-        source: lastSource,
+        source: review.source,
         deviceId,
         action,
-        overrideWrongRoom: overrides.overrideWrongRoom ?? false,
+        overrideWrongRoom: review.overrideWrongRoom,
         comment: nextComment || null
       });
       const requestId = markIdempotencyRef.current!.get(fingerprint);
@@ -1019,22 +1077,20 @@ export function WebScannerApp() {
         examSessionId: currentRoom.examSessionId,
         roomId: currentRoom.id,
         studentId: normalizedId,
-        source: lastSource,
+        source: review.source,
         userId: currentUser.id,
         deviceId,
         action,
         comment: nextComment,
-        ...overrides
+        overrideWrongRoom: review.overrideWrongRoom
       };
-      queuedRequestId = requestId;
-
       await getOutbox().enqueue({
         id: requestId,
         request: requestBody,
         examSessionId: currentRoom.examSessionId,
         roomId: currentRoom.id,
         studentId: normalizedId,
-        source: lastSource,
+        source: review.source,
         comment: nextComment,
         overrideWrongRoom: requestBody.overrideWrongRoom ?? false,
         action,
@@ -1042,6 +1098,7 @@ export function WebScannerApp() {
         userId: currentUser.id,
         queuedAt: new Date().toISOString()
       });
+      queuedRequestId = requestId;
       await refreshOutbox();
 
       const payload = await requestJson<MarkResponse>(
@@ -1057,12 +1114,15 @@ export function WebScannerApp() {
 
       await getOutbox().complete(requestId);
       await refreshOutbox();
+      if (!ownsReview()) return;
       applyMarkSuccess(payload, normalizedId);
+      reviewGuardRef.current.consume(review.generation);
       markIdempotencyRef.current?.clear();
-      window.setTimeout(resetForNextScan, 180);
+      window.setTimeout(() => { if (ownsReview()) resetForNextScan(); }, 180);
       loadLiveState(currentRoom.id).catch(() => undefined);
     } catch (error) {
       if (!queuedRequestId) {
+        if (!ownsReview()) return;
         setStatusMessage(
           error instanceof Error
             ? error.message
@@ -1073,6 +1133,9 @@ export function WebScannerApp() {
         const message = error instanceof Error ? error.message : "Unable to mark attendance.";
         if (disposition === "retry") {
           await getOutbox().markRetry(queuedRequestId, message, getRetryDelayMs(1));
+          await refreshOutbox();
+          if (!ownsReview()) return;
+          reviewGuardRef.current.consume(review.generation);
           setBackendState(navigator.onLine ? "unreachable" : "offline");
           setStatusMessage("Saved on this device. Attendance is pending synchronization.");
           setLocalRecentChips((current) => [{
@@ -1082,19 +1145,25 @@ export function WebScannerApp() {
             tone: "warn" as const
           }, ...current].slice(0, 3));
           markIdempotencyRef.current?.clear();
-          window.setTimeout(resetForNextScan, 450);
+          window.setTimeout(() => { if (ownsReview()) resetForNextScan(); }, 450);
         } else {
           await getOutbox().markTerminal(queuedRequestId, disposition, message);
+          await refreshOutbox();
+          if (!ownsReview()) return;
           setStatusMessage(
             disposition === "conflict"
               ? `Attendance needs review: ${message}`
               : `Attendance was not marked: ${message}`
           );
         }
-        await refreshOutbox();
       }
     } finally {
-      setBusy(false);
+      markPendingRef.current = false;
+      if (ownsReview()) {
+        reviewGuardRef.current.finish(review.generation);
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
   }
 
@@ -1486,6 +1555,10 @@ export function WebScannerApp() {
     );
   }
 
+  const reviewActionable = Boolean(selectedRoom && reviewGuardRef.current.actionable({
+    studentId: normalizeStudentId(studentId), roomId: selectedRoom.id,
+    examSessionId: selectedRoom.examSessionId
+  }));
   const reviewTone = lookupPending
     ? "pending"
     : lastLookup?.status === "ready_to_mark"
@@ -1586,7 +1659,7 @@ export function WebScannerApp() {
             <input
               ref={manualInputRef}
               value={studentId}
-              onChange={(event) => setStudentId(event.target.value)}
+              onChange={(event) => editStudentId(event.target.value)}
               inputMode="numeric"
               placeholder="Manual student number"
             />
@@ -1722,6 +1795,7 @@ export function WebScannerApp() {
             <h2>
               {lookupPending
                 ? "Checking student..."
+                : reviewEdited ? "Look up edited student number"
                 : lastLookup?.status === "wrong_room"
                 ? "Wrong room detected"
                 : lastLookup?.status === "ready_to_mark"
@@ -1732,20 +1806,34 @@ export function WebScannerApp() {
                       ? "Student not found"
                       : "Review scan"}
             </h2>
+            {lastLookup ? (
+              <div style={{ overflowWrap: "anywhere" }}>
+                <p><strong>{"allocation" in lastLookup ? lastLookup.allocation.studentName?.trim() || "Name unavailable" : "Name unavailable"}</strong></p>
+                <p>Student number: {lastLookup.studentId}</p>
+                <p>{"allocation" in lastLookup && lastLookup.allocation.zone?.trim() ? `Zone: ${lastLookup.allocation.zone}` : "Zone unavailable"}</p>
+                {lastLookup.status === "wrong_room" ? (
+                  <>
+                    <p>Assigned room: {lastLookup.expectedRoom.code}</p>
+                    <p>Consult the room team leader before deciding where the student should sit.</p>
+                    <p>Marking present in {selectedRoom.code} records a room mismatch; the assigned room stays unchanged.</p>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
             <input
               value={studentId}
-              onChange={(event) => setStudentId(event.target.value)}
+              onChange={(event) => editStudentId(event.target.value)}
               inputMode="numeric"
               placeholder="Student number"
-              readOnly={lookupPending}
+              readOnly={busy && !lookupPending}
             />
-            <textarea
+            {lastLookup?.status === "ready_to_mark" || lastLookup?.status === "wrong_room" ? <textarea
               value={comment}
               onChange={(event) => setComment(event.target.value)}
               placeholder="Comments (optional)"
               rows={3}
-              disabled={lookupPending}
-            />
+              disabled={busy || !reviewActionable}
+            /> : comment ? <p className="subtle">Draft comment retained for re-lookup. Continue Scan discards it without saving.</p> : null}
             {statusMessage ? <p className="subtle">{statusMessage}</p> : null}
             <div className="inline-actions">
               {lookupPending ? (
@@ -1766,43 +1854,41 @@ export function WebScannerApp() {
                   className="secondary"
                   type="button"
                   onClick={() => lookupStudent(studentId, lastSource)}
-                  disabled={busy}
+                  disabled={busy || !normalizeStudentId(studentId)}
                 >
                   Lookup Edited ID
                 </button>
               )}
               {lastLookup?.status === "ready_to_mark" ? (
-                <button type="button" onClick={() => markStudent()} disabled={busy}>
+                <button type="button" onClick={() => markStudent()} disabled={busy || !reviewActionable}>
                   Mark Present
                 </button>
               ) : null}
               {lastLookup?.status === "wrong_room" ? (
                 <>
                   <button
+                    type="button"
+                    onClick={() =>
+                      markStudent({
+                        action: "redirect_only"
+                      })
+                    }
+                    disabled={busy || !reviewActionable}
+                  >
+                    Send to {lastLookup.expectedRoom.code}
+                  </button>
+                  <button
                     className="secondary"
                     type="button"
                     onClick={() =>
                       markStudent({
-                        action: "redirect_only",
-                        studentId: lastLookup.studentId
-                      })
-                    }
-                    disabled={busy}
-                  >
-                    Send To Room
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      markStudent({
                         action: "mark_present",
-                        studentId: lastLookup.studentId,
                         overrideWrongRoom: true
                       })
                     }
-                    disabled={busy}
+                    disabled={busy || !reviewActionable}
                   >
-                    Mark Anyway
+                    Mark present in {selectedRoom.code}
                   </button>
                 </>
               ) : null}
