@@ -1,5 +1,13 @@
 # B2 Handoff: Accurate Exam Staffing and Readiness
 
+## Independent Parent Review
+
+Parent reviewed selected-exam assignment filtering, deterministic paging/bounds/error propagation, per-room allocation readiness, committed save baselines, dirty refresh retention, stale-scope navigation guards and unchanged server write contracts. No blocking B2 finding identified.
+
+Independent reruns: 14 staffing tests passed; 20 isolated Chromium cases passed (35.1 seconds); branch diff whitespace check passed. Parent visually inspected the generated 390px long-content review screenshot and confirmed contained layout and visible actions. Agent full-suite/typecheck/build evidence remains below and is not relabelled as an independent rerun.
+
+Approved for local integration into `hardening/staging`. Deployment, authenticated full-page staging checks, real persisted writes and physical-device acceptance remain pending. Existing capped detail-report arrays and B3 scanner dismissal remain outside B2.
+
 ## Scope and Revision
 
 - Date: 5 September 2026. Worktree: `C:/dev/AlgoAttendance-ux-b2`; branch: `ux/exam-staffing-b2`.

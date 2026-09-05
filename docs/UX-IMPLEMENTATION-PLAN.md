@@ -225,7 +225,7 @@ Success measures are concrete task outcomes rather than a new invented UX score:
 ### Completion Checklist
 
 - [ ] B1 release acceptance: implementation and independent source review complete on 5 September 2026; 10/10 mocked browser tests passed, including a corrected small-phone review overflow. Agent unit/type/build evidence is recorded in `UX-B1-HANDOFF.md`. Live staging and physical acceptance remain open for UX-02, UX-06, UX-07, UX-11, UX-13.
-- [ ] B2 release acceptance: UX-01, UX-10, UX-03 setup, UX-04 assignments implemented and locally mock-verified in `0d1331e`; 93 web and 20 browser tests passed. Parent final review, staging/write-path and physical acceptance remain open; see `UX-B2-HANDOFF.md`.
+- [ ] B2 release acceptance: UX-01, UX-10, UX-03 setup, UX-04 assignments implemented in `0d1331e`; agent 93 web and 20 browser tests passed. Independent parent review found no blocker; 14 staffing tests and 20 browser cases rerun successfully, with 390px visual inspection. Approved for local integration. Staging/write-path and physical acceptance remain open; see `UX-B2-HANDOFF.md`.
 - [ ] B3 verified: UX-05, UX-08, UX-12, UX-03 scanner.
 - [ ] B4 verified: UX-14, UX-03 audit filters, UX-04 audit/shared containment.
 - [ ] B5 verified: UX-09, UX-03 account/staff forms.
