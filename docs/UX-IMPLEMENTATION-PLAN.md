@@ -123,6 +123,15 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Zero-room, zero-allocation, partially staffed, valid staffed, dirty, active, and closed fixtures show truthful readiness. Invalid drafts cannot initiate publication from enabled UI. A valid draft still follows the established save/publish flow.
 - All setup controls have persistent associated labels and described guidance/errors. At 390, 768, 899, 900, 910, and 1440px, assignment actions remain reachable with no page-wide overflow.
 
+### B2 Implementation Evidence (5 September 2026)
+
+- User-approved B2 implementation completed in `C:/dev/AlgoAttendance-ux-b2`, branch `ux/exam-staffing-b2`, commit `0d1331e9f37921dc3ea9ee43607f13d8c40a9bd9`, based on `72639aa306424fc58608f6333269fb8dff20dabd`. Detailed evidence, initial fixture failures and remaining gates: `docs/UX-B2-HANDOFF.md`.
+- UX-01: shared exam-scoped staffing hydration with deterministic pagination, bounded IN chunks, row/page/deadline limits and failure propagation. Clean refreshes adopt one model; dirty refreshes retain edits and the original expected-assignment baseline. The committed save response remains authoritative. These multi-query reads are not claimed to be transactional snapshots.
+- UX-10: explicit per-room allocation existence metadata, four-way bounded reads for drafts, truthful zero/unknown/missing-staff states and disabled invalid publication. HTTP failures cannot navigate as success; save failure prevents publication, while successful save then followed 303 behavior remains intact. Closed mode resets unsaved edits to supplied data.
+- UX-03 setup and UX-04 assignment slices: persistent associated labels/guidance/errors; assignment-scoped content-width reflow without shell redesign or global overflow hiding.
+- Final checks on implementation commit: `test:web` 93/93 (including 14 B2 cases), isolated Chromium browser tests 20/20, web typecheck and safe admin build passed. Browser fixtures checked 390, 768, 899, 900, 910 and 1440px with long content; this is not authenticated full-page or physical-device acceptance.
+- No live mutations, migration/dependency changes, backend write-contract changes, integration, pushes or deployments. Parent final review, exact-revision staging, authorized disposable write-path verification and physical/assistive-technology acceptance remain open; B2 release acceptance is not checked off.
+
 ## B3. Accessible Scanner Input and Review Navigation
 
 1. **Goal:** make repeated scanner input and cancellation predictable with keyboard, assistive technology, and browser Back.
@@ -216,7 +225,7 @@ Success measures are concrete task outcomes rather than a new invented UX score:
 ### Completion Checklist
 
 - [ ] B1 release acceptance: implementation and independent source review complete on 5 September 2026; 10/10 mocked browser tests passed, including a corrected small-phone review overflow. Agent unit/type/build evidence is recorded in `UX-B1-HANDOFF.md`. Live staging and physical acceptance remain open for UX-02, UX-06, UX-07, UX-11, UX-13.
-- [ ] B2 verified: UX-01, UX-10, UX-03 setup, UX-04 assignments.
+- [ ] B2 release acceptance: UX-01, UX-10, UX-03 setup, UX-04 assignments implemented and locally mock-verified in `0d1331e`; 93 web and 20 browser tests passed. Parent final review, staging/write-path and physical acceptance remain open; see `UX-B2-HANDOFF.md`.
 - [ ] B3 verified: UX-05, UX-08, UX-12, UX-03 scanner.
 - [ ] B4 verified: UX-14, UX-03 audit filters, UX-04 audit/shared containment.
 - [ ] B5 verified: UX-09, UX-03 account/staff forms.
