@@ -146,7 +146,7 @@ export default async function AttendancePage({
           </div>
         </form>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Attendance table" tabIndex={0}>
         <table className="table compact-table">
           <thead>
             <tr>

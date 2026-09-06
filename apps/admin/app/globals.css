@@ -1335,6 +1335,11 @@ button.icon-button.danger:hover {
   min-width: 880px;
 }
 
+.audit-page .table-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .audit-page .table-scroll td {
   overflow-wrap: anywhere;
 }

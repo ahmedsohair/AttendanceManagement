@@ -155,7 +155,7 @@ export default async function IncidentsPage({
             </div>
           </form>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="Incidents table" tabIndex={0}>
           <table className="table compact-table">
             <thead>
               <tr>

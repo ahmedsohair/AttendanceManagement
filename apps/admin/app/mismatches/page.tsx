@@ -138,7 +138,7 @@ export default async function MismatchesPage({
           </div>
         </form>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Mismatch present table" tabIndex={0}>
         <table className="table compact-table">
           <thead>
             <tr>

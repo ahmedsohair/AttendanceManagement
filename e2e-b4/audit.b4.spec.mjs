@@ -34,8 +34,10 @@ async function expectNamedFilters(page, kind) {
 }
 
 async function expectUrlWithParams(page, pathname, query) {
-  const actual = new URL(page.url());
   const expected = new URLSearchParams(query);
+  await expect(page).toHaveURL((url) => url.pathname === pathname &&
+    JSON.stringify([...url.searchParams.entries()].sort()) === JSON.stringify([...expected.entries()].sort()));
+  const actual = new URL(page.url());
   expect(actual.pathname).toBe(pathname);
   expect([...actual.searchParams.entries()].sort()).toEqual([...expected.entries()].sort());
 }
@@ -123,12 +125,12 @@ test("real audit pages preserve GET filters, Clear, Next, Previous, and Browser 
     const nextLink = page.getByRole("link", { name: "Next", exact: true });
     const nextHref = await nextLink.getAttribute("href");
     expect(nextHref).toContain("page=2");
-    await page.goto(new URL(nextHref, page.url()).toString());
+    await nextLink.click();
     await expectUrlWithParams(page, path, `${appliedQuery}&page=2`);
     await expect(page.getByRole("link", { name: "Previous", exact: true })).toBeVisible();
     const previousHref = await page.getByRole("link", { name: "Previous", exact: true }).getAttribute("href");
     expect(previousHref).toContain(path);
-    await page.goto(new URL(previousHref, page.url()).toString());
+    await page.getByRole("link", { name: "Previous", exact: true }).click();
     await expectUrlWithParams(page, path, appliedQuery);
     const backPage = await page.context().newPage();
     await blockExternalRequests(backPage);
@@ -163,7 +165,7 @@ test("real audit pages keep empty results usable", async ({ page }) => {
 });
 
 for (const kind of pages) {
-  test.fail(`${kind} table overflow is keyboard reachable and pans with ArrowRight`, async ({ page }) => {
+  test(`${kind} table overflow is keyboard reachable and pans with ArrowRight`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 900 });
     await page.goto(`/${kind}?${queryFor(kind, { q: "long" })}`);
     const clear = page.getByRole("link", { name: "Clear", exact: true });
@@ -175,9 +177,8 @@ for (const kind of pages) {
     await expect(scrollRegion).toBeFocused();
     const before = await scrollRegion.evaluate((element) => element.scrollLeft);
     await page.keyboard.press("ArrowRight");
-    const after = await scrollRegion.evaluate((element) => element.scrollLeft);
-    expect(after).toBeGreaterThan(before);
-  }, "Current production table-scroll has no keyboard focus semantics; parent production review must resolve this gate.");
+    await expect.poll(() => scrollRegion.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+  });
 }
 
 test("mismatch real page is an Attendance subview with direct and exam-scoped parent context", async ({ page }) => {
