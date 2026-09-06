@@ -226,6 +226,12 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Scope: account/staff labels and recovery UI state/race handling, isolated real-component fixtures and handoff. Preserve password policy, existing session eligibility, auth callback/token exchange, access-code lifecycle, backend authorization and email behavior. No live calls, password changes, mail, credentials, migrations, dependencies, merge, push or deployment by the delegate.
 - Parent will independently review state ownership, session invalidation, duplicate submissions and test evidence before integration. B5 and deferred acceptance checks remain open.
 
+### B5 Parent Review Hold (7 September 2026)
+
+- Reviewed delegate HEAD `c7f1747`. No backend/callback/password-policy changes were found, and the fixture imports real components. Two added focused browser tests failed: benign same-account TOKEN_REFRESHED invalidates an in-flight update and drops its busy guard; changing accounts retains the old password/confirmation drafts in the newly eligible form.
+- Related source inspection shows same-account events after confirmed success can reset the success screen. Bernoulli is correcting auth-event ownership, sensitive draft clearing and regression coverage in the isolated B5 branch. Parent also requested verification that retry after client initialization failure establishes the auth subscription.
+- No B5 merge, push or deployment is approved until these review findings are resolved and independently verified. The initial 13 passing delegate tests did not cover these cases.
+
 1. **Goal:** make credential administration and recovery fields understandable, with terminal recovery states instead of indefinite progress.
 2. **Findings:** UX-09 (P2), remaining account/staff portion of UX-03 (P2).
 3. **Intent:** fortify for recovery states, include for field associations, articulate for honest status/error copy.
