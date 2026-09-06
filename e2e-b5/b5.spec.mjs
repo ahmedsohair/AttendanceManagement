@@ -92,7 +92,7 @@ test("recovery uses a truthful terminal state for a missing session", async ({ p
   await gotoWithAuth(page, "/update-password", "null");
   await expect(page.getByRole("heading", { name: "No Valid Recovery Session" })).toBeVisible();
   await expect(
-    page.getByText("No valid recovery session. Request a new password reset email.", { exact: true })
+    page.getByText("No valid recovery session. Request a new reset email.", { exact: true })
   ).toBeVisible();
   await expect(page.getByLabel("New password", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Password updated.", { exact: false })).toHaveCount(0);

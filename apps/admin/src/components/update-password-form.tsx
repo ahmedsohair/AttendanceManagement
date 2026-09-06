@@ -15,7 +15,7 @@ type Submission = {
 
 const RECOVERY_CHECK_TIMEOUT_MS = 5000;
 const MISSING_SESSION_MESSAGE =
-  "No valid recovery session. Request a new password reset email.";
+  "No valid recovery session. Request a new reset email.";
 const CHECK_FAILURE_MESSAGE =
   "We could not verify your recovery session. Check your connection and try again.";
 const CHECK_TIMEOUT_MESSAGE =
@@ -332,15 +332,23 @@ export function UpdatePasswordForm() {
             : "Choose New Password";
   const kicker = status === "success" ? "Recovery Complete" : "Account Recovery";
   const formErrorId = "update-password-error";
+  const description =
+    status === "success"
+      ? "Your password has been updated. Sign in again to continue."
+      : status === "missing"
+        ? "Request a new reset email to continue."
+        : status === "error"
+          ? "We could not verify this recovery link. Retry the check or request a new reset email."
+          : status === "checking"
+            ? "We are checking whether this recovery link is still valid."
+            : "Set a new password for your staff account. This link expires automatically.";
 
   return (
     <div className="card" style={{ maxWidth: 520, margin: "0 auto" }}>
       <div className="kicker">{kicker}</div>
       <h2 className="section-title">{title}</h2>
       <p className="subtle" style={{ marginTop: 0 }}>
-        {status === "success"
-          ? "Your password has been updated. Sign in again to continue."
-          : "Set a new password for your staff account. This link expires automatically."}
+        {description}
       </p>
 
       {status === "checking" ? (
