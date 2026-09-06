@@ -68,3 +68,10 @@ The fixture imports the production pages/components directly. Only fixture-local
 - Parent review should focus on auth-generation ownership, null-session invalidation, same-account `USER_UPDATED` handling during an update, stale completion suppression after account/session changes, truthful success timing, and preservation of existing authenticated-session recovery behavior.
 
 Stop here for parent review. No push, merge, deploy, or staging mutation was performed.
+
+## Independent Parent Review (7 September 2026)
+
+- Reviewed correction `800a739` and final delegate HEAD `5bb9038`. Both reproduced review failures are resolved: benign same-account events preserve pending/success state; sign-out, identity change and new recovery flow clear drafts and invalidate stale completion. Retry now installs the auth subscription after an initial client-construction failure.
+- Parent independently reran all 20 B5 real-component mocked browser tests and all 93 web tests: passed. The env-cleared production build passed compilation, lint/type validation, 22 static pages and tracing; base diff check passed.
+- Source review found no callback/API/backend, password-policy, role, code-lifecycle or email-contract changes. Fixture mocks remain isolated from the production application.
+- Approved for local integration into `hardening/staging`. This does not claim deployment, authenticated staging recovery-link/token exchange, live password changes, physical-device or screen-reader acceptance. Those limits above remain open.
