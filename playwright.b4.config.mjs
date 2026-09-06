@@ -26,7 +26,7 @@ export default defineConfig({
     command: "node apps/admin/node_modules/next/dist/bin/next dev e2e-b4/fixture --hostname 127.0.0.1 --port 3114",
     url: "http://127.0.0.1:3114/attendance",
     reuseExistingServer: false,
-    timeout: 90000,
+    timeout: 180000,
     env: {
       ...env,
       NEXT_IGNORE_INCORRECT_LOCKFILE: "1",

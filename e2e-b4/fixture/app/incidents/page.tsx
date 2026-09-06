@@ -1,11 +1,5 @@
-import { AuditFixture } from "../audit-fixture";
+import IncidentsPage from "../../../../apps/admin/app/incidents/page";
 
 export const dynamic = "force-dynamic";
 
-export default async function IncidentsFixture({
-  searchParams
-}: {
-  searchParams?: Promise<Record<string, string | undefined>>;
-}) {
-  return <AuditFixture kind="incidents" searchParams={(await searchParams) || {}} />;
-}
+export default IncidentsPage;
