@@ -3,7 +3,8 @@
 ## Commit Scope
 
 - Base: `08f9d19a836308d06e4f46013a80f22178cb2f6f`
-- Implementation and tests: `a46b4c4bed319aedf911d8e2c31f932954f68eae`
+- Primary implementation and tests: `a46b4c4bed319aedf911d8e2c31f932954f68eae`
+- Follow-up terminal-copy/test correction: `85282e645ba3c6c8500a9e55efca8ee2cc6160a8`
 - Branch: `ux/credential-recovery-b5`
 - Worktree: `C:\dev\AlgoAttendance-ux-b5`
 
@@ -12,7 +13,7 @@ B5 only is implemented. `docs/UX-IMPLEMENTATION-PLAN.md`, `docs/UX-AUDIT.md`, th
 ## Implementation
 
 - `UpdatePasswordForm` now owns explicit `checking`, `ready`, `missing`, `error`, `submitting`, and `success` states.
-- A resolved null session, including `PASSWORD_RECOVERY` with a null session, terminates as `No valid recovery session. Request a new password reset email.`
+- A resolved null session, including `PASSWORD_RECOVERY` with a null session, terminates as `No valid recovery session. Request a new reset email.` with new-link guidance.
 - Check errors and bounded stalls are distinct from missing-session guidance. The five-second timeout increments the check generation; a later legitimate auth/recovery event can still establish readiness, while the earlier promise is ignored.
 - Older `getSession` results cannot override newer auth events. Unmount cleanup clears the timer, unsubscribes, invalidates pending work, and ignores late results.
 - Password updates use a synchronous submission ref guard and current-user ownership. Sign-out, another auth/session event, account changes, and unmount invalidate stale completion; only an accepted current update exposes success and clears password fields. A same-account `USER_UPDATED` event from the accepted update is allowed to settle normally.
@@ -49,10 +50,10 @@ The fixture imports the production pages/components directly. Only fixture-local
 
 ## Verification
 
-- `npx.cmd --no-install playwright test --config playwright.b5.config.mjs`: **13 passed**. Local Chromium on `127.0.0.1:3115`; all non-local browser requests aborted; inherited `SUPABASE`, `DATABASE`, `RESEND`, `SMTP`, and `SCANNER_TELEMETRY` variables cleared.
-- `npm.cmd run test:web`: **93 passed** across shared, API, server-unit, and scanner suites (`14 + 29 + 20 + 30`).
-- `npm.cmd run typecheck:web`: passed.
-- `npm.cmd --workspace @algo-attendance/admin run build`: passed compilation, lint/type validation, 22 static pages, and tracing.
+- `npx.cmd --no-install playwright test --config playwright.b5.config.mjs`: **13 passed** after the follow-up commit. Local Chromium on `127.0.0.1:3115`; all non-local browser requests aborted; inherited `SUPABASE`, `DATABASE`, `RESEND`, `SMTP`, and `SCANNER_TELEMETRY` variables cleared.
+- `npm.cmd run test:web`: **93 passed** after the follow-up commit across shared, API, server-unit, and scanner suites (`14 + 29 + 20 + 30`).
+- `npm.cmd run typecheck:web`: passed after the follow-up commit.
+- `npm.cmd --workspace @algo-attendance/admin run build`: passed after the follow-up commit, including compilation, lint/type validation, 22 static pages, and tracing.
 - `git diff --check`: passed before commit.
 - No package install, dependency change, lockfile change, real password update, reset email, mail send, session mutation, staging call, production call, push, merge, or deploy was performed.
 
