@@ -172,9 +172,15 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Independent review found and corrected reverse-tab navigation from the initially focused, non-tabbable review heading. The strengthened test reproduced the defect before the fix and passed afterwards.
 - Parent verification: scanner unit tests 30/30, B1 browser regressions 10/10, expanded B3 browser tests 8/8, and web typechecking passed. The 375x667 screenshot was inspected; review actions remain reachable by scrolling inside the bounded card.
 - Review evidence and the remaining acceptance limits are in `docs/UX-B3-HANDOFF.md`. No production change or physical-device acceptance is implied. B4 remains the next implementation batch after B3 staging verification.
-- Parent production build and diff checks passed. B3 is approved for local staging-branch integration; push/deployment and exact-revision staging verification remain pending.
+- Parent production build and diff checks passed. B3 was merged/pushed as `3c09d64`; GitHub release gate and staging deployment passed on 6 September. Live synthetic-account Chromium smoke confirmed sign-in, modal/focus behavior, edited-ID invalidation, wrong-room re-lookup and cancellation with zero attendance write attempts. See the B3 handoff for deployment links, script correction and scope. Physical-device and assistive-technology acceptance remain deferred, so full acceptance is not checked off.
 
 ## B4. Usable Admin Audit Workspace
+
+### Active Delegation (6 September 2026)
+
+- Socrates (`01a075a7-bf2e-7d31-a542-c0d41d683949`) is implementing B4 using user-approved `gpt-5.6-luna` / `xhigh` in isolated worktree `C:/dev/AlgoAttendance-ux-b4`, branch `ux/admin-audit-b4`, base `3c09d64`.
+- Scope: audit-page layout/labels, contextual mismatch navigation, scoped CSS, synthetic fixtures/tests and `docs/UX-B4-HANDOFF.md`. Existing read/write contracts, report columns, URL query semantics and core scanner/business logic must remain unchanged. No live writes, credentials, migrations, dependencies, push, merge or deployment by the delegate.
+- Parent independently reviews and verifies the returned commits before integration. Impeccable is permitted for restrained existing-system responsive polish, not a redesign. B4 implementation and acceptance remain open.
 
 1. **Goal:** keep investigative controls visible and preserve location/context while reviewing attendance, incidents, and mismatches.
 2. **Findings:** audit portion of UX-04 (P2), audit-filter portion of UX-03 (P2), UX-14 (P3).

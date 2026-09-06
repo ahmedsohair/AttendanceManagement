@@ -34,12 +34,20 @@ All commands ran in the isolated worktree with production-related environment va
 - Parent scanner units passed 30/30, B1 browser regressions passed 10/10, expanded B3 browser tests passed 8/8, and web typechecking passed. The generated phone screenshot was visually inspected after scrolling to the actions: the card remains viewport-contained and its actions are reachable. This does not simulate the physical phone keyboard.
 - These are isolated mocked-browser checks, not physical-device or deployed-revision acceptance. Integration and release status must be distinguished from the agent's original local-only results above.
 - Parent env-cleared production build passed compilation, lint/type validation, all 22 static pages and tracing. Next.js automatically added optional SWC lockfile entries during the build; only that generated change was reverted, leaving dependencies unchanged. `git diff --check` passed.
-- Approved for local integration into `hardening/staging` after these checks. A push, release-gate result and exact-revision staging smoke test are not claimed by this handoff.
+- Approved for local integration into `hardening/staging` after these checks; subsequent deployment evidence is recorded below.
+
+## Staging Deployment And Smoke Test (6 September 2026)
+
+- Merged and pushed as `3c09d64` on `hardening/staging`. GitHub release gate, critical dependency audit, temporary database migration tests, secret scan, and type-check/test/build all passed: https://github.com/ahmedsohair/AttendanceManagement/actions/runs/34019573355.
+- Staging Vercel deployment succeeded: https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/62rcV1FF2KbSwCfstFknpQkRLNc4. No production promotion was performed.
+- Live Chromium smoke at 375x667 against `https://exampulse-stagings.vercel.app/scan`: HTTP 200; fresh sign-in has no expiry warning; synthetic invigilator sign-in via Enter; ready review is a native modal with focused heading; initial Shift+Tab reaches Mark Present; editing the ID revokes the mark action; re-lookup returns wrong-room details; Cancel closes the review and restores manual-entry focus.
+- The first smoke script incorrectly expected a disabled mark button after editing, whereas the valid edited state removes it. That locator timed out; the corrected check accepts absent or disabled actions and the complete rerun passed. This was a verification-script issue, not an application fix.
+- Camera access was deliberately disabled and non-read application requests other than access-login/lookup were intercepted. No attendance or email mutation was attempted (zero blocked write attempts). Authentication and student lookups used only the synthetic staging account/data. Temporary browser contexts were closed.
 
 ## Remaining Gates And Limitations
 
-- This is local mocked browser evidence only. No staging or production API, deployment, push, attendance mutation, or integration was performed.
+- Local mocked tests and the bounded live staging smoke above are verified. No production API use or attendance mutation was performed.
 - Physical iPhone/Android behavior remains open: soft-keyboard occlusion, Safari dialog behavior, camera resume, browser Back/gesture behavior, and background/foreground recovery.
 - No full screen-reader run, automated WCAG audit, contrast audit, or assistive-technology acceptance is claimed. Chromium keyboard coverage is not a substitute for those checks.
 - Real OCR/camera performance, permission-denied recovery, network failure behavior against an authorized disposable backend, and durable outbox synchronization remain unverified here.
-- B3 implementation is complete for parent review, but the plan's B3 release checkbox remains open. Physical-device, exact-revision staging, and release acceptance are not claimed.
+- B3 implementation, parent review, release gate and bounded staging smoke are complete. The plan's full B3 acceptance checkbox remains open for deferred physical-device and assistive-technology checks.
