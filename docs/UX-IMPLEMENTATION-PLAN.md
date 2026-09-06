@@ -219,6 +219,13 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 
 ## B5. Clear Credential and Recovery Forms
 
+### Active Delegation (6 September 2026)
+
+- B4 release checks and Vercel staging deployment for `08f9d19` passed. Public HTTP and signed-out audit redirects passed; authenticated audit-page staging acceptance remains open because no admin session is available. See `docs/UX-B4-HANDOFF.md`.
+- Bernoulli (`01a076b6-206e-70e3-bab1-08eb94049235`) is implementing B5 with user-approved `gpt-5.6-luna` / `xhigh` in `C:/dev/AlgoAttendance-ux-b5`, branch `ux/credential-recovery-b5`, base `08f9d19`.
+- Scope: account/staff labels and recovery UI state/race handling, isolated real-component fixtures and handoff. Preserve password policy, existing session eligibility, auth callback/token exchange, access-code lifecycle, backend authorization and email behavior. No live calls, password changes, mail, credentials, migrations, dependencies, merge, push or deployment by the delegate.
+- Parent will independently review state ownership, session invalidation, duplicate submissions and test evidence before integration. B5 and deferred acceptance checks remain open.
+
 1. **Goal:** make credential administration and recovery fields understandable, with terminal recovery states instead of indefinite progress.
 2. **Findings:** UX-09 (P2), remaining account/staff portion of UX-03 (P2).
 3. **Intent:** fortify for recovery states, include for field associations, articulate for honest status/error copy.

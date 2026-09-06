@@ -45,4 +45,14 @@ The required Impeccable detector ran once over the changed UI targets. It report
 
 ## Parent Review
 
+### Subsequent Staging Release (6 September 2026)
+
+- B4 merged as `84b87e1` and pushed with tracking commit `08f9d19` on `hardening/staging`.
+- All GitHub release checks passed: https://github.com/ahmedsohair/AttendanceManagement/actions/runs/34033360621.
+- Staging deployment succeeded: https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/DVoEdKwzRXbPgx8naBSqBfSHkvgZ. No production promotion was performed.
+- Read-only HTTP smoke against `https://exampulse-stagings.vercel.app`: `/login` and `/scan` returned 200; signed-out `/attendance`, `/incidents` and `/mismatches` with `examSessionId=active` each redirected to login (307). This verifies public availability and signed-out protection only, not authenticated audit rendering or filter behavior.
+- No authenticated staging admin session was available. Actual admin-page staging acceptance, physical devices and screen-reader checks remain open; local real-component mock evidence is not upgraded to those claims.
+
+### Pre-Release Review
+
 Parent reviewed implementation `b3b54f5` and fixture revision `f362599`. The copied-page fixture was replaced by actual page imports with isolated mocked auth/query boundaries. Parent then fixed the keyboard-scroll gate and navigation assertion as described above. Final regressions/build passed, approving local integration into `hardening/staging`; no staging deployment/device acceptance is claimed. No backend or business-rule changes were found.
