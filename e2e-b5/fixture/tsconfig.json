@@ -1,0 +1,30 @@
+{
+  "extends": "../../apps/admin/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["../../apps/admin/src/*"],
+      "@/lib/admin-queries": ["mocks/admin-queries.js"],
+      "@/lib/auth": ["mocks/auth.js"],
+      "@/lib/invigilator-instruction-email": ["mocks/emails.js"],
+      "@/lib/repository": ["mocks/repository.js"],
+      "@/lib/supabase": ["mocks/supabase.js"],
+      "@/lib/supabase-browser": ["mocks/supabase-browser.js"],
+      "@/lib/tracked-access-code-email": ["mocks/emails.js"]
+    }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../apps/admin/src/**/*.ts",
+    "../../apps/admin/src/**/*.tsx",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ]
+}

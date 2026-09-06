@@ -252,8 +252,16 @@ export default async function InvigilatorsPage({
       <div className="card">
         <div className="kicker">Access Management</div>
         <h2 className="section-title">Add Invigilator</h2>
-        {params.message ? <p className="pill ok toast-message">{params.message}</p> : null}
-        {params.error ? <p className="pill warn toast-message">{params.error}</p> : null}
+        {params.message ? (
+          <p className="pill ok toast-message" role="status" aria-live="polite">
+            {params.message}
+          </p>
+        ) : null}
+        {params.error ? (
+          <p id="invigilator-page-error" className="pill warn toast-message" role="alert">
+            {params.error}
+          </p>
+        ) : null}
         {accessCodeFlash?.accessCode && accessCodeFlash.standalone ? (
           <div className="access-code-box">
             <div>
@@ -278,11 +286,31 @@ export default async function InvigilatorsPage({
             ) : null}
           </div>
         ) : null}
-        <form className="form-grid" action={submitInvigilator}>
-          <input name="email" type="email" placeholder="Email address" required />
-          <input name="fullName" placeholder="Full name (optional)" />
+        <form
+          className="form-grid"
+          action={submitInvigilator}
+          aria-describedby={params.error ? "invigilator-page-error" : "invigilator-create-help"}
+        >
+          <div className="form-field">
+            <label htmlFor="invigilator-create-email">Email address</label>
+            <input
+              id="invigilator-create-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+            />
+          </div>
+          <div className="form-field">
+            <label htmlFor="invigilator-create-name">Full name (optional)</label>
+            <input
+              id="invigilator-create-name"
+              name="fullName"
+              autoComplete="name"
+            />
+          </div>
           <button type="submit">Create Invigilator</button>
-          <div className="subtle">
+          <div id="invigilator-create-help" className="subtle">
             The system generates an access code automatically. The invigilator
             uses only that code in the mobile app. Room access is assigned from
             each exam panel.
@@ -297,15 +325,22 @@ export default async function InvigilatorsPage({
             <h2 className="section-title">Invigilators ({invigilatorPage.totalCount})</h2>
           </div>
           <form className="search-form" action="/invigilators" method="get">
-            <input
-              name="q"
-              placeholder="Search staff"
-              defaultValue={staffSearch}
-            />
-            <select name="sort" defaultValue={sort}>
-              <option value="name_asc">Name A-Z</option>
-              <option value="name_desc">Name Z-A</option>
-            </select>
+            <div className="form-field">
+              <label htmlFor="invigilator-search">Search invigilators</label>
+              <input
+                id="invigilator-search"
+                name="q"
+                defaultValue={staffSearch}
+                autoComplete="off"
+              />
+            </div>
+            <div className="form-field">
+              <label htmlFor="invigilator-sort">Sort staff</label>
+              <select id="invigilator-sort" name="sort" defaultValue={sort}>
+                <option value="name_asc">Name A-Z</option>
+                <option value="name_desc">Name Z-A</option>
+              </select>
+            </div>
             <button className="secondary" type="submit">
               Apply
             </button>
@@ -339,18 +374,30 @@ export default async function InvigilatorsPage({
                       <div className="inline-popover">
                         <form className="assignment-form" action={submitInvigilatorDetails}>
                           <input name="userId" type="hidden" value={invigilator.id} />
-                          <input
-                            name="email"
-                            type="email"
-                            defaultValue={invigilator.email}
-                            placeholder="Email address"
-                            required
-                          />
-                          <input
-                            name="fullName"
-                            defaultValue={invigilator.fullName}
-                            placeholder="Full name"
-                          />
+                          <div className="form-field">
+                            <label htmlFor={`invigilator-${invigilator.id}-desktop-email`}>
+                              Email address
+                            </label>
+                            <input
+                              id={`invigilator-${invigilator.id}-desktop-email`}
+                              name="email"
+                              type="email"
+                              defaultValue={invigilator.email}
+                              autoComplete="email"
+                              required
+                            />
+                          </div>
+                          <div className="form-field">
+                            <label htmlFor={`invigilator-${invigilator.id}-desktop-name`}>
+                              Full name
+                            </label>
+                            <input
+                              id={`invigilator-${invigilator.id}-desktop-name`}
+                              name="fullName"
+                              defaultValue={invigilator.fullName}
+                              autoComplete="name"
+                            />
+                          </div>
                           <button type="submit">Save</button>
                         </form>
                       </div>
@@ -395,18 +442,30 @@ export default async function InvigilatorsPage({
                   <summary>Edit</summary>
                   <form className="assignment-form" action={submitInvigilatorDetails}>
                     <input name="userId" type="hidden" value={invigilator.id} />
-                    <input
-                      name="email"
-                      type="email"
-                      defaultValue={invigilator.email}
-                      placeholder="Email address"
-                      required
-                    />
-                    <input
-                      name="fullName"
-                      defaultValue={invigilator.fullName}
-                      placeholder="Full name"
-                    />
+                    <div className="form-field">
+                      <label htmlFor={`invigilator-${invigilator.id}-mobile-email`}>
+                        Email address
+                      </label>
+                      <input
+                        id={`invigilator-${invigilator.id}-mobile-email`}
+                        name="email"
+                        type="email"
+                        defaultValue={invigilator.email}
+                        autoComplete="email"
+                        required
+                      />
+                    </div>
+                    <div className="form-field">
+                      <label htmlFor={`invigilator-${invigilator.id}-mobile-name`}>
+                        Full name
+                      </label>
+                      <input
+                        id={`invigilator-${invigilator.id}-mobile-name`}
+                        name="fullName"
+                        defaultValue={invigilator.fullName}
+                        autoComplete="name"
+                      />
+                    </div>
                     <button type="submit">Save Details</button>
                   </form>
                 </details>
