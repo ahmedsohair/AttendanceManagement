@@ -182,6 +182,12 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Scope: audit-page layout/labels, contextual mismatch navigation, scoped CSS, synthetic fixtures/tests and `docs/UX-B4-HANDOFF.md`. Existing read/write contracts, report columns, URL query semantics and core scanner/business logic must remain unchanged. No live writes, credentials, migrations, dependencies, push, merge or deployment by the delegate.
 - Parent independently reviews and verifies the returned commits before integration. Impeccable is permitted for restrained existing-system responsive polish, not a redesign. B4 implementation and acceptance remain open.
 
+### B4 Parent Review In Progress (6 September 2026)
+
+- Initial delegate commits: `b3b54f5` implementation and `f7a6b61` handoff. Parent source review found no changed backend/read-query/write contracts and independently ran B3 scanner browser regressions against B4 CSS: 8/8 passed.
+- Integration is withheld for a verification gap: the original B4 browser fixture duplicates audit-page markup, adds a nested card absent from the real Attendance/Mismatch pages, and fabricates pagination. It therefore cannot establish actual-page filter, pagination or containment correctness despite passing synthetic tests.
+- Socrates has been asked to replace copied pages with imports of the actual page components, mocking only auth/query boundaries inside the isolated fixture. Required follow-up coverage includes real GET/Clear/Next/Previous behavior on all three pages, realistic full-page rows, direct/scoped mismatch navigation, and keyboard panning of overflowing tables. Parent retains production-file ownership while the delegate revises tests/handoff. No B4 integration, push or deployment is approved yet.
+
 1. **Goal:** keep investigative controls visible and preserve location/context while reviewing attendance, incidents, and mismatches.
 2. **Findings:** audit portion of UX-04 (P2), audit-filter portion of UX-03 (P2), UX-14 (P3).
 3. **Intent:** transpose and include for reflow; organize for location hierarchy; articulate for filter labels.
