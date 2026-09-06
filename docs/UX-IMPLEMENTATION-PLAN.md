@@ -160,6 +160,20 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Fresh signed-out visit shows neutral copy; established-session expiration explains reauthentication; an unavailable backend is not mislabeled as expiration.
 - Browser automation verifies semantic/keyboard cases. Physical iPhone/Android checks must cover soft keyboard, camera resume, Back/gesture, and background/foreground recovery before release acceptance.
 
+### B3 Implementation Evidence (5 September 2026)
+
+- Implementation commit `a3555ba` is complete in isolated worktree `C:/dev/AlgoAttendance-ux-b3`, branch `ux/scanner-accessibility-b3`. It is limited to the scanner component, scanner-scoped CSS, B3 mocked browser fixture/config, and the one B1 fixture locator update required by the new visible `Cancel review` label.
+- UX-05/08/12 and scanner UX-03 are implemented with semantic forms, persistent labels, native modal dialog semantics, top-layer background inertness, dialog-local Tab/Shift+Tab containment, initial heading focus, explicit cancellation/reset, manual/OCR focus restoration, and neutral-versus-expired authentication copy. Existing B1 generation, immutable write identity, outbox/idempotency, request cancellation, camera lifecycle, and 180/450 ms reset ownership remain in place.
+- Local evidence: scanner unit suite 30/30, B3 mocked Chromium 7/7, preserved B1 mocked Chromium 10/10, env-cleared web typecheck passed, env-cleared admin build passed, and `git diff --check` passed. See `docs/UX-B3-HANDOFF.md` for the exact fixture boundary and case coverage.
+- B3 release verification remains open. No staging, production, physical-device, screen-reader, exact-revision backend, or release acceptance is claimed; the completion checkbox below remains deliberately unchecked.
+
+### B3 Parent Review (6 September 2026)
+
+- Independent review found and corrected reverse-tab navigation from the initially focused, non-tabbable review heading. The strengthened test reproduced the defect before the fix and passed afterwards.
+- Parent verification: scanner unit tests 30/30, B1 browser regressions 10/10, expanded B3 browser tests 8/8, and web typechecking passed. The 375x667 screenshot was inspected; review actions remain reachable by scrolling inside the bounded card.
+- Review evidence and the remaining acceptance limits are in `docs/UX-B3-HANDOFF.md`. No production change or physical-device acceptance is implied. B4 remains the next implementation batch after B3 staging verification.
+- Parent production build and diff checks passed. B3 is approved for local staging-branch integration; push/deployment and exact-revision staging verification remain pending.
+
 ## B4. Usable Admin Audit Workspace
 
 1. **Goal:** keep investigative controls visible and preserve location/context while reviewing attendance, incidents, and mismatches.

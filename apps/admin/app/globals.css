@@ -1508,14 +1508,43 @@ button.icon-button.danger:hover {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+  align-items: end;
   padding: 10px;
   border-radius: 20px;
   background: rgba(17, 17, 17, 0.64);
 }
 
+.web-login-form,
+.web-scanner-field,
+.web-review-lookup-form {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.web-login-form,
+.web-review-lookup-form {
+  gap: 10px;
+}
+
+.web-login-form label,
+.web-scanner-field label {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.web-login-form button {
+  margin-top: 2px;
+}
+
 .web-manual-row input {
   border-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.96);
+}
+
+.web-manual-row .web-scanner-field label {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .web-stat-row {
@@ -1665,12 +1694,21 @@ button.icon-button.danger:hover {
 }
 
 .web-review-sheet {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 35;
   display: grid;
   align-items: end;
+  width: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
   padding: 18px;
+  border: 0;
+  background: transparent;
+}
+
+.web-review-sheet::backdrop {
   background: rgba(0, 0, 0, 0.28);
 }
 
@@ -1708,6 +1746,15 @@ button.icon-button.danger:hover {
 
 .web-review-card h2 {
   margin: 0;
+}
+
+.web-review-lookup-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.web-review-lookup-form .web-scanner-field {
+  min-width: 0;
 }
 
 @media (max-width: 900px) {
@@ -1827,6 +1874,10 @@ button.icon-button.danger:hover {
   }
 
   .web-manual-row {
+    grid-template-columns: 1fr;
+  }
+
+  .web-review-lookup-form {
     grid-template-columns: 1fr;
   }
 
