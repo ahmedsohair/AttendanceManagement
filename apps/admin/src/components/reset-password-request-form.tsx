@@ -55,14 +55,19 @@ export function ResetPasswordRequestForm({
       </p>
 
       <form className="form-grid" onSubmit={handleSubmit}>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email address"
-          autoComplete="email"
-          required
-        />
+        <div className="form-field">
+          <label htmlFor="reset-password-email">Email address</label>
+          <input
+            id="reset-password-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            required
+            aria-describedby={error ? "reset-password-error" : undefined}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
         <button type="submit" disabled={busy}>
           {busy ? "Sending..." : "Send Reset Email"}
         </button>
@@ -75,7 +80,12 @@ export function ResetPasswordRequestForm({
       ) : null}
 
       {error ? (
-        <p className="subtle" style={{ color: "var(--accent-dark)", marginBottom: 0 }}>
+        <p
+          id="reset-password-error"
+          className="subtle"
+          role="alert"
+          style={{ color: "var(--accent-dark)", marginBottom: 0 }}
+        >
           {error}
         </p>
       ) : null}

@@ -65,22 +65,32 @@ export function AdminLoginForm({
       </p>
 
       <form className="form-grid" onSubmit={handleSubmit}>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="Email address"
-          autoComplete="email"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
-          required
-        />
+        <div className="form-field">
+          <label htmlFor="admin-login-email">Email address</label>
+          <input
+            id="admin-login-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="email"
+            required
+            aria-describedby={error ? "admin-login-error" : undefined}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="admin-login-password">Password</label>
+          <input
+            id="admin-login-password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+            aria-describedby={error ? "admin-login-error" : undefined}
+            aria-invalid={Boolean(error)}
+          />
+        </div>
         <button type="submit" disabled={busy}>
           {busy ? "Signing in..." : "Sign In"}
         </button>
@@ -93,7 +103,12 @@ export function AdminLoginForm({
       ) : null}
 
       {error ? (
-        <p className="subtle" style={{ color: "var(--accent-dark)", marginBottom: 0 }}>
+        <p
+          id="admin-login-error"
+          className="subtle"
+          role="alert"
+          style={{ color: "var(--accent-dark)", marginBottom: 0 }}
+        >
           {error}
         </p>
       ) : null}

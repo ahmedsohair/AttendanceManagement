@@ -502,6 +502,17 @@ button.secondary:hover {
   gap: 14px;
 }
 
+.form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.form-field label {
+  color: var(--accent-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 input,
 select,
 textarea {
