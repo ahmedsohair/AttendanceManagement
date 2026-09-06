@@ -188,6 +188,12 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Integration is withheld for a verification gap: the original B4 browser fixture duplicates audit-page markup, adds a nested card absent from the real Attendance/Mismatch pages, and fabricates pagination. It therefore cannot establish actual-page filter, pagination or containment correctness despite passing synthetic tests.
 - Socrates has been asked to replace copied pages with imports of the actual page components, mocking only auth/query boundaries inside the isolated fixture. Required follow-up coverage includes real GET/Clear/Next/Previous behavior on all three pages, realistic full-page rows, direct/scoped mismatch navigation, and keyboard panning of overflowing tables. Parent retains production-file ownership while the delegate revises tests/handoff. No B4 integration, push or deployment is approved yet.
 
+### B4 Review Resolved And Locally Integrated
+
+- The preceding review hold is resolved. Fixture revision `f362599` imports the real pages with isolated auth/query mocks. Parent correction `99e3002` adds named focusable table regions and scoped focus outlines, removes three expected-failure markers, and waits correctly for actual pagination-link navigation instead of substituting direct GETs.
+- Parent verification passed: B4 27/27 with no expected failures, B2 20/20, web tests 93/93, and the env-cleared production build including lint/type validation. B3 scanner browser tests also passed 8/8 against B4 CSS during review. No backend, dependencies, query contracts or business rules changed.
+- B4 is merged locally into `hardening/staging`. Push/release-gate/deployment verification and authenticated staging acceptance remain pending; physical-device and screen-reader checks remain deferred. Full batch acceptance remains unchecked. See `docs/UX-B4-HANDOFF.md` for evidence boundaries. B5 is the next planned implementation batch after staging release verification.
+
 1. **Goal:** keep investigative controls visible and preserve location/context while reviewing attendance, incidents, and mismatches.
 2. **Findings:** audit portion of UX-04 (P2), audit-filter portion of UX-03 (P2), UX-14 (P3).
 3. **Intent:** transpose and include for reflow; organize for location hierarchy; articulate for filter labels.
