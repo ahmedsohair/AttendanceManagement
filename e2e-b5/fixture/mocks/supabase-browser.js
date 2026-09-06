@@ -6,6 +6,7 @@ const pendingUpdates = [];
 let getSessionCalls = 0;
 let updateUserCalls = 0;
 let signOutCalls = 0;
+let subscriptionCalls = 0;
 
 function sessionFor(userId = "b5-user") {
   return {
@@ -49,7 +50,12 @@ function ensureControls() {
       else pending.resolve({ error: mode === "error" ? { message: "Fixture update failed." } : null });
     },
     counts() {
-      return { getSession: getSessionCalls, updateUser: updateUserCalls, signOut: signOutCalls };
+      return {
+        getSession: getSessionCalls,
+        updateUser: updateUserCalls,
+        signOut: signOutCalls,
+        subscriptions: subscriptionCalls
+      };
     }
   };
   window.__b5AuthControls = controls;
@@ -97,12 +103,18 @@ function signOut() {
 
 export function getSupabaseBrowserClient() {
   ensureControls();
+  if (window.__b5AuthScenario === "client-throw" && !window.__b5AuthClientThrew) {
+    window.__b5AuthClientThrew = true;
+    throw new Error("Fixture client construction failed.");
+  }
+
   return {
     auth: {
       getSession,
       updateUser,
       signOut,
       onAuthStateChange(listener) {
+        subscriptionCalls += 1;
         listeners.add(listener);
         return {
           data: {

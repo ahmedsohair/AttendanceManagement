@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type RecoveryStatus = "checking" | "ready" | "missing" | "error" | "submitting" | "success";
@@ -12,6 +12,7 @@ type Submission = {
   userId: string;
   invalidated: boolean;
 };
+type AuthSubscription = { unsubscribe: () => void };
 
 const RECOVERY_CHECK_TIMEOUT_MS = 5000;
 const MISSING_SESSION_MESSAGE =
@@ -20,6 +21,11 @@ const CHECK_FAILURE_MESSAGE =
   "We could not verify your recovery session. Check your connection and try again.";
 const CHECK_TIMEOUT_MESSAGE =
   "Recovery session check took too long. Check your connection and try again.";
+const BENIGN_SAME_ACCOUNT_EVENTS = new Set<AuthChangeEvent>([
+  "TOKEN_REFRESHED",
+  "SIGNED_IN",
+  "USER_UPDATED"
+]);
 
 type BrowserSupabaseClient = ReturnType<typeof getSupabaseBrowserClient>;
 
@@ -40,6 +46,7 @@ export function UpdatePasswordForm() {
   const checkTimeoutRef = useRef<number | null>(null);
   const submissionRef = useRef<Submission | null>(null);
   const nextSubmissionIdRef = useRef(0);
+  const subscriptionRef = useRef<AuthSubscription | null>(null);
   const returnBusyRef = useRef(false);
 
   function setRecoveryStatus(nextStatus: RecoveryStatus, nextMessage = "") {
@@ -53,6 +60,11 @@ export function UpdatePasswordForm() {
       window.clearTimeout(checkTimeoutRef.current);
       checkTimeoutRef.current = null;
     }
+  }
+
+  function clearPasswordDrafts() {
+    setPassword("");
+    setConfirmPassword("");
   }
 
   function invalidateSubmission() {
@@ -127,6 +139,54 @@ export function UpdatePasswordForm() {
       });
   }
 
+  function handleAuthStateChange(event: AuthChangeEvent, session: Session | null) {
+    if (!mountedRef.current) {
+      return;
+    }
+
+    clearCheckTimeout();
+    generationRef.current += 1;
+    const previousUserId = sessionRef.current?.user.id ?? null;
+    const sameAccount = Boolean(session && previousUserId === session.user.id);
+    const accountChanged = Boolean(
+      session && previousUserId && previousUserId !== session.user.id
+    );
+    const isSignedOut = event === "SIGNED_OUT";
+    const startsNewRecoveryFlow = event === "PASSWORD_RECOVERY";
+
+    if (!session || isSignedOut || accountChanged || startsNewRecoveryFlow) {
+      invalidateSubmission();
+      clearPasswordDrafts();
+    }
+
+    sessionRef.current = isSignedOut ? null : session;
+
+    if (!session || isSignedOut) {
+      sessionRef.current = null;
+      setRecoveryStatus("missing", MISSING_SESSION_MESSAGE);
+      return;
+    }
+
+    if (
+      sameAccount &&
+      BENIGN_SAME_ACCOUNT_EVENTS.has(event) &&
+      (statusRef.current === "submitting" || statusRef.current === "success")
+    ) {
+      return;
+    }
+
+    setRecoveryStatus("ready");
+  }
+
+  function ensureAuthSubscription(supabase: BrowserSupabaseClient) {
+    if (subscriptionRef.current) {
+      return;
+    }
+
+    const authState = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    subscriptionRef.current = authState.data.subscription;
+  }
+
   function retrySessionCheck() {
     if (!mountedRef.current) {
       return;
@@ -136,6 +196,7 @@ export function UpdatePasswordForm() {
     try {
       supabase ||= getSupabaseBrowserClient();
       supabaseRef.current = supabase;
+      ensureAuthSubscription(supabase);
       beginSessionCheck(supabase);
     } catch {
       setRecoveryStatus("error", CHECK_FAILURE_MESSAGE);
@@ -144,45 +205,11 @@ export function UpdatePasswordForm() {
 
   useEffect(() => {
     mountedRef.current = true;
-    let subscription: { unsubscribe: () => void } | null = null;
 
     try {
       const supabase = getSupabaseBrowserClient();
       supabaseRef.current = supabase;
-      const authState = supabase.auth.onAuthStateChange((event, session) => {
-        if (!mountedRef.current) {
-          return;
-        }
-
-        clearCheckTimeout();
-        generationRef.current += 1;
-        const currentSubmission = submissionRef.current;
-        const sameAccount =
-          Boolean(session) && currentSubmission?.userId === session?.user.id;
-        const isOwnUpdate = sameAccount && event === "USER_UPDATED";
-
-        if (currentSubmission && !isOwnUpdate) {
-          invalidateSubmission();
-        }
-
-        sessionRef.current = session;
-
-        if (!session) {
-          sessionRef.current = null;
-          setRecoveryStatus("missing", MISSING_SESSION_MESSAGE);
-          return;
-        }
-
-        if (
-          isOwnUpdate &&
-          (statusRef.current === "submitting" || statusRef.current === "success")
-        ) {
-          return;
-        }
-
-        setRecoveryStatus("ready");
-      });
-      subscription = authState.data.subscription;
+      ensureAuthSubscription(supabase);
       beginSessionCheck(supabase);
     } catch {
       setRecoveryStatus("error", CHECK_FAILURE_MESSAGE);
@@ -195,7 +222,8 @@ export function UpdatePasswordForm() {
         submissionRef.current.invalidated = true;
       }
       submissionRef.current = null;
-      subscription?.unsubscribe();
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
     };
   }, []);
 

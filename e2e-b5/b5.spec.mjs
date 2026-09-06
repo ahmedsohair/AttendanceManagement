@@ -180,16 +180,25 @@ test("rapid submits call update once and clear secrets only after actual success
   await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveCount(0);
 });
 
-test("same-account refresh preserves an in-flight update and confirmed success", async ({ page }) => {
+test("same-account refresh preserves in-flight and confirmed update state", async ({ page }) => {
   await gotoWithAuth(page, "/update-password");
   await page.evaluate(() => { window.__b5AuthUpdateMode = "pending"; });
   await fillMatchingPasswords(page);
   await page.getByRole("button", { name: "Update Password" }).click();
   await emitAuth(page, "TOKEN_REFRESHED", "b5-user");
   await expect(page.getByRole("button", { name: "Updating..." })).toBeDisabled();
+  await emitAuth(page, "SIGNED_IN", "b5-user");
+  await expect(page.getByRole("button", { name: "Updating..." })).toBeDisabled();
+  await emitAuth(page, "USER_UPDATED", "b5-user");
+  await expect(page.getByRole("button", { name: "Updating..." })).toBeDisabled();
+  expect((await authCounts(page)).updateUser).toBe(1);
   await page.evaluate(() => window.__b5AuthControls.resolveUpdate("success"));
   await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
+  await emitAuth(page, "TOKEN_REFRESHED", "b5-user");
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
   await emitAuth(page, "SIGNED_IN", "b5-user");
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
+  await emitAuth(page, "USER_UPDATED", "b5-user");
   await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
 });
 
@@ -202,6 +211,45 @@ test("account switch clears password drafts before allowing another update", asy
   expect((await authCounts(page)).updateUser).toBe(0);
 });
 
+test("account switch invalidates a pending update and blocks stale success", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await page.evaluate(() => { window.__b5AuthUpdateMode = "pending"; });
+  await fillMatchingPasswords(page);
+  await page.getByRole("button", { name: "Update Password" }).click();
+  await emitAuth(page, "SIGNED_IN", "another-user");
+  await expect(page.getByRole("heading", { name: "Choose New Password" })).toBeVisible();
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveValue("");
+  expect((await authCounts(page)).updateUser).toBe(1);
+  await page.evaluate(() => window.__b5AuthControls.resolveUpdate("success"));
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toHaveCount(0);
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("");
+});
+
+test("sign-out then same-user sign-in keeps old completion revoked and drafts cleared", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await page.evaluate(() => { window.__b5AuthUpdateMode = "pending"; });
+  await fillMatchingPasswords(page);
+  await page.getByRole("button", { name: "Update Password" }).click();
+  await emitAuth(page, "SIGNED_OUT", null);
+  await expect(page.getByRole("heading", { name: "No Valid Recovery Session" })).toBeVisible();
+  await page.evaluate(() => window.__b5AuthControls.resolveUpdate("success"));
+  await emitAuth(page, "SIGNED_IN", "b5-user");
+  await expect(page.getByRole("heading", { name: "Choose New Password" })).toBeVisible();
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveValue("");
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toHaveCount(0);
+});
+
+test("a new recovery flow clears sensitive drafts before accepting the new session", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await fillMatchingPasswords(page);
+  await emitAuth(page, "PASSWORD_RECOVERY", "b5-user");
+  await expect(page.getByRole("heading", { name: "Choose New Password" })).toBeVisible();
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveValue("");
+});
+
 test("failed updates keep the form and do not announce completion", async ({ page }) => {
   await gotoWithAuth(page, "/update-password");
   await page.evaluate(() => {
@@ -210,6 +258,18 @@ test("failed updates keep the form and do not announce completion", async ({ pag
   await fillMatchingPasswords(page);
   await page.getByRole("button", { name: "Update Password" }).click();
   await expect(page.locator("#update-password-error")).toHaveText("Fixture update failed.");
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toHaveCount(0);
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("correct horse");
+});
+
+test("rejected updates keep the form and report the actual failure", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await page.evaluate(() => {
+    window.__b5AuthUpdateMode = "reject";
+  });
+  await fillMatchingPasswords(page);
+  await page.getByRole("button", { name: "Update Password" }).click();
+  await expect(page.locator("#update-password-error")).toHaveText("Fixture update rejected.");
   await expect(page.getByRole("heading", { name: "Password Updated" })).toHaveCount(0);
   await expect(page.getByLabel("New password", { exact: true })).toHaveValue("correct horse");
 });
@@ -235,6 +295,25 @@ test("unmount cleanup ignores a late session result", async ({ page }) => {
   await expect(page).toHaveURL(/\/reset-password$/);
   await page.evaluate(() => window.__b5AuthControls.resolveSession(false));
   await expect(page.getByRole("heading", { name: "Reset Password" })).toBeVisible();
+});
+
+test("retry after client construction failure subscribes once and accepts later auth events", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password", "client-throw");
+  await expect(page.getByRole("heading", { name: "Unable to Verify Recovery Session" })).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__b5AuthScenario = "error";
+  });
+  await page.getByRole("button", { name: "Retry check" }).click();
+  await expect(page.getByRole("heading", { name: "Unable to Verify Recovery Session" })).toBeVisible();
+
+  await page.evaluate(() => {
+    window.__b5AuthScenario = "stall";
+  });
+  await page.getByRole("button", { name: "Retry check" }).click();
+  await page.evaluate(() => window.__b5AuthControls.emit("PASSWORD_RECOVERY", "b5-user"));
+  await expect(page.getByLabel("New password", { exact: true })).toBeVisible();
+  expect((await authCounts(page)).subscriptions).toBe(1);
 });
 
 test("successful recovery preserves guarded sign-out and return-to-sign-in navigation", async ({ page }) => {
