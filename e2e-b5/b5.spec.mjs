@@ -180,6 +180,28 @@ test("rapid submits call update once and clear secrets only after actual success
   await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveCount(0);
 });
 
+test("same-account refresh preserves an in-flight update and confirmed success", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await page.evaluate(() => { window.__b5AuthUpdateMode = "pending"; });
+  await fillMatchingPasswords(page);
+  await page.getByRole("button", { name: "Update Password" }).click();
+  await emitAuth(page, "TOKEN_REFRESHED", "b5-user");
+  await expect(page.getByRole("button", { name: "Updating..." })).toBeDisabled();
+  await page.evaluate(() => window.__b5AuthControls.resolveUpdate("success"));
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
+  await emitAuth(page, "SIGNED_IN", "b5-user");
+  await expect(page.getByRole("heading", { name: "Password Updated" })).toBeVisible();
+});
+
+test("account switch clears password drafts before allowing another update", async ({ page }) => {
+  await gotoWithAuth(page, "/update-password");
+  await fillMatchingPasswords(page);
+  await emitAuth(page, "SIGNED_IN", "another-user");
+  await expect(page.getByLabel("New password", { exact: true })).toHaveValue("");
+  await expect(page.getByLabel("Confirm new password", { exact: true })).toHaveValue("");
+  expect((await authCounts(page)).updateUser).toBe(0);
+});
+
 test("failed updates keep the form and do not announce completion", async ({ page }) => {
   await gotoWithAuth(page, "/update-password");
   await page.evaluate(() => {
