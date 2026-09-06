@@ -232,6 +232,12 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Related source inspection shows same-account events after confirmed success can reset the success screen. Bernoulli is correcting auth-event ownership, sensitive draft clearing and regression coverage in the isolated B5 branch. Parent also requested verification that retry after client initialization failure establishes the auth subscription.
 - No B5 merge, push or deployment is approved until these review findings are resolved and independently verified. The initial 13 passing delegate tests did not cover these cases.
 
+### B5 Review Resolved And Locally Integrated (7 September 2026)
+
+- The preceding hold is resolved by `800a739` (final delegate HEAD `5bb9038`). Parent independently reviewed auth-event ownership and reran 20/20 real-component browser tests, 93/93 web tests and the env-cleared production build including lint/type validation. The previously failing cases now pass; retry after initial client-construction failure also establishes its auth subscription.
+- B5 is merged locally into `hardening/staging`, with independent evidence in `docs/UX-B5-HANDOFF.md`. No backend/callback/password-policy/code-lifecycle/email-contract changes were found. No push or deployment is claimed yet.
+- All five planned UX implementation batches are now locally integrated. This is not full release acceptance: B5 staging release verification, authenticated admin/recovery-link checks, physical-device and screen-reader acceptance remain open, alongside separately tracked Phase 8 operational work. Impeccable visual polish is the next planned design work after B5 staging release verification.
+
 1. **Goal:** make credential administration and recovery fields understandable, with terminal recovery states instead of indefinite progress.
 2. **Findings:** UX-09 (P2), remaining account/staff portion of UX-03 (P2).
 3. **Intent:** fortify for recovery states, include for field associations, articulate for honest status/error copy.
