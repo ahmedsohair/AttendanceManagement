@@ -26,6 +26,16 @@ All commands ran in the isolated worktree with production-related environment va
 | `npm.cmd --workspace @algo-attendance/admin run build` | Passed with service env vars cleared; compilation, lint/type validation, 22 static pages, and tracing completed. |
 | `git diff --check` | Passed. |
 
+## Independent Parent Review (6 September 2026)
+
+- Reviewed the component/CSS diff and fixture scope against B1 identity, request-generation, idempotency, outbox and reset protections. No backend or business-rule changes are included.
+- Strengthened the keyboard test to cover Shift+Tab from the initial heading and both ends of the tab sequence. This reproduced a focus-boundary defect in the delegated implementation. The parent correction treats a non-tabbable heading as outside the tab sequence, wrapping to the last/first enabled control as appropriate.
+- Added explicit manual-field focus checks after Continue Scan and a 375x667 viewport/action-reachability test with a generated screenshot.
+- Parent scanner units passed 30/30, B1 browser regressions passed 10/10, expanded B3 browser tests passed 8/8, and web typechecking passed. The generated phone screenshot was visually inspected after scrolling to the actions: the card remains viewport-contained and its actions are reachable. This does not simulate the physical phone keyboard.
+- These are isolated mocked-browser checks, not physical-device or deployed-revision acceptance. Integration and release status must be distinguished from the agent's original local-only results above.
+- Parent env-cleared production build passed compilation, lint/type validation, all 22 static pages and tracing. Next.js automatically added optional SWC lockfile entries during the build; only that generated change was reverted, leaving dependencies unchanged. `git diff --check` passed.
+- Approved for local integration into `hardening/staging` after these checks. A push, release-gate result and exact-revision staging smoke test are not claimed by this handoff.
+
 ## Remaining Gates And Limitations
 
 - This is local mocked browser evidence only. No staging or production API, deployment, push, attendance mutation, or integration was performed.

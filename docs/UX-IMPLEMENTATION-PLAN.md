@@ -165,6 +165,13 @@ UX-03 is one audit finding with four delivery slices, not four new findings. It 
 - Local evidence: scanner unit suite 30/30, B3 mocked Chromium 7/7, preserved B1 mocked Chromium 10/10, env-cleared web typecheck passed, env-cleared admin build passed, and `git diff --check` passed. See `docs/UX-B3-HANDOFF.md` for the exact fixture boundary and case coverage.
 - B3 release verification remains open. No staging, production, physical-device, screen-reader, exact-revision backend, or release acceptance is claimed; the completion checkbox below remains deliberately unchecked.
 
+### B3 Parent Review (6 September 2026)
+
+- Independent review found and corrected reverse-tab navigation from the initially focused, non-tabbable review heading. The strengthened test reproduced the defect before the fix and passed afterwards.
+- Parent verification: scanner unit tests 30/30, B1 browser regressions 10/10, expanded B3 browser tests 8/8, and web typechecking passed. The 375x667 screenshot was inspected; review actions remain reachable by scrolling inside the bounded card.
+- Review evidence and the remaining acceptance limits are in `docs/UX-B3-HANDOFF.md`. No production change or physical-device acceptance is implied. B4 remains the next implementation batch after B3 staging verification.
+- Parent production build and diff checks passed. B3 is approved for local staging-branch integration; push/deployment and exact-revision staging verification remain pending.
+
 ## B4. Usable Admin Audit Workspace
 
 1. **Goal:** keep investigative controls visible and preserve location/context while reviewing attendance, incidents, and mismatches.

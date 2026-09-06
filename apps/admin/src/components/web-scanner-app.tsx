@@ -1920,12 +1920,13 @@ export function WebScannerApp() {
             }
 
             const active = document.activeElement;
+            const activeIsTabStop = active instanceof HTMLElement && focusable.includes(active);
             const first = focusable[0];
             const last = focusable[focusable.length - 1];
-            if (event.shiftKey && (active === first || !event.currentTarget.contains(active))) {
+            if (event.shiftKey && (active === first || !activeIsTabStop)) {
               event.preventDefault();
               last.focus();
-            } else if (!event.shiftKey && (active === last || !event.currentTarget.contains(active))) {
+            } else if (!event.shiftKey && (active === last || !activeIsTabStop)) {
               event.preventDefault();
               first.focus();
             }

@@ -175,6 +175,7 @@ test("each review outcome exposes its own accessible dialog name", async ({ page
       await review(page).getByRole("button", { name: "Cancel review" }).click();
     }
     await expect(review(page)).toHaveCount(0);
+    await expect(page.locator("#scanner-manual-student-id")).toBeFocused();
   }
 });
 
@@ -187,8 +188,14 @@ test("native review dialog names every state, contains focus, and restores manua
   expect(await review(page).evaluate((dialog) => dialog.matches(":modal"))).toBe(true);
   await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("scanner-review-title");
 
-  for (let index = 0; index < 8; index += 1) {
-    await page.keyboard.press(index % 2 ? "Shift+Tab" : "Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(review(page).getByRole("button", { name: "Mark Present", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(review(page).getByLabel("Student number", { exact: true })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(review(page).getByRole("button", { name: "Mark Present", exact: true })).toBeFocused();
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.press("Tab");
     expect(await page.evaluate(() => document.activeElement?.closest("dialog") !== null)).toBe(true);
   }
 
@@ -253,4 +260,23 @@ test("later 401 explains established-session expiry instead of looking signed ou
   await page.getByLabel("Student number", { exact: true }).first().press("Enter");
   await expect(page.getByRole("heading", { name: "Invigilator Web Login" })).toBeVisible();
   await expect(page.getByText("Your invigilator session has expired. Sign in again to continue.")).toBeVisible();
+});
+
+test("small-phone review remains within the viewport with reachable actions", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  const state = await openScanner(page);
+  state.lookup = (id) => result(id, "wrong_room");
+  await lookup(page, "9000991");
+  const card = review(page).locator(".web-review-card");
+  const box = await card.boundingBox();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(375);
+  expect(box.y + box.height).toBeLessThanOrEqual(667);
+  await review(page).getByRole("button", { name: "Cancel review" }).scrollIntoViewIfNeeded();
+  await expect(review(page).getByRole("button", { name: "Cancel review" })).toBeInViewport();
+  await page.screenshot({ path: testInfo.outputPath("review-phone.png") });
+  await review(page).getByRole("button", { name: "Cancel review" }).click();
+  await expect(review(page)).toHaveCount(0);
+  expect(state.writes).toHaveLength(0);
 });
