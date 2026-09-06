@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/auth": ["../../e2e-b4/mocks/auth.ts"],
+      "@/lib/admin-queries": ["../../e2e-b4/mocks/admin-queries.ts"],
+      "@/*": ["../../apps/admin/src/*"],
+      "@algo-attendance/shared": ["../../packages/shared/src/index.ts"],
+      "@algo-attendance/shared/*": ["../../packages/shared/src/*"]
+    },
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

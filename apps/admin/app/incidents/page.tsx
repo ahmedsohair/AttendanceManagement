@@ -85,11 +85,11 @@ export default async function IncidentsPage({
   );
 
   return (
-    <div className="stack">
+    <div className="audit-page stack">
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span>/</span>
-        <span>Incidents</span>
+        <span aria-current="page">Incidents</span>
       </nav>
 
       <div className="card compact-card">
@@ -98,47 +98,64 @@ export default async function IncidentsPage({
       </div>
 
       <div className="card wide-card">
-        <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+        <div className="audit-header">
           <div>
             <div className="kicker">Incident Log</div>
-            <h2 className="section-title">Recorded Incidents</h2>
+            <h1 className="section-title">Recorded Incidents</h1>
             <div className="subtle">
               Showing: <strong>{selectedSessionLabel}</strong>
             </div>
           </div>
           <form className="search-form table-filter-form" action="/incidents" method="get">
-            <select name="examSessionId" defaultValue={examSessionFilter}>
-              <option value="active">Active exams only</option>
-              <option value="all">All exams</option>
-              {incidentPage.sessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.name} ({getExamSessionStatus(session)})
-                </option>
-              ))}
-            </select>
-            <input name="q" placeholder="Search student/comment/staff" defaultValue={query} />
-            <select name="room" defaultValue={roomFilter}>
-              <option value="">All rooms</option>
-              {incidentPage.rooms.map((room) => (
-                <option key={room.id} value={room.id}>{room.code}</option>
-              ))}
-            </select>
-            <select name="type" defaultValue={incidentType}>
-              <option value="">All incident types</option>
-              <option value="wrong_room_redirected">Wrong room redirected</option>
-              <option value="wrong_room_present_override">Wrong room marked present</option>
-              <option value="duplicate_attempt">Duplicate attempt</option>
-              <option value="student_not_found">Student not found</option>
-            </select>
-            <select name="sort" defaultValue={sort}>
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </select>
-            <button className="secondary" type="submit">Apply</button>
-            <Link className="button secondary" href="/incidents">Clear</Link>
+            <div className="filter-field">
+              <label htmlFor="incidents-filter-exam">Exam</label>
+              <select id="incidents-filter-exam" name="examSessionId" defaultValue={examSessionFilter}>
+                <option value="active">Active exams only</option>
+                <option value="all">All exams</option>
+                {incidentPage.sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name} ({getExamSessionStatus(session)})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-field filter-field-search">
+              <label htmlFor="incidents-filter-search">Search</label>
+              <input id="incidents-filter-search" name="q" placeholder="Student, comment or staff" defaultValue={query} />
+            </div>
+            <div className="filter-field">
+              <label htmlFor="incidents-filter-room">Room</label>
+              <select id="incidents-filter-room" name="room" defaultValue={roomFilter}>
+                <option value="">All rooms</option>
+                {incidentPage.rooms.map((room) => (
+                  <option key={room.id} value={room.id}>{room.code}</option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-field">
+              <label htmlFor="incidents-filter-type">Incident type</label>
+              <select id="incidents-filter-type" name="type" defaultValue={incidentType}>
+                <option value="">All incident types</option>
+                <option value="wrong_room_redirected">Wrong room redirected</option>
+                <option value="wrong_room_present_override">Wrong room marked present</option>
+                <option value="duplicate_attempt">Duplicate attempt</option>
+                <option value="student_not_found">Student not found</option>
+              </select>
+            </div>
+            <div className="filter-field">
+              <label htmlFor="incidents-filter-sort">Sort order</label>
+              <select id="incidents-filter-sort" name="sort" defaultValue={sort}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+            <div className="filter-actions">
+              <button className="secondary" type="submit">Apply</button>
+              <Link className="button secondary" href="/incidents">Clear</Link>
+            </div>
           </form>
         </div>
-        <div className="table-scroll">
+        <div className="table-scroll" role="region" aria-label="Incidents table" tabIndex={0}>
           <table className="table compact-table">
             <thead>
               <tr>

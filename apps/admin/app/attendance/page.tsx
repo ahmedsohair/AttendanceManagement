@@ -82,54 +82,71 @@ export default async function AttendancePage({
   );
 
   return (
-    <div className="card wide-card">
+    <div className="audit-page card wide-card">
       <nav className="breadcrumbs" aria-label="Breadcrumb">
         <Link href="/">Dashboard</Link>
         <span>/</span>
-        <span>Attendance</span>
+        <span aria-current="page">Attendance</span>
       </nav>
-      <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+      <div className="audit-header">
         <div>
           <div className="kicker">Attendance Audit</div>
-          <h2 className="section-title">Attendance Marked</h2>
+          <h1 className="section-title">Attendance Marked</h1>
           <div className="subtle">
             Showing: <strong>{selectedSessionLabel}</strong>
           </div>
         </div>
         <form className="search-form table-filter-form" action="/attendance" method="get">
-          <select name="examSessionId" defaultValue={examSessionFilter}>
-            <option value="active">Active exams only</option>
-            <option value="all">All exams</option>
-            {auditPage.sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.name} ({getExamSessionStatus(session)})
-              </option>
-            ))}
-          </select>
-          <input name="q" placeholder="Search student/name/comment" defaultValue={query} />
-          <select name="room" defaultValue={roomFilter}>
-            <option value="">All rooms</option>
-            {auditPage.rooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.code}
-              </option>
-            ))}
-          </select>
-          <select name="status" defaultValue={statusFilter}>
-            <option value="">All statuses</option>
-            <option value="standard">Standard present</option>
-            <option value="mismatch">Mismatch present</option>
-            <option value="commented">Has comment</option>
-          </select>
-          <select name="sort" defaultValue={sort}>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-          </select>
-          <button className="secondary" type="submit">Apply</button>
-          <Link className="button secondary" href="/attendance">Clear</Link>
+          <div className="filter-field">
+            <label htmlFor="attendance-filter-exam">Exam</label>
+            <select id="attendance-filter-exam" name="examSessionId" defaultValue={examSessionFilter}>
+              <option value="active">Active exams only</option>
+              <option value="all">All exams</option>
+              {auditPage.sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name} ({getExamSessionStatus(session)})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field filter-field-search">
+            <label htmlFor="attendance-filter-search">Search</label>
+            <input id="attendance-filter-search" name="q" placeholder="Student, name or comment" defaultValue={query} />
+          </div>
+          <div className="filter-field">
+            <label htmlFor="attendance-filter-room">Room</label>
+            <select id="attendance-filter-room" name="room" defaultValue={roomFilter}>
+              <option value="">All rooms</option>
+              {auditPage.rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.code}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="attendance-filter-status">Attendance status</label>
+            <select id="attendance-filter-status" name="status" defaultValue={statusFilter}>
+              <option value="">All statuses</option>
+              <option value="standard">Standard present</option>
+              <option value="mismatch">Mismatch present</option>
+              <option value="commented">Has comment</option>
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="attendance-filter-sort">Sort order</label>
+            <select id="attendance-filter-sort" name="sort" defaultValue={sort}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+          <div className="filter-actions">
+            <button className="secondary" type="submit">Apply</button>
+            <Link className="button secondary" href="/attendance">Clear</Link>
+          </div>
         </form>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Attendance table" tabIndex={0}>
         <table className="table compact-table">
           <thead>
             <tr>

@@ -36,6 +36,10 @@ function pageHref(params: MismatchSearchParams, page: number) {
   return serialized ? `/mismatches?${serialized}` : "/mismatches";
 }
 
+function attendanceHref(examSessionFilter: string) {
+  return `/attendance?${new URLSearchParams({ examSessionId: examSessionFilter }).toString()}`;
+}
+
 export default async function MismatchesPage({
   searchParams
 }: {
@@ -73,41 +77,68 @@ export default async function MismatchesPage({
   );
 
   return (
-    <div className="card wide-card">
-      <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+    <div className="audit-page card wide-card">
+      <nav className="breadcrumbs" aria-label="Breadcrumb">
+        <Link href="/">Dashboard</Link>
+        <span>/</span>
+        <Link href={attendanceHref(examSessionFilter)}>Attendance</Link>
+        <span>/</span>
+        <span aria-current="page">Mismatch Present</span>
+      </nav>
+      <div className="audit-context">
+        <span>Attendance audit / mismatch review</span>
+        <Link className="inline-link" href={attendanceHref(examSessionFilter)}>
+          Return to Attendance
+        </Link>
+      </div>
+      <div className="audit-header">
         <div>
           <div className="kicker">Override Review</div>
-          <h2 className="section-title">Mismatch Present</h2>
+          <h1 className="section-title">Mismatch Present</h1>
           <div className="subtle">
             Showing: <strong>{selectedSessionLabel}</strong> | {mismatchPage.totalCount} record(s)
           </div>
         </div>
         <form className="search-form table-filter-form" action="/mismatches" method="get">
-          <select name="examSessionId" defaultValue={examSessionFilter}>
-            <option value="active">Active exams only</option>
-            <option value="all">All exams</option>
-            {mismatchPage.sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.name} ({getExamSessionStatus(session)})
-              </option>
-            ))}
-          </select>
-          <input name="q" placeholder="Search student/name/comment" defaultValue={query} />
-          <select name="room" defaultValue={roomFilter}>
-            <option value="">All marked rooms</option>
-            {mismatchPage.rooms.map((room) => (
-              <option key={room.id} value={room.id}>{room.code}</option>
-            ))}
-          </select>
-          <select name="sort" defaultValue={sort}>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-          </select>
-          <button className="secondary" type="submit">Apply</button>
-          <Link className="button secondary" href="/mismatches">Clear</Link>
+          <div className="filter-field">
+            <label htmlFor="mismatches-filter-exam">Exam</label>
+            <select id="mismatches-filter-exam" name="examSessionId" defaultValue={examSessionFilter}>
+              <option value="active">Active exams only</option>
+              <option value="all">All exams</option>
+              {mismatchPage.sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.name} ({getExamSessionStatus(session)})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field filter-field-search">
+            <label htmlFor="mismatches-filter-search">Search</label>
+            <input id="mismatches-filter-search" name="q" placeholder="Student, name or comment" defaultValue={query} />
+          </div>
+          <div className="filter-field">
+            <label htmlFor="mismatches-filter-room">Room</label>
+            <select id="mismatches-filter-room" name="room" defaultValue={roomFilter}>
+              <option value="">All marked rooms</option>
+              {mismatchPage.rooms.map((room) => (
+                <option key={room.id} value={room.id}>{room.code}</option>
+              ))}
+            </select>
+          </div>
+          <div className="filter-field">
+            <label htmlFor="mismatches-filter-sort">Sort order</label>
+            <select id="mismatches-filter-sort" name="sort" defaultValue={sort}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+          <div className="filter-actions">
+            <button className="secondary" type="submit">Apply</button>
+            <Link className="button secondary" href="/mismatches">Clear</Link>
+          </div>
         </form>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll" role="region" aria-label="Mismatch present table" tabIndex={0}>
         <table className="table compact-table">
           <thead>
             <tr>
