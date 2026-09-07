@@ -311,6 +311,25 @@ Unscored questions about exam-detail table size and import network-error recover
   Broader admin/scanner visual polish, physical/assistive-technology acceptance
   and remaining Phase 8 operations are not completed by this account-only pass.
 
+## Admin Workspace UI Pass Started - 8 September 2026
+
+- Scope: existing admin shell/navigation, dashboard and exam list. Preserve all
+  data reads, actions, confirmation guards, query/pagination semantics and
+  incumbent ExamPulse identity. Detail/setup, staff/code panels, audit content,
+  scanner and account forms are not redesigned in this pass.
+- Worktree: `C:/dev/AlgoAttendance-ui-admin`, branch `ui/admin-workspace`, base
+  `798f726`. Lovelace (Luna/xhigh) owns scoped production presentation changes;
+  parent owns the isolated real-page fixture, behavioral verification and review.
+- Parent fixture committed in `c9c01ed`, using real root layout/dashboard/exam
+  list with mocked auth/query boundaries. Baseline screenshots were captured
+  from immutable `798f726` at desktop/phone widths in populated and empty states.
+- Verification targets include four viewport widths, visible navigation,
+  headings/labels, keyboard table scrolling, query-preserving pagination and
+  native destructive-action guards. All writes are blocked or explicitly mocked.
+- No delegate cleanup, dependency installation, push, deployment or live data
+  changes. Keep baseline and implementation worktrees in place. Source review,
+  final browser/build checks and integration are pending.
+
 ## Implement First: B1
 
 Implement **Trustworthy Student Review** first, starting with UX-02's identity/action guard. It addresses a P1 decision-state error in the highest-repetition workflow, has a narrow web-client boundary, and can be demonstrated with mocked requests without changing production data. The identity and exception refinements then become safe to add on the same reviewed-result contract. It needs no migration and must not add a confirmation step to ordinary marking.
