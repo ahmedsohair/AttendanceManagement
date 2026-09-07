@@ -79,28 +79,8 @@
 }
 
 .admin-shell .admin-topbar {
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 18px;
-}
-
-.admin-shell .admin-topbar-context {
-  display: grid;
-  min-width: 0;
-  gap: 2px;
-}
-
-.admin-shell .admin-topbar-kicker {
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.admin-shell .admin-topbar-title {
-  color: var(--accent-dark);
-  font-size: 14px;
-  font-weight: 800;
 }
 
 .admin-shell .admin-user {
@@ -113,6 +93,11 @@
   min-width: 0;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+.admin-shell .admin-user button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .admin-shell .admin-content {
@@ -190,6 +175,7 @@
 }
 
 .admin-shell .dashboard-metric-label {
+  min-height: 2.5em;
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -201,6 +187,7 @@
   margin: 0;
   font-size: 30px;
   line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-shell .dashboard-primary-panel .exam-card-list,
@@ -235,6 +222,15 @@
 .admin-shell .dashboard-list-copy,
 .admin-shell .exam-list-row-copy {
   overflow-wrap: anywhere;
+}
+
+.admin-shell .exam-list-row {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.admin-shell .exam-list-row-actions {
+  justify-content: flex-start;
 }
 
 .admin-shell .exam-row-card .pill {
@@ -304,7 +300,6 @@
   display: flex;
   min-width: 0;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -420,6 +415,16 @@
   overflow-wrap: anywhere;
 }
 
+.admin-shell .exam-list-table th:first-child {
+  width: 45%;
+}
+
+.admin-shell .exam-list-table td:not(:first-child),
+.admin-shell .exam-list-table button {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .admin-shell .exam-list-table td:last-child,
 .admin-shell .exam-list-table th:last-child {
   min-width: 150px;
@@ -526,8 +531,8 @@
   }
 
   .admin-shell .admin-user {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
+    flex-wrap: nowrap;
     gap: 8px;
   }
 
@@ -604,8 +609,8 @@
   }
 }
 
-.admin-shell :is(a, button, input, select, textarea):focus-visible {
-  outline: 3px solid rgba(0, 89, 187, 0.28);
+.admin-shell:not(:has(.scan-route)) :is(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 

@@ -26,10 +26,6 @@ export default async function RootLayout({
           <div className={isAdmin ? "header admin-header" : "header"}>
             {isAdmin ? (
               <div className="admin-topbar">
-                <div className="admin-topbar-context">
-                  <span className="admin-topbar-kicker">Admin workspace</span>
-                  <span className="admin-topbar-title">Exam operations</span>
-                </div>
                 <div className="admin-user">
                   <span className="admin-user-name">{sessionUser.fullName}</span>
                   <SignOutButton />
