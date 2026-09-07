@@ -71,6 +71,15 @@ Stop here for parent review. No push, merge, deploy, or staging mutation was per
 
 ## Independent Parent Review (7 September 2026)
 
+### Subsequent Staging Release
+
+- Pushed as `a4b430e` on `hardening/staging`; all release checks passed: https://github.com/ahmedsohair/AttendanceManagement/actions/runs/34077142971.
+- Staging deployment succeeded: https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/HtszBV93kEcs5bmgBTs11X9GhVCe. No production promotion.
+- Live signed-out Chromium smoke at 390x844: `/login`, `/reset-password`, `/update-password` all returned 200 and fit document width. Login/reset Email address labels are visible. Missing recovery session terminates at No Valid Recovery Session without showing password fields. No forms submitted or non-read requests attempted; temporary browser closed.
+- Real recovery email/token exchange, actual password mutation, authenticated admin acceptance, physical devices and screen-reader verification remain open. This bounded smoke does not establish those outcomes.
+
+### Pre-Release Review
+
 - Reviewed correction `800a739` and final delegate HEAD `5bb9038`. Both reproduced review failures are resolved: benign same-account events preserve pending/success state; sign-out, identity change and new recovery flow clear drafts and invalidate stale completion. Retry now installs the auth subscription after an initial client-construction failure.
 - Parent independently reran all 20 B5 real-component mocked browser tests and all 93 web tests: passed. The env-cleared production build passed compilation, lint/type validation, 22 static pages and tracing; base diff check passed.
 - Source review found no callback/API/backend, password-policy, role, code-lifecycle or email-contract changes. Fixture mocks remain isolated from the production application.

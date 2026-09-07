@@ -30,6 +30,13 @@ Attendance uniqueness, atomic transactions, idempotency, outbox ownership/retrie
 
 ## Evidence and Estimation
 
+### Impeccable Visual Polish (7 September 2026)
+
+- User approved beginning visual polish after UX batches. B5 `a4b430e` passed its release gate and staging deployment. Public signed-out account/recovery screen smoke passed at 390x844, including terminal missing-session guidance, with no form submission or write attempts. Remaining real-provider, authenticated, physical-device and screen-reader acceptance is unchanged.
+- First bounded pass: connected admin sign-in, reset-request and password-update screens. Ohm (`01a079c0-a9fb-7293-b9e2-dc371da6adf7`) uses user-approved `gpt-5.6-luna` / `xhigh` in `C:/dev/AlgoAttendance-ui-account`, branch `ui/account-polish`, base `a4b430e`. Parent owns independent review/integration.
+- Impeccable Operate-mode refinement: preserve identity, fonts/assets/palette, factual copy, route contracts, forms/labels/ARIA and all B5 recovery functions/state/refs/effects/guards. Only scoped presentation classes/wrappers/CSS; no backend, dependencies, auth changes, live calls, push or deployment by the delegate.
+- Require real-component before/after desktop and phone captures, bounded visual inspection/fix/confirmation passes, detector and B5 regression/type/build checks. Handoff: `docs/UI-ACCOUNT-POLISH-HANDOFF.md`. Admin workspace and scanner polish follow as separately reviewed surfaces, not a global redesign in this pass.
+
 Source checks confirm that `readExamSessionStoreFast` omits assignment hydration while `readExamSetupStoreFast` supplies it; the scanner review input changes `studentId` without invalidating `lastLookup`; and `UpdatePasswordForm` does not terminate the no-session check. Other findings retain the audit's evidence strength and require focused reproduction during implementation.
 
 Effort is engineering time including targeted tests and review, excluding credentials, deployment waits, and physical-device scheduling. S = about 0.5-1 day; M = 1-2 days; L = 2-4 days. Ranges are estimates, not commitments. Per-finding estimates overlap within batches and must not be added mechanically.
