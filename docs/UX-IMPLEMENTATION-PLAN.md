@@ -305,7 +305,9 @@ Unscored questions about exam-detail table size and import network-error recover
   `docs/UI-ACCOUNT-POLISH-HANDOFF.md`.
 - Local cleanup damage was repaired before integration; safeguards are recorded
   in `AGENTS.md` and `docs/LOCAL-RECOVERY-20260907.md`.
-- Next gate: explicitly authorized staging push and release verification.
+- Staging push `7122b96` and release verification completed on 8 September 2026:
+  GitHub run `34081263374` and Vercel staging deployment passed; read-only account
+  screen checks are recorded in `docs/UI-ACCOUNT-POLISH-HANDOFF.md`.
   Broader admin/scanner visual polish, physical/assistive-technology acceptance
   and remaining Phase 8 operations are not completed by this account-only pass.
 

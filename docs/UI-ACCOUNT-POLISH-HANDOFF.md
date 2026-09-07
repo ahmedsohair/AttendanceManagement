@@ -62,3 +62,23 @@ Parent should perform the independent B5 staging visual and behavior review. No 
   untracked files were preserved. No worktrees were removed.
 - No push or deployment yet. Staging release verification, real recovery-link
   checks and physical-device/screen-reader acceptance remain open.
+
+## Staging Release Verification - 8 September 2026
+
+- Pushed `7122b96` to `origin/hardening/staging` following user authorization.
+- GitHub run `34081263374` passed all checks: release gate, temporary database
+  migrations, secret scan, critical dependency audit, and type-check/test/build.
+  https://github.com/ahmedsohair/AttendanceManagement/actions/runs/34081263374
+- Vercel staging deployment `DT7xYnzXiR8Fs8DyBQfe1AEGc5ED` reports success.
+  https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/DT7xYnzXiR8Fs8DyBQfe1AEGc5ED
+- Read-only checks of `https://exampulse-stagings.vercel.app` returned HTTP 200
+  for `/login`, `/reset-password`, and `/update-password`; each response contains
+  the new `account-card` class.
+- Browser inspection confirmed labelled login/reset fields and recovery links.
+  The update page transitioned from checking to the new-password form, indicating
+  an eligible existing browser session. This is not signed-out/missing-session
+  evidence. The session was not changed or inspected for credentials.
+- No forms were submitted, emails requested, passwords changed, or business
+  data written. Real recovery-link and physical-device/screen-reader acceptance
+  remain open; missing-session behavior has independent local fixture coverage.
+- No production promotion was performed.
