@@ -44,3 +44,21 @@ Each directory contains desktop (`1280x844`) and phone (`390x844`) captures for 
 - Manual detector ran once on the four changed UI targets. It reported only existing out-of-scope findings at `globals.css:35` (incumbent Inter font) and `globals.css:1965` (scanner review card border); neither was changed in this pass.
 
 Parent should perform the independent B5 staging visual and behavior review. No merge, push, deploy, migration, or staging mutation was performed.
+
+## Parent Review And Local Integration - 7 September 2026
+
+- Reviewed the source diff and representative desktop before/after and phone
+  error/missing-session captures. Changes are confined to account presentation;
+  existing recovery state ownership and submission guards are preserved.
+- After local dependency recovery, independently reran 20 B5 browser tests and
+  93 web tests successfully. The isolated production build passed, including
+  lint/type validation and 22 generated static pages. Live service boundaries
+  were not exercised. See `docs/LOCAL-RECOVERY-20260907.md` for the cleanup incident.
+- Merged reviewed delegate HEAD `aaa44d6` into `hardening/staging` in `f9c67bf`.
+  No conflicts occurred. Post-merge application, package and B5 test/config files
+  match the tested delegate branch; the merge diff passes whitespace checks.
+- The restored attendance lookup route remains identical to its committed blob
+  `c67a7d0069ca1e238018f38c9a93933ec74b2756`. Cleanup safeguards and unrelated
+  untracked files were preserved. No worktrees were removed.
+- No push or deployment yet. Staging release verification, real recovery-link
+  checks and physical-device/screen-reader acceptance remain open.

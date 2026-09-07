@@ -44,5 +44,6 @@ reviewed link-safe cleanup is authorized.
   Production-sensitive environment variables were cleared for this build.
 - Account-polish worktree remained clean after tests/build. Representative
   desktop before/after and phone error/missing-session captures were reviewed;
-  the implementation diff is presentation-only. Integration remains pending.
+  the implementation diff is presentation-only. Subsequently integrated locally
+  in `f9c67bf`; see `docs/UI-ACCOUNT-POLISH-HANDOFF.md`.
 - No push, deployment, live email, password change, or business-data write.

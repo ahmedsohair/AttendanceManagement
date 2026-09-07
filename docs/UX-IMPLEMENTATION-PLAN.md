@@ -294,6 +294,21 @@ Success measures are concrete task outcomes rather than a new invented UX score:
 
 Unscored questions about exam-detail table size and import network-error recovery remain separate investigations, not extra implementation batches. Do not widen this plan into pagination architecture, roster editing, persistent duplicate notes, native apps, or a new design system without evidence and separate approval.
 
+## Account UI Polish Integrated Locally - 7 September 2026
+
+- First Impeccable refinement covers only sign-in, reset-request and password
+  recovery presentation. Reviewed branch `ui/account-polish` (`aaa44d6`) merged
+  into `hardening/staging` in `f9c67bf`, with no conflicts or auth-logic changes.
+- Parent independently verified representative desktop/phone captures, 20 B5
+  browser tests, 93 web tests and the isolated production build. Integrated
+  application/test files match the tested branch. Detailed evidence is in
+  `docs/UI-ACCOUNT-POLISH-HANDOFF.md`.
+- Local cleanup damage was repaired before integration; safeguards are recorded
+  in `AGENTS.md` and `docs/LOCAL-RECOVERY-20260907.md`.
+- Next gate: explicitly authorized staging push and release verification.
+  Broader admin/scanner visual polish, physical/assistive-technology acceptance
+  and remaining Phase 8 operations are not completed by this account-only pass.
+
 ## Implement First: B1
 
 Implement **Trustworthy Student Review** first, starting with UX-02's identity/action guard. It addresses a P1 decision-state error in the highest-repetition workflow, has a narrow web-client boundary, and can be demonstrated with mocked requests without changing production data. The identity and exception refinements then become safe to add on the same reviewed-result contract. It needs no migration and must not add a confirmation step to ordinary marking.
