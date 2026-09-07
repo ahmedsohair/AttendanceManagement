@@ -1,7 +1,7 @@
 # Account UI Polish Handoff
 
-Branch: `ui/account-polish`  
-Base: `a4b430e`  
+Branch: `ui/account-polish`
+Base: `a4b430e`
 Worktree: `C:\dev\AlgoAttendance-ui-account`
 
 ## Scope
