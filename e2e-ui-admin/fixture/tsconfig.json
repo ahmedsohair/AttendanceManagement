@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/surface/layout": ["../../apps/admin/app/layout.tsx"],
+      "@/surface/dashboard": ["../../apps/admin/app/page.tsx"],
+      "@/surface/sessions": ["../../apps/admin/app/sessions/page.tsx"],
+      "@/lib/auth": ["../mocks/auth.ts"],
+      "@/lib/admin-queries": ["../mocks/admin-queries.ts"],
+      "@/lib/supabase-browser": ["../mocks/supabase-browser.ts"],
+      "@/*": ["../../apps/admin/src/*"],
+      "@algo-attendance/shared": ["../../packages/shared/src/index.ts"]
+    },
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "app/**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
