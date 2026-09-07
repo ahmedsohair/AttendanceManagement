@@ -56,15 +56,15 @@ export function AdminLoginForm({
   }
 
   return (
-    <div className="card" style={{ maxWidth: 520, margin: "0 auto" }}>
+    <div className="card account-card account-login-card">
       <div className="kicker">Secure Access</div>
       <h2 className="section-title">Admin Sign In</h2>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <p className="subtle account-intro">
         Use your administrator credentials to manage exams, invigilators, and
         attendance activity.
       </p>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid account-form" onSubmit={handleSubmit}>
         <div className="form-field">
           <label htmlFor="admin-login-email">Email address</label>
           <input
@@ -97,7 +97,7 @@ export function AdminLoginForm({
       </form>
 
       {unauthorized ? (
-        <p className="subtle" style={{ color: "var(--warn)", marginBottom: 0 }}>
+        <p className="account-status account-status-warning">
           This account is not allowed to access the admin dashboard.
         </p>
       ) : null}
@@ -105,28 +105,27 @@ export function AdminLoginForm({
       {error ? (
         <p
           id="admin-login-error"
-          className="subtle"
+          className="account-status account-status-error"
           role="alert"
-          style={{ color: "var(--accent-dark)", marginBottom: 0 }}
         >
           {error}
         </p>
       ) : null}
 
       {reset === "requested" ? (
-        <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
+        <p className="account-status account-status-success">
           Password reset email sent. Check your inbox for the recovery link.
         </p>
       ) : null}
 
       {reset === "updated" ? (
-        <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
+        <p className="account-status account-status-success">
           Password updated. Sign in with your new password.
         </p>
       ) : null}
 
-      <div className="inline-actions" style={{ marginTop: 12 }}>
-        <Link href="/reset-password" className="subtle" style={{ color: "var(--accent-dark)" }}>
+      <div className="inline-actions account-actions account-actions-secondary">
+        <Link href="/reset-password" className="subtle">
           Forgot password?
         </Link>
       </div>
