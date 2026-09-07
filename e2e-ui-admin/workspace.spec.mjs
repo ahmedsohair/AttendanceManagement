@@ -114,3 +114,21 @@ test("confirmed delete retains the exact name and endpoint contract in the mock"
   expect(requests[0].method).toBe("POST");
   expect(new URLSearchParams(requests[0].body).get("confirmationName")).toBe("Algorithms and Analysis - Undergraduate and Postgraduate Final Examination 1");
 });
+
+test("dashboard preserves metric destinations and the native draft publish action", async ({ page }) => {
+  await page.goto("/");
+  for (const [name, href, value] of [
+    ["Active Exams", "/sessions", "7"],
+    ["Attendance Marked", "/attendance", "12580"],
+    ["Mismatch Present", "/mismatches", "17"],
+    ["Total Incidents", "/incidents", "28"]
+  ]) {
+    const metric = page.getByRole("link").filter({ hasText: name }).filter({ hasText: value });
+    await expect(metric).toHaveCount(1);
+    await expect(metric).toHaveAttribute("href", href);
+  }
+  await expect(page.getByText("Showing 3 of 7 active exams.", { exact: false })).toBeVisible();
+  const form = page.getByRole("button", { name: "Publish", exact: true }).first().locator("xpath=ancestor::form");
+  await expect(form).toHaveAttribute("action", "/api/exam-sessions/draft-1/publish");
+  await expect(form).toHaveAttribute("method", "post");
+});
