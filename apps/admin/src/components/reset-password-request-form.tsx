@@ -46,15 +46,15 @@ export function ResetPasswordRequestForm({
   }
 
   return (
-    <div className="card" style={{ maxWidth: 520, margin: "0 auto" }}>
+    <div className="card account-card account-reset-card">
       <div className="kicker">Account Recovery</div>
       <h2 className="section-title">Reset Password</h2>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <p className="subtle account-intro">
         Enter your staff email address and we&apos;ll send a secure link to set a new
         password.
       </p>
 
-      <form className="form-grid" onSubmit={handleSubmit}>
+      <form className="form-grid account-form" onSubmit={handleSubmit}>
         <div className="form-field">
           <label htmlFor="reset-password-email">Email address</label>
           <input
@@ -74,7 +74,7 @@ export function ResetPasswordRequestForm({
       </form>
 
       {sent ? (
-        <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }}>
+        <p className="account-status account-status-success">
           If an eligible account exists, a reset email will be sent shortly.
         </p>
       ) : null}
@@ -82,16 +82,15 @@ export function ResetPasswordRequestForm({
       {error ? (
         <p
           id="reset-password-error"
-          className="subtle"
+          className="account-status account-status-error"
           role="alert"
-          style={{ color: "var(--accent-dark)", marginBottom: 0 }}
         >
           {error}
         </p>
       ) : null}
 
-      <div className="inline-actions" style={{ marginTop: 12 }}>
-        <Link href="/login" className="subtle" style={{ color: "var(--accent-dark)" }}>
+      <div className="inline-actions account-actions account-actions-secondary">
+        <Link href="/login" className="subtle">
           Back to sign in
         </Link>
       </div>

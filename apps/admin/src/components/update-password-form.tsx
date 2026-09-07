@@ -372,15 +372,15 @@ export function UpdatePasswordForm() {
             : "Set a new password for your staff account. This link expires automatically.";
 
   return (
-    <div className="card" style={{ maxWidth: 520, margin: "0 auto" }}>
+    <div className={`card account-card account-update-card account-state-${status}`}>
       <div className="kicker">{kicker}</div>
       <h2 className="section-title">{title}</h2>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <p className="subtle account-intro">
         {description}
       </p>
 
       {status === "checking" ? (
-        <p className="subtle" role="status" aria-live="polite">
+        <p className="account-status account-status-checking" role="status" aria-live="polite">
           Checking your recovery session...
         </p>
       ) : null}
@@ -388,11 +388,10 @@ export function UpdatePasswordForm() {
       {status === "missing" || status === "error" ? (
         <div
           id="update-password-status"
-          className="subtle"
+          className={`account-status account-status-${status}`}
           role="alert"
-          style={{ color: status === "error" ? "var(--accent-dark)" : "var(--warn)" }}
         >
-          <p style={{ marginTop: 0 }}>{message}</p>
+          <p className="account-status-message">{message}</p>
           {status === "error" ? (
             <button type="button" className="secondary" onClick={retrySessionCheck}>
               Retry check
@@ -403,7 +402,7 @@ export function UpdatePasswordForm() {
 
       {status === "ready" || status === "submitting" ? (
         <form
-          className="form-grid"
+          className="form-grid account-form"
           onSubmit={handleSubmit}
           aria-busy={status === "submitting"}
         >
@@ -436,9 +435,8 @@ export function UpdatePasswordForm() {
           {message ? (
             <p
               id={formErrorId}
-              className="subtle"
+              className="account-status account-status-error account-form-message"
               role="alert"
-              style={{ color: "var(--accent-dark)", marginBottom: 0 }}
             >
               {message}
             </p>
@@ -451,10 +449,10 @@ export function UpdatePasswordForm() {
 
       {status === "success" ? (
         <>
-          <p className="subtle" style={{ color: "var(--ok)", marginBottom: 0 }} role="status">
+          <p className="account-status account-status-success" role="status">
             Password updated. You can now sign in again on the web.
           </p>
-          <div className="inline-actions" style={{ marginTop: 12 }}>
+          <div className="inline-actions account-actions account-actions-primary">
             <button type="button" onClick={handleReturnToLogin} disabled={returnBusy}>
               {returnBusy ? "Signing out..." : "Return to Sign In"}
             </button>
@@ -462,9 +460,8 @@ export function UpdatePasswordForm() {
           {returnError ? (
             <p
               id="return-to-login-error"
-              className="subtle"
+              className="account-status account-status-error"
               role="alert"
-              style={{ color: "var(--accent-dark)", marginBottom: 0 }}
             >
               {returnError}
             </p>
@@ -473,8 +470,8 @@ export function UpdatePasswordForm() {
       ) : null}
 
       {status !== "success" ? (
-        <div className="inline-actions" style={{ marginTop: 12 }}>
-          <Link href="/reset-password" className="subtle" style={{ color: "var(--accent-dark)" }}>
+        <div className="inline-actions account-actions account-actions-secondary">
+          <Link href="/reset-password" className="subtle">
             Request another recovery email
           </Link>
         </div>
