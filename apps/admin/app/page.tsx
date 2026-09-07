@@ -27,33 +27,33 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="stack">
+    <div className="stack admin-dashboard">
       <div className="dashboard-hero">
-        <div className="card">
-          <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+        <section className="dashboard-primary-panel" aria-labelledby="active-exams-title">
+          <div className="dashboard-section-heading">
             <div>
               <div className="kicker">Live Operations</div>
-              <h2 className="section-title">Active Exams</h2>
+              <h1 className="section-title" id="active-exams-title">Active Exams</h1>
             </div>
             <Link className="button secondary" href="/sessions">
               View all sessions
             </Link>
           </div>
-          <div className="grid compact-grid">
-            <Link className="card metric-card compact-card" href="/sessions">
-              <div className="subtle">Active Exams</div>
+          <div className="dashboard-metrics" aria-label="Attendance overview">
+            <Link className="dashboard-metric" href="/sessions">
+              <div className="dashboard-metric-label">Active Exams</div>
               <div className="metric">{activeSessionCount}</div>
             </Link>
-            <Link className="card metric-card compact-card" href="/attendance">
-              <div className="subtle">Attendance Marked</div>
+            <Link className="dashboard-metric" href="/attendance">
+              <div className="dashboard-metric-label">Attendance Marked</div>
               <div className="metric">{overall.present}</div>
             </Link>
-            <Link className="card metric-card compact-card" href="/mismatches">
-              <div className="subtle">Mismatch Present</div>
+            <Link className="dashboard-metric" href="/mismatches">
+              <div className="dashboard-metric-label">Mismatch Present</div>
               <div className="metric">{overall.mismatch}</div>
             </Link>
-            <Link className="card metric-card compact-card" href="/incidents">
-              <div className="subtle">Total Incidents</div>
+            <Link className="dashboard-metric" href="/incidents">
+              <div className="dashboard-metric-label">Total Incidents</div>
               <div className="metric">{overall.incidents}</div>
             </Link>
           </div>
@@ -86,11 +86,11 @@ export default async function DashboardPage() {
               for the complete list.
             </div>
           ) : null}
-        </div>
+        </section>
 
-        <div className="card attention-card">
+        <aside className="dashboard-attention attention-card" aria-labelledby="admin-actions-title">
           <div className="kicker">Needs Attention</div>
-          <h2 className="section-title">Admin Actions</h2>
+          <h2 className="section-title" id="admin-actions-title">Admin Actions</h2>
           <div className="attention-list">
             {needsAttention.map((item) => (
               <Link key={item.label} className={`attention-item ${item.tone}`} href={item.href}>
@@ -99,38 +99,36 @@ export default async function DashboardPage() {
               </Link>
             ))}
           </div>
-        </div>
+        </aside>
       </div>
 
-      <div className="layout-two">
-        <div className="card tint">
-          <div className="inline-actions" style={{ justifyContent: "space-between" }}>
+      <div className="layout-two dashboard-secondary">
+        <section className="dashboard-list-panel dashboard-drafts" aria-labelledby="draft-exams-title">
+          <div className="dashboard-section-heading">
             <div>
               <div className="kicker">Ready To Publish</div>
-              <h2 className="section-title">Draft Exams</h2>
+              <h2 className="section-title" id="draft-exams-title">Draft Exams</h2>
             </div>
           </div>
-          <div className="stack">
+          <div className="dashboard-list">
             {draftSessions.length ? (
               draftSessions.map((session) => (
-                <div key={session.id} className="card" style={{ padding: 16 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                    <div>
-                      <Link className="inline-link" href={`/sessions/${session.id}`}>
-                        {session.name}
-                      </Link>
-                      <div className="subtle">
-                        {session.examDate} | {session.startTime}
-                      </div>
+                <div key={session.id} className="dashboard-list-row">
+                  <div className="dashboard-list-copy">
+                    <Link className="inline-link" href={`/sessions/${session.id}`}>
+                      {session.name}
+                    </Link>
+                    <div className="subtle">
+                      {session.examDate} | {session.startTime}
                     </div>
-                    <div className="inline-actions">
-                      <Link className="button secondary" href={`/sessions/${session.id}`}>
-                        Manage
-                      </Link>
-                      <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
-                        <button type="submit">Publish</button>
-                      </form>
-                    </div>
+                  </div>
+                  <div className="dashboard-row-actions">
+                    <Link className="button secondary" href={`/sessions/${session.id}`}>
+                      Manage
+                    </Link>
+                    <form action={`/api/exam-sessions/${session.id}/publish`} method="post">
+                      <button type="submit">Publish</button>
+                    </form>
                   </div>
                 </div>
               ))
@@ -149,11 +147,11 @@ export default async function DashboardPage() {
               Showing {draftSessions.length} of {draftSessionCount} draft exams.
             </div>
           ) : null}
-        </div>
+        </section>
 
-        <div className="card">
+        <section className="dashboard-list-panel" aria-labelledby="closed-exams-title">
           <div className="kicker">History</div>
-          <h2 className="section-title">Closed Exams</h2>
+          <h2 className="section-title" id="closed-exams-title">Closed Exams</h2>
           <div className="exam-card-list">
             {closedSessions.length ? (
               closedSessions.map((session) => (
@@ -174,7 +172,7 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
