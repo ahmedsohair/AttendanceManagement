@@ -336,9 +336,14 @@ Unscored questions about exam-detail table size and import network-error recover
   result for follow-up rather than claiming it was fixed. Detailed commands,
   fixture setup, artifacts and limitations: `docs/UI-ADMIN-WORKSPACE-HANDOFF.md`.
 - No delegate cleanup, dependency installation, push, deployment or live data
-  changes. Baseline and implementation worktrees remain in place. Next gate is
-  an explicitly approved staging push, CI/deployment verification and staging
-  acceptance. Physical-device and assistive-technology acceptance remain open.
+  changes during local integration. Baseline and implementation worktrees remain
+  in place. Subsequent authorized staging push `45731b1` passed GitHub run
+  `34187902428` and Vercel deployment `CX1aTu6iarNd4YxPNnsX7A8LYSLL`. Read-only
+  HTTP checks verified the new stylesheet, public account pages and signed-out
+  exam-list redirect. Browser tooling could not initialize, so authenticated
+  staging visual/interaction acceptance remains open, as do physical-device and
+  assistive-technology checks. No production promotion performed. See the handoff
+  for release links and exact verification limits.
 
 ## Implement First: B1
 

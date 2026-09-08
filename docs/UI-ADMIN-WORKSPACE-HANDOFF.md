@@ -79,3 +79,26 @@ Branch: `ui/admin-workspace`
 - No push or deployment performed. Preserve both worktrees and unrelated
   untracked files. Next: approved staging push, CI/deployment verification and
   read-only staging visual checks; do not imply device acceptance is complete.
+
+## Staging Release Verification - 8 September 2026
+
+- User authorized push and staging verification. Pushed `45731b1` to
+  `origin/hardening/staging`; no production branch push or promotion performed.
+- GitHub run `34187902428` passed all five jobs: type-check/test/build,
+  temporary database migrations, critical dependency audit, secret scan and
+  release gate.
+  https://github.com/ahmedsohair/AttendanceManagement/actions/runs/34187902428
+- Vercel staging deployment `CX1aTu6iarNd4YxPNnsX7A8LYSLL` reports success for
+  that exact commit.
+  https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/CX1aTu6iarNd4YxPNnsX7A8LYSLL
+- Read-only HTTP checks against `https://exampulse-stagings.vercel.app`:
+  `/login`, `/reset-password`, and `/update-password` returned 200 with the
+  account-card markup. Signed-out `/sessions` redirected to `/login?next=%2Fsessions`.
+  Served CSS `/_next/static/css/c7d35b129cd831db.css` returned 200 and contains
+  the new admin-user-name and scoped exam-list-row selectors.
+- Browser automation could not initialize (local kernel-assets path error).
+  These HTTP checks do not certify authenticated deployed UI interactions;
+  those and physical-device/screen-reader acceptance remain open. Local real-page
+  fixture visual and behavioral results are recorded above.
+- No forms submitted, emails sent, credentials changed, or live data mutated.
+  Release-evidence documentation is committed locally after the deployed commit.
