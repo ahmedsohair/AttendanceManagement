@@ -27,7 +27,7 @@ export default async function RootLayout({
             {isAdmin ? (
               <div className="admin-topbar">
                 <div className="admin-user">
-                  <span>{sessionUser.fullName}</span>
+                  <span className="admin-user-name">{sessionUser.fullName}</span>
                   <SignOutButton />
                 </div>
               </div>
