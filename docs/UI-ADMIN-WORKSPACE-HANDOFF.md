@@ -40,4 +40,31 @@ Branch: `ui/admin-workspace`
 - Manual Impeccable detector ran once after final changes: only pre-existing
   incumbent Inter font and scanner review border warnings, intentionally kept
   outside this pass. No new detector finding was reported for this work.
-- Final browser/build results and integration remain pending.
+- Final workspace browser run: 15/15 passed, covering desktop/phone populated
+  and empty captures, 320/390/768/1280px layouts, navigation, native GET filters,
+  pagination, keyboard table scrolling, delete/close guards, and metric/publish
+  contracts. The capture batch has a 300-second test allowance; assertions were
+  not weakened. Final corrected desktop exam-list and phone dashboard captures
+  were visually reviewed, alongside the empty dashboard.
+- Final isolated admin production build passed, including lint/type validation
+  and static page generation. `CIRCLE_NODE_TOTAL=2` limits local Next build
+  concurrency; this is process-only, not an application configuration change.
+- Workspace verification command:
+  `npx.cmd --no-install playwright test --config playwright.ui-admin.config.mjs --timeout=120000`.
+  Baseline and final images remain in ignored `test-results/admin-workspace-before`
+  and `test-results/admin-workspace-after` directories in the implementation worktree.
+- The supplementary B4 fixture needs process-only `NODE_PATH` pointing to
+  `apps/admin/node_modules` in this junction-backed checkout. Without it, the
+  fixture could not resolve Next before tests started. With it, 26 checks passed;
+  the combined three-page navigation case exceeded its overall 30-second limit
+  during page loading. A 120-second rerun passed 26 checks but failed the
+  mismatch-page Browser Back URL assertion. That exact combined navigation test
+  then passed unchanged in isolation with tracing (52.5 seconds). This is an
+  intermittent regression-test result, not proof of a diagnosed application bug
+  or proof that timing was the cause. No assertions were weakened. The final full
+  suite run passed 27/27 in 2.1 minutes, including the navigation test in 40.5
+  seconds. Command: `npx.cmd --no-install playwright test --config playwright.b4.config.mjs --timeout=120000`.
+  Investigate further if the intermittent Browser Back failure recurs; it is not
+  being declared fixed by this presentation-only pass.
+- No live data, deployment, or production environment changes. Physical-device,
+  screen-reader and exact-revision staging acceptance remain separate gates.

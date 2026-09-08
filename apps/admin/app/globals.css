@@ -224,11 +224,6 @@
   overflow-wrap: anywhere;
 }
 
-.admin-shell .exam-list-row {
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-}
-
 .admin-shell .exam-list-row-actions {
   justify-content: flex-start;
 }
@@ -286,6 +281,11 @@
   gap: 14px;
   padding: 14px 2px;
   border-bottom: 1px solid var(--line);
+}
+
+.admin-shell .exam-list-row {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
 
 .admin-shell .dashboard-list-copy,

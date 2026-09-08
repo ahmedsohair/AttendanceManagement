@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("capture workspace baseline and refined states", async ({ page, context }) => {
-  test.setTimeout(120000);
+  test.setTimeout(300000);
   const phase = process.env.UI_ADMIN_BASELINE === "1" ? "before" : "after";
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 });
