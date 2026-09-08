@@ -68,3 +68,14 @@ Branch: `ui/admin-workspace`
   being declared fixed by this presentation-only pass.
 - No live data, deployment, or production environment changes. Physical-device,
   screen-reader and exact-revision staging acceptance remain separate gates.
+
+## Local Integration
+
+- Reviewed implementation `33ecf53` merged without conflicts into
+  `hardening/staging` as `bf5b97b` on 8 September 2026.
+- Integrated `apps`, `packages`, and workspace fixture/config files match the
+  tested branch. Attendance lookup route Git hash remains
+  `c67a7d0069ca1e238018f38c9a93933ec74b2756`.
+- No push or deployment performed. Preserve both worktrees and unrelated
+  untracked files. Next: approved staging push, CI/deployment verification and
+  read-only staging visual checks; do not imply device acceptance is complete.

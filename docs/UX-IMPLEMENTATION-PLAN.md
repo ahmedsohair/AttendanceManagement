@@ -311,7 +311,7 @@ Unscored questions about exam-detail table size and import network-error recover
   Broader admin/scanner visual polish, physical/assistive-technology acceptance
   and remaining Phase 8 operations are not completed by this account-only pass.
 
-## Admin Workspace UI Pass Started - 8 September 2026
+## Admin Workspace UI Pass Integrated Locally - 8 September 2026
 
 - Scope: existing admin shell/navigation, dashboard and exam list. Preserve all
   data reads, actions, confirmation guards, query/pagination semantics and
@@ -326,9 +326,19 @@ Unscored questions about exam-detail table size and import network-error recover
 - Verification targets include four viewport widths, visible navigation,
   headings/labels, keyboard table scrolling, query-preserving pagination and
   native destructive-action guards. All writes are blocked or explicitly mocked.
+- Reviewed implementation `33ecf53` merged into `hardening/staging` in
+  `bf5b97b` without conflicts. Integrated application and fixture files match
+  the tested branch; the attendance lookup route retains its original Git hash.
+- Verification: 93 web tests, 15 workspace browser tests, final isolated admin
+  production build, and final 27-case B4 audit browser run passed. Desktop/phone
+  screenshots were visually reviewed. The B4 Browser Back case failed once and
+  passed unchanged in isolation and the final full run; retain this intermittent
+  result for follow-up rather than claiming it was fixed. Detailed commands,
+  fixture setup, artifacts and limitations: `docs/UI-ADMIN-WORKSPACE-HANDOFF.md`.
 - No delegate cleanup, dependency installation, push, deployment or live data
-  changes. Keep baseline and implementation worktrees in place. Source review,
-  final browser/build checks and integration are pending.
+  changes. Baseline and implementation worktrees remain in place. Next gate is
+  an explicitly approved staging push, CI/deployment verification and staging
+  acceptance. Physical-device and assistive-technology acceptance remain open.
 
 ## Implement First: B1
 
