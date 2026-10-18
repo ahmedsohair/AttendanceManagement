@@ -58,5 +58,12 @@ remaining operator rehearsals above are not waived.
 The owner's 18 October staging catalog snapshot has now been reviewed: all 16
 expected tables have RLS enabled, all expected routine names are present, the
 three audit/integrity triggers are enabled, and all four legacy audited cores
-deny service-role execution. Production comparison, full audit-body/behavior and
-fresh relational-integrity validation remain separate from this catalog check.
+deny service-role execution. Full audit-body/behavior and fresh relational-integrity
+validation remain separate from this catalog check.
+
+The owner's production catalog snapshot has also been compared. It has the seven
+original core tables with RLS enabled but none of the inspected hardening RPCs;
+nine newer tables and eight newer columns are absent. The hardened application
+must not be promoted against that baseline. Fresh aggregate production integrity
+validation, backup/private restore and upgrade/rollback rehearsal are next; no
+production migration has been applied or authorized by the snapshot exchange.

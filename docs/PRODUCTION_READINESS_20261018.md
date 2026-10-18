@@ -26,6 +26,7 @@ production credentials were loaded for these checks.
 | Current local web suite | 95/95 passed: 14 shared, 31 API, 20 server-unit and 30 scanner tests. Type-check also passed. |
 | Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression; documentation checkpoint `2125917` also passed. Conflict correction is installed and HTTP-verified on staging; the separate audit-order correction still needs target verification. |
 | Owner-supplied staging catalog snapshot | 16/16 expected tables present with RLS enabled; all 27 expected routine names present (31 overloads); three custom triggers enabled; four legacy audited cores inaccessible to service role; zero unvalidated constraints on the inspected tables. This is catalog evidence, not full policy/body or row-integrity acceptance. |
+| Owner-supplied production catalog comparison | Original seven core tables present with RLS enabled; nine hardening tables, eight added columns and all inspected hardening RPCs absent. No inspected custom audit/integrity triggers. Existing shared columns have matching types/nullability. This production baseline cannot yet support the hardened application. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -162,8 +163,55 @@ filename has not been applied. Definition hashes are comparison signals, not
 proof of exact body equivalence. The full policies, constraint/index definitions,
 actor-rejection behavior and current relational data integrity are not established
 by this snapshot. No additional live mutation was performed to inspect it.
-Next obtain the same read-only snapshot from production and compare before
-selecting any required migration or changing either database.
+Production comparison is now recorded below. Neither snapshot authorizes a
+migration or establishes current business-record integrity.
+
+### Production baseline comparison
+
+The owner supplied the production snapshot captured at
+`2026-10-18T10:46:17.518921+00:00`, PostgreSQL 17.6, with read-only transaction on.
+As with staging, the project identity (`mtoyhpyxqhfwhcrysqon`) comes from the
+owner's response to the project-specific request, not from a field in the JSON.
+Ignored local artifacts in both checkouts:
+`test-results/production-catalog-snapshot-20261018.json` and
+`test-results/production-staging-catalog-diff-20261018.json`. Source attachment:
+`b8184b61-6308-482b-8ec3-383e48da6816/Pasted text.txt`.
+
+- All seven original application tables are present and have RLS enabled.
+  Existing columns shared with staging have matching types and nullability;
+  column ordering differences are not migration requirements.
+- Nine tables are absent: `attendance_requests`, `auth_rate_limits`, `email_jobs`,
+  `email_deliveries`, `email_webhook_events`, `admin_audit_events`, `ops_events`,
+  `ops_scanners` and `ops_alerts`.
+- `exam_sessions` lacks `import_checksum`, `import_student_count` and
+  `import_room_count`. `users` lacks `pending_access_code_hash` and the four
+  access-code lifecycle timestamps: created, activated, emailed and revoked.
+- None of the 27 selected hardening routine names is present (31 overloads on
+  staging), including atomic marking/idempotency, import/staffing/lifecycle,
+  rate limits, email queue, audit pagination and operations ingestion.
+- No custom trigger on the inspected application tables is present. PostgreSQL's
+  internal foreign-key triggers are outside this snapshot and are not claimed
+  absent. No unvalidated constraints were reported, but that does not prove
+  relational-integrity rules or future migration prerequisites hold for the data.
+
+This is an older production baseline, consistent with hardening having remained
+isolated on staging. It is not evidence of deleted production records or a
+failed staging migration. Do not promote the hardened application against this
+database. All 20 manifest migrations are candidates for the release rehearsal;
+the snapshot does not certify complete installed DDL, indexes, policies or a
+safe live execution sequence. Monitoring activation remains a separate flag and
+operator decision even if its database tables are included.
+
+Immediate next check: run `supabase/tests/validate_relational_integrity.sql` in
+the production SQL Editor and return its aggregate JSON (expected `total: 0`).
+It references only the seven existing tables and uses a read-only transaction;
+no Docker or shared database credentials are needed for this editor-based check.
+If violations exist, stop and review them without automatic repair/deletion.
+Then obtain a fresh checksummed production logical backup, restore it into a
+private rehearsal database, and test the reviewed migration sequence and a
+compatible rollback application before scheduling any production change.
+Do not run `supabase/schema.sql`, restore synthetic staging data over production,
+or execute the manifest as an unreviewed bulk migration.
 
 Use `supabase/tests/production_readiness_snapshot.sql` separately in the staging
 and production SQL editors. It uses a read-only transaction and reads catalogs,
@@ -222,11 +270,11 @@ Record a compatible application fallback and operator decision before promotion.
   open. Owner-reported OCR timeout followed by immediate successful retry is
   recorded in the Safari handoff; no timeout behavior change is part of this pass.
 - Dedicated staging admin lifecycle and post-migration stale-assignment rejection
-  evidence are complete as scoped above. Production database preflight and the
-  separate audit-order target verification remain open.
-- Owner-supplied staging catalog baseline has been reviewed as scoped above.
-  Production comparison, fresh integrity checks and fresh backup still need
-  operator database access; no connection secret is available in this shell.
+  evidence are complete as scoped above. Production upgrade rehearsal and the
+  separate audit-order body/behavior target verification remain open.
+- Both owner-supplied catalog snapshots have been compared as scoped above.
+  Fresh integrity checks and a fresh backup still need operator action;
+  no connection secret is available in this shell. Production remains unchanged.
 - Scheduler execution and independent failure/recovery notification evidence,
   provider-resource observations, rollback rehearsal, code-compromise containment
   and manual-fallback reconciliation remain the finite Phase 8 acceptance list in
