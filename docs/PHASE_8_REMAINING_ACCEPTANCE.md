@@ -30,7 +30,7 @@ The existing 70-test web suite passed on 4 September; three new real-source pers
 - Monitoring: actual persistence function defers database access until the after-response callback; scheduler/database failures do not escape; storage identifiers are HMAC digests. Protected endpoint tests cover provider failure and unavailable metrics. These are controlled dependency tests, not a live database outage.
 - Email: real alert inbox and immediate repeat suppression passed. Scheduler CLI exits nonzero for unavailable/unauthorized/ambiguous delivery, malformed results and network failure, and refuses production URLs. Provider/invigilator-email fallback and scheduler notification acceptance are separate.
 - Roster: malformed workbook, duplicate student rows and canonicalization tests passed. An operator correction/reconciliation exercise remains pending.
-- Deployment: actual rollback rehearsal remains pending; no deployment rollback or alternate-origin migration was attempted.
+- Deployment: local application replacement/fallback compatibility passed on 19 October with real synthetic Auth/REST and preserved committed attendance. Hosted rollback activation, target deployment/environment selection and alternate-origin behavior were not exercised; see the October report.
 - Compromised code: existing-session containment remains a real gap. Do not claim password/code rotation revokes already-issued sessions. A disposable staging account and authorized operator access are needed to test the supported containment procedure without disrupting test users.
 - Manual fallback: institutional owner approval and mixed paper/queued/committed reconciliation tabletop remain pending; they cannot be certified by an agent-only unit test.
 
@@ -51,8 +51,10 @@ staging API/scanner/admin lifecycle evidence and the two forward database
 corrections. Their final-state CI regression passed. The owner installed the
 business-conflict correction on staging; its bounded stale-assignment HTTP retest
 passed with 409 in 630 ms and unchanged staffing/audit history. The separate
-audit-order correction still needs target verification. A green disposable-database
-job is not evidence that Supabase received a migration. Physical acceptance and the
+audit-order correction also passed the owner's live rollback-only regression on
+19 October, with the definition-hash difference independently verified as CRLF
+versus LF. A green disposable-database job alone is not evidence that Supabase
+received a migration. Physical acceptance and the
 remaining operator rehearsals above are not waived.
 
 The owner's 18 October staging catalog snapshot has now been reviewed: all 16
@@ -85,6 +87,27 @@ the application-data rehearsal.
 On 19 October the owner reported applying the final audit-contract correction to
 staging. The test now verifies authorization before nonexistent-exam lookup and
 returns a compact JSON summary before rolling back. The stronger private
-rehearsal passed; the live staging test/hash result is still requested. Managed
-Auth migration-only tooling has been source-reviewed, not yet exercised against
-the private backup. No production session was replayed or database changed.
+rehearsal passed; the owner subsequently supplied a passing live staging result
+for audit behavior and legacy-core denial. The reported definition MD5
+`5874ce7eadf7dd8cbb1f1ce0ac3f0da2` was reproduced locally from the reviewed
+function using CRLF; LF reproduces the private reference hash. This scoped
+audit-contract gate is closed. All five release-gate jobs on `72d8b4e` passed.
+The subsequent managed Auth data rehearsal passed against the verified backup:
+all 26 Auth tables and original columns restored, exact COPY round-trips,
+24 foreign keys, generated sequence reconciliation and official migrator replay
+with original fingerprints preserved. Both network-isolated containers were
+removed. No production session was replayed or hosted database changed. Hosted
+Auth configuration/signing-key recovery remains outside these data-only checks;
+see the linked rehearsal report for private evidence and limits.
+
+The local application fallback rehearsal also passed on 19 October: candidate
+`72d8b4e` was stopped and separately built fallback `04da701` started against the
+same fully migrated synthetic database. Existing admin cookies/attendance were
+preserved; replay/duplicate/conflict handling, new marks, wrong-room controls,
+export, closure and audited deletion passed, with zero final integrity violations
+and no queued email. All private services stopped. The two revisions have
+identical application/shared source and lockfile, so this is a bounded baseline
+fallback test, not approval for arbitrary older revisions or database downgrade.
+Hosted deployment/environment selection and operator authorization remain
+separate. Production `main` is not an approved post-upgrade fallback. No live
+deployment, provider configuration, DNS or business data was changed.

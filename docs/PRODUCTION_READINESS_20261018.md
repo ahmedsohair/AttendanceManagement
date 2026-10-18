@@ -24,12 +24,14 @@ production credentials were loaded for these checks.
 | Migration-order source review | Found two final-state audit regressions; forward correction and final-state SQL tests prepared. SQL execution evidence is recorded separately below when available. |
 | Authenticated synthetic admin lifecycle | Import, staffing, publication, marks/replays, override/redirect, export, closure and typed deletion/audit passed on staging. Post-migration stale-assignment rejection also passed: 409 in 630 ms with staffing and audit history unchanged. |
 | Current local web suite | 95/95 passed: 14 shared, 31 API, 20 server-unit and 30 scanner tests. Type-check also passed. |
-| Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression; documentation checkpoint `2125917` also passed. Conflict correction is installed and HTTP-verified on staging; the separate audit-order correction still needs target verification. |
+| Corrective migration CI | All five jobs passed on `72d8b4e`, including the strengthened authorization-before-lookup regression. Conflict correction is installed and HTTP-verified on staging; audit-order correction is live-regression verified as recorded below. |
 | Owner-supplied staging catalog snapshot | 16/16 expected tables present with RLS enabled; all 27 expected routine names present (31 overloads); three custom triggers enabled; four legacy audited cores inaccessible to service role; zero unvalidated constraints on the inspected tables. This is catalog evidence, not full policy/body or row-integrity acceptance. |
 | Owner-supplied production catalog comparison | Original seven core tables present with RLS enabled; nine hardening tables, eight added columns and all inspected hardening RPCs absent. No inspected custom audit/integrity triggers. Existing shared columns have matching types/nullability. This production baseline cannot yet support the hardened application. |
 | Current production relational-integrity check | Owner reported `total: 0` after running the requested read-only validation SQL on 18 October. Accepted as operator-reported evidence; the full JSON output was not supplied. This is not backup/restore or migration rehearsal evidence. |
 | Fresh production logical backup | Owner completed `production-20261018-220510`; all three file sizes and hashes independently verified locally. |
 | Private application-database restore/upgrade rehearsal | Passed: seven table counts, all 20 migrations twice, exact original-column fingerprints, rollback-only audit/conflict and operations tests, zero integrity violations, and container removal. Managed Auth/Storage recovery and application rollback are not certified. See the dedicated rehearsal report. |
+| Separate managed Auth data recovery | Passed on 19 October: official pinned Auth schema, all 26 backup tables and original columns restored, exact COPY round-trips, 24 foreign keys checked, sequence reconciled and migration replay fingerprints preserved. Both private containers removed. Hosted Auth settings/signing keys are outside this data-only evidence. |
+| Compatible local application fallback | Passed on 19 October: independently production-built `72d8b4e` and `04da701`, real synthetic Auth/REST, preserved admin cookies and committed attendance across replacement, replay/duplicate/conflict/new-mark behavior, export, closure and audited deletion. Zero final integrity violations/emails; owned containers removed. This is not hosted deployment activation or physical-device acceptance. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -63,14 +65,18 @@ transaction, checks six audit events, typed confirmation, rejection of a non-adm
 delete, immutable history and core privilege restrictions. CI runs it after both
 the first complete migration pass and the second idempotency pass.
 
-On 19 October the owner reported applying the correction to staging; its
-post-installation live regression/fingerprint verification is pending. The
-correction has not been applied to production. Do not mark the database contract
-accepted until the target snapshot and rollback-only tests are
-verified there. Local Docker startup did not produce a usable engine; disposable
-hosted PostgreSQL CI is the SQL verification path for this checkpoint.
-That execution passed on both `1223a97` and `04da701`; the final conflict correction
-also passed on `e39764c` in [run 39119270274](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/39119270274).
+On 19 October the owner applied the correction to staging and supplied the live
+rollback-only result: `auditRegressionPassed: true`,
+`legacyCoreBypassBlocked: true`, definition MD5
+`5874ce7eadf7dd8cbb1f1ce0ac3f0da2`. A disposable network-disabled local PostgreSQL
+check independently reproduced that exact hash using CRLF line endings and the
+private reference `be3e0a522dde77ce55780f92fdb48101` using LF. The difference is
+verified line-ending representation, not a different reviewed function body.
+The staging audit-contract gate is complete, including authorization before
+nonexistent-exam lookup. The stronger private restore/upgrade regression and
+[release gate 39171044629](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/39171044629)
+also passed. The disposable hash-check container was removed. No production
+correction or promotion has been performed.
 
 ## Resolved staging business-conflict retry
 
@@ -229,11 +235,15 @@ for exact counts, source hashes, commands, evidence paths and scope limits.
 Comparing that private release reference with the supplied staging snapshot found
 30/31 routine hashes identical; only the draft-deletion definition differs and
 needed the reviewed audit-contract correction on staging. The owner reported
-applying it on 19 October; the strengthened live rollback-only regression and
-definition hash are requested before marking parity passed. Existing staging
-audit insertion and all four core revocations have already been verified.
-Managed Auth/Storage recovery and a compatible application rollback still need
-verification before scheduling any production change.
+applying it on 19 October; the strengthened live rollback-only regression passed.
+The resulting hash matches the reviewed definition with CRLF line endings,
+independently reproduced locally. The scoped staging audit-contract check is
+complete; raw definition hashes are not byte-identical across line endings.
+Managed Auth data recovery and the local compatible application fallback are now
+separately verified. Hosted Auth configuration recovery and the operator's target
+deployment/environment selection still need confirmation before scheduling any
+production change. The reviewed backup has no Storage bucket or object rows;
+SQL backup does not contain file payloads.
 Do not run `supabase/schema.sql`, restore synthetic staging data over production,
 or execute the manifest as an unreviewed bulk migration.
 
@@ -273,9 +283,10 @@ references; a snapshot alone does not certify complete migration installation.
 3. Verify synthetic staging admin import, assignment, publish, mark, export and
    close behavior on the intended deployed revision. Reconcile expected student
    IDs/counts and ensure invalid/duplicate marks cannot create duplicate rows.
-4. Complete the phone gate and separately verify the chosen compatible rollback
-   application version against the post-migration schema. No live staging
-   deployment rollback is performed merely to prepare this document.
+4. Complete the phone gate. The compatible local fallback `04da701` now passed
+   against the post-migration schema; retain/select its correctly configured
+   target deployment and record the operator decision. No live staging deployment
+   rollback was performed by the local rehearsal.
 5. During an agreed quiet release window, apply the reviewed production database
    sequence before deploying application code that needs its RPCs. Verify the
    release gate, environment and backend identity before production promotion.
@@ -295,16 +306,20 @@ Record a compatible application fallback and operator decision before promotion.
   recorded in the Safari handoff; no timeout behavior change is part of this pass.
 - Dedicated staging admin lifecycle and post-migration stale-assignment rejection
   evidence are complete as scoped above. Application-data upgrade rehearsal is
-  complete; full managed-schema recovery, application rollback and the
-  separate audit-order body/behavior target verification remain open.
+  complete, as is the separate staging audit-order body/behavior verification.
+  Managed Auth row recovery and local application replacement with fallback
+  `04da701` also passed separately; hosted Auth configuration recovery and the
+  operator's fallback-deployment/environment selection remain open.
 - Both owner-supplied catalog snapshots have been compared as scoped above.
   Current production integrity passed by owner report (`total: 0`). A fresh
   backup and private application-data restore/upgrade rehearsal are complete as
-  scoped in the linked report. Managed recovery and application rollback remain
-  open; no connection secret is available in this shell. A fresh staging integrity
+  scoped in the linked report, with Auth data recovery subsequently verified.
+  Local fallback compatibility also passed. Hosted configuration recovery and
+  target fallback-deployment selection remain open; no
+  connection secret is available in this shell. A fresh staging integrity
   result is not inferred from production's report. Production remains unchanged.
 - Scheduler execution and independent failure/recovery notification evidence,
-  provider-resource observations, rollback rehearsal, code-compromise containment
+  provider-resource observations, hosted recovery decisions, code-compromise containment
   and manual-fallback reconciliation remain the finite Phase 8 acceptance list in
   `PHASE_8_REMAINING_ACCEPTANCE.md`. They need evidence or explicit owner deferral;
   do not relabel them passed from unit tests or an HTTP 200.

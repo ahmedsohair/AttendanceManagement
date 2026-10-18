@@ -63,7 +63,9 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 
 **Recovery check:** expected deployment and backend confirmed, domain/TLS work, sign-in and lookup verified, and any original-origin pending marks accounted for. Record the deployment change and time.
 
-**Rehearsal pending:** staging-only rollback compatibility and alternate-origin behavior. No live failover rehearsal has been established by this document.
+**19 October local rehearsal:** candidate `72d8b4e` was replaced by independently built fallback `04da701a5caecc90c84b74ce29d5ee5beda9dca0` against the fully upgraded synthetic database. Real Auth sessions, committed attendance, replay/conflict controls, new marks, export and closure passed. See `PRODUCTION_UPGRADE_REHEARSAL_20261018.md` for scope and reproduction. The two revisions have identical application/shared source and lockfile; this does not approve arbitrary older builds. The old production `main` is not a post-upgrade fallback. Before an authorized hosted rollback, identify/retain a target deployment built from the tested revision with the correct production environment. Do not reverse migrations, drop audit tables, change origin or discard queues as part of application rollback.
+
+**Still pending:** hosted deployment/environment selection, domain/TLS and alternate-origin behavior. No live failover was performed by the local rehearsal.
 
 ## 4. Email Delivery Failure
 
@@ -150,7 +152,7 @@ For each incident record: owner; environment/deployment; start/end time with tim
 | --- | --- | --- | --- |
 | Scanner/OCR | Yes | Not run here | Model outage and physical crash/recovery |
 | Database | Yes, queue boundaries | Not run here | Reconnect and uncertain commit |
-| Deployment/domain | Environment boundaries documented | Not run here | Compatible rollback and origin isolation |
+| Deployment/domain | Environment boundaries documented | Local synthetic application fallback passed 19 October | Hosted deployment/environment selection and origin isolation |
 | Email | Yes, job status/retry UI | Not run here | Failure handling and recipient fallback |
 | Roster | Import/operational boundaries documented | Not run here | Synthetic correction/reconciliation |
 | Code compromise | Yes, activation warning | Not run here | Verified existing-session containment |

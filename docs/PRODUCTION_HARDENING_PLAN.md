@@ -688,6 +688,15 @@ Local implementation checkpoint: `npm.cmd run telemetry:summary -- <JSONL path>`
 
 Documentation checkpoint (4 September 2026): `docs/EXAM_DAY_RUNBOOKS.md` now covers all eight scenarios below, including owners, immediate fallback, recovery checks, privacy/environment safeguards, and rehearsal gaps. This is documentation-only; no controlled drills or production changes were performed. The boxes remain open until operational verification, including existing-session containment for compromised codes, is complete. Phase 8 is not complete.
 
+Recovery checkpoint (19 October 2026): fresh production backup/application-data
+upgrade rehearsal, separate managed Auth data recovery, live staging audit-contract
+regression and local authenticated application fallback to `04da701` have now
+passed. See `docs/PRODUCTION_UPGRADE_REHEARSAL_20261018.md` and
+`docs/PRODUCTION_READINESS_20261018.md` for exact evidence and limits. Hosted Auth
+configuration recovery, target fallback deployment/environment selection,
+physical-device acceptance and the remaining operator drills are not certified
+by these local checks. Production remains unchanged; Phase 8 is still open.
+
 - [ ] Scanner unavailable or model CDN unavailable.
 - [ ] Supabase paused, degraded, or unreachable.
 - [ ] Vercel deployment/domain failure.
