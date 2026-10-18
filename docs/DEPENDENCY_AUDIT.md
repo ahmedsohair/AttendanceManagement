@@ -25,3 +25,19 @@ Only registry package names and versions are sent to OSV. No source files, crede
 Outstanding non-critical advisory families: `protobufjs`, `brace-expansion`, `uuid`, `postcss`, `@xmldom/xmldom`, `nanoid`, `@babel/core`, `ws`, `js-yaml`, `browserslist`, `image-size`, `shell-quote`, and `sharp`. Some affect the native/build dependency tree rather than the deployed web runtime; reachability is not established here. They are **not dismissed**. Triage runtime exposure and compatible fixes separately before production rollout; do not apply a broad `npm audit fix --force` during monitoring activation.
 
 No dependency versions changed in this audit-runner update. GitHub/Vercel release checks must still pass for the pushed commit before staging promotion is considered verified.
+
+## Scanner trial release gate - 18 October 2026
+
+- The runtime-only staging trial `e13c1cc` failed the critical gate. A fresh native
+  report confirmed critical advisory groups for `next@15.5.21` and
+  `shell-quote@1.8.4`; these were not registry timeouts.
+- Companion patch: Next.js 15.5.28 (same 15.5 release line), matching env/SWC
+  packages, and a root override for shell-quote 1.11.0. No broad audit-fix or
+  scanner-library version change. See `SCANNER_SAFARI_WASM_TRIAL.md` for scope,
+  verification and release status.
+- Initial patched-lock audit: zero critical, 33 high, 12 moderate and 1 low.
+  Passing the critical threshold does not close the remaining advisory triage.
+- Advisory references:
+  https://github.com/advisories/GHSA-p293-qw3h-jr36
+  https://github.com/advisories/GHSA-2xp9-vwfh-vxw4
+  https://github.com/advisories/GHSA-pqg4-j6r4-53mv

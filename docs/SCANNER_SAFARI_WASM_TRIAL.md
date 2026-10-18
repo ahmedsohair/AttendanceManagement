@@ -59,6 +59,32 @@ browser testing cannot establish that this physical-device failure is fixed.
   `npx.cmd --no-install playwright test --config playwright.b3.config.mjs --timeout=120000`.
 - Staging CI/deployment verification and the real-device retest are pending.
 
+## Separate release-gate prerequisite
+
+- Initial runtime-only commit: `e13c1cc`. GitHub run `39109255807` failed the
+  critical dependency audit; the Vercel staging deployment also reported failure.
+  Do not ask the owner to test that deployment as a verified release.
+- Fresh npm audit found critical advisories affecting Next.js 15.5.21 and
+  shell-quote 1.8.4. These findings are unrelated to the OCR alias and were not
+  waived. A separate companion commit updates Next.js within the 15.5 line to
+  15.5.28 and pins the shell-quote override to 1.11.0.
+- Lockfile changes are limited to Next.js and its matching env/SWC packages,
+  plus shell-quote. PaddleOCR and ONNX versions remain unchanged. This companion
+  changes the framework, so the deployed trial is not a perfectly isolated
+  one-variable comparison against the September build; preserve that limitation
+  when interpreting the phone result.
+- Fresh independent `npm ci --ignore-scripts --no-audit --no-fund` completed.
+  The critical audit gate, all 93 web tests, the production build with lint/type
+  checks, and all eight B3 browser tests passed again with Next.js 15.5.28.
+- Reinspected the patched production browser output: chunk
+  `3267.7a2682fd750804ff.js` references the plain WASM binary and loader. No
+  extended runtime artifact references were found. Model/library versions remain
+  unchanged. Hosted gate verification and the physical retest are still required.
+- Other advisory severities remain for separate triage.
+- Dependencies are installed in `C:/dev/AlgoAttendance-scanner-security`, which
+  has independent dependency directories. Main and older worktree shared
+  dependency directories are not updated or removed.
+
 ## Physical retest and release gate
 
 Use the staging URL and synthetic exam/student data. Record the deployment SHA
