@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseManifest } from "./rehearse-production-application-backup.mjs";
+import { extractApplicationData, parseManifest } from "./rehearse-production-application-backup.mjs";
 
 const postgresImage = "public.ecr.aws/supabase/postgres@sha256:b15d862126dd2dac02da524696ccfde2dcce2ceaee0a58973b2727befe492706";
 const authImage = "supabase/gotrue@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b";
@@ -52,7 +52,15 @@ export async function rehearseManagedAuth(backupDirectory) {
     assert.equal(contents.length, entry.Bytes, `Backup size mismatch: ${entry.File}`);
     assert.equal(sha256(contents), entry.SHA256.toLowerCase(), `Backup hash mismatch: ${entry.File}`);
   }
-  const data = extractManagedAuthData(readFileSync(join(backup, "data.sql"), "utf8"));
+  const dump = readFileSync(join(backup, "data.sql"), "utf8");
+  const data = extractManagedAuthData(dump);
+  const profiles = extractApplicationData(dump).tables.get("users");
+  const sourceIds = (table) => {
+    const index = table.columns.indexOf("id");
+    assert(index >= 0, "Source identity table has no ID column");
+    return new Set(table.lines.slice(1, -1).map((line) => line.split("\t")[index]));
+  };
+  const authIds = sourceIds(data.tables.get("users")), profileIds = sourceIds(profiles);
   const run = randomUUID();
   const container = `exampulse-private-auth-${run}`;
   const migrator = `${container}-migrate`;
@@ -62,6 +70,11 @@ export async function rehearseManagedAuth(backupDirectory) {
     capturedAt: new Date().toISOString(), backupDirectory: backup, postgresImage, authImage,
     scope: "Managed Auth data round-trip against official migrated schema; no Auth server, production login/session replay or provider/signing-key recovery.",
     network: "none", publishedPorts: false, completed: false,
+    sourceIdentityCoverage: {
+      authUsersWithoutPublicProfile: [...authIds].filter((id) => !profileIds.has(id)).length,
+      publicProfilesWithoutAuthUser: [...profileIds].filter((id) => !authIds.has(id)).length,
+      scope: "Source-backup ID relationships only; public table preservation is verified in the separate application-data rehearsal. No orphan profile is repaired or deleted."
+    },
     expectedCounts: Object.fromEntries([...data.tables].map(([name, table]) => [name, table.rows])),
     phases: []
   };
