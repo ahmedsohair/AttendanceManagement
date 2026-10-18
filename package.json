@@ -26,7 +26,7 @@
     "audit:dependencies": "node scripts/audit-dependencies.mjs",
     "test:audit": "node --test scripts/tests/audit-dependencies.test.mjs",
     "test:operations": "node --test scripts/tests/operations-check.test.mjs",
-    "test:rehearsal": "node --test scripts/tests/production-rehearsal.test.mjs",
+    "test:rehearsal": "node --test scripts/tests/production-rehearsal.test.mjs scripts/tests/managed-auth-rehearsal.test.mjs",
     "dev:admin": "npm --workspace @algo-attendance/admin run dev",
     "dev:mobile": "npm --workspace @algo-attendance/mobile run start",
     "build:mobile:configure": "npm --prefix apps/mobile run build:configure",
