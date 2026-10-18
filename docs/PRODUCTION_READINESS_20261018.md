@@ -27,6 +27,7 @@ production credentials were loaded for these checks.
 | Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression; documentation checkpoint `2125917` also passed. Conflict correction is installed and HTTP-verified on staging; the separate audit-order correction still needs target verification. |
 | Owner-supplied staging catalog snapshot | 16/16 expected tables present with RLS enabled; all 27 expected routine names present (31 overloads); three custom triggers enabled; four legacy audited cores inaccessible to service role; zero unvalidated constraints on the inspected tables. This is catalog evidence, not full policy/body or row-integrity acceptance. |
 | Owner-supplied production catalog comparison | Original seven core tables present with RLS enabled; nine hardening tables, eight added columns and all inspected hardening RPCs absent. No inspected custom audit/integrity triggers. Existing shared columns have matching types/nullability. This production baseline cannot yet support the hardened application. |
+| Current production relational-integrity check | Owner reported `total: 0` after running the requested read-only validation SQL on 18 October. Accepted as operator-reported evidence; the full JSON output was not supplied. This is not backup/restore or migration rehearsal evidence. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -202,12 +203,24 @@ the snapshot does not certify complete installed DDL, indexes, policies or a
 safe live execution sequence. Monitoring activation remains a separate flag and
 operator decision even if its database tables are included.
 
-Immediate next check: run `supabase/tests/validate_relational_integrity.sql` in
-the production SQL Editor and return its aggregate JSON (expected `total: 0`).
-It references only the seven existing tables and uses a read-only transaction;
-no Docker or shared database credentials are needed for this editor-based check.
-If violations exist, stop and review them without automatic repair/deletion.
-Then obtain a fresh checksummed production logical backup, restore it into a
+The owner subsequently reported `total: 0` from
+`supabase/tests/validate_relational_integrity.sql` in the production SQL Editor.
+That script references the seven existing tables and uses a read-only
+transaction. The aggregate zero is operator-reported; no raw JSON or individual
+category values were supplied, so none are fabricated in the evidence artifacts.
+No production records were repaired or deleted by the agent.
+
+Immediate next step: obtain a fresh checksummed production logical backup using
+`scripts/backup-supabase.ps1`. Docker Desktop must be running. In the existing
+production project's Connect panel choose the Session pooler URI on port 5432,
+retain `[YOUR-PASSWORD]`, and verify the username is
+`postgres.mtoyhpyxqhfwhcrysqon` before assigning `SUPABASE_DB_URL` locally.
+The script prompts securely for the password. Do not post the URL with a password
+or any SQL backup contents in chat. Only the completion summary/manifest path is
+needed. The current agent shell has no database URL, and only August backup
+directories were found; no October backup has yet been created or certified.
+
+After backup verification, restore it into a
 private rehearsal database, and test the reviewed migration sequence and a
 compatible rollback application before scheduling any production change.
 Do not run `supabase/schema.sql`, restore synthetic staging data over production,
@@ -273,8 +286,10 @@ Record a compatible application fallback and operator decision before promotion.
   evidence are complete as scoped above. Production upgrade rehearsal and the
   separate audit-order body/behavior target verification remain open.
 - Both owner-supplied catalog snapshots have been compared as scoped above.
-  Fresh integrity checks and a fresh backup still need operator action;
-  no connection secret is available in this shell. Production remains unchanged.
+  Current production integrity passed by owner report (`total: 0`). A fresh
+  backup and private restore/upgrade rehearsal still need operator action;
+  no connection secret is available in this shell. A fresh staging integrity
+  result is not inferred from production's report. Production remains unchanged.
 - Scheduler execution and independent failure/recovery notification evidence,
   provider-resource observations, rollback rehearsal, code-compromise containment
   and manual-fallback reconciliation remain the finite Phase 8 acceptance list in

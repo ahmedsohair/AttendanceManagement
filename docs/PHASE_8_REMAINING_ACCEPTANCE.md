@@ -67,3 +67,8 @@ nine newer tables and eight newer columns are absent. The hardened application
 must not be promoted against that baseline. Fresh aggregate production integrity
 validation, backup/private restore and upgrade/rollback rehearsal are next; no
 production migration has been applied or authorized by the snapshot exchange.
+
+The owner subsequently reported production relational-integrity `total: 0` from
+the requested read-only SQL. Record this as operator-reported evidence, not a raw
+JSON artifact or a restore/migration pass. Fresh production backup and private
+restore/upgrade rehearsal are next; the agent has no production database URL.
