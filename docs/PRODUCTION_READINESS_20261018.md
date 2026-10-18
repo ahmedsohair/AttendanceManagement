@@ -28,6 +28,8 @@ production credentials were loaded for these checks.
 | Owner-supplied staging catalog snapshot | 16/16 expected tables present with RLS enabled; all 27 expected routine names present (31 overloads); three custom triggers enabled; four legacy audited cores inaccessible to service role; zero unvalidated constraints on the inspected tables. This is catalog evidence, not full policy/body or row-integrity acceptance. |
 | Owner-supplied production catalog comparison | Original seven core tables present with RLS enabled; nine hardening tables, eight added columns and all inspected hardening RPCs absent. No inspected custom audit/integrity triggers. Existing shared columns have matching types/nullability. This production baseline cannot yet support the hardened application. |
 | Current production relational-integrity check | Owner reported `total: 0` after running the requested read-only validation SQL on 18 October. Accepted as operator-reported evidence; the full JSON output was not supplied. This is not backup/restore or migration rehearsal evidence. |
+| Fresh production logical backup | Owner completed `production-20261018-220510`; all three file sizes and hashes independently verified locally. |
+| Private application-database restore/upgrade rehearsal | Passed: seven table counts, all 20 migrations twice, exact original-column fingerprints, rollback-only audit/conflict and operations tests, zero integrity violations, and container removal. Managed Auth/Storage recovery and application rollback are not certified. See the dedicated rehearsal report. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -210,19 +212,24 @@ transaction. The aggregate zero is operator-reported; no raw JSON or individual
 category values were supplied, so none are fabricated in the evidence artifacts.
 No production records were repaired or deleted by the agent.
 
-Immediate next step: obtain a fresh checksummed production logical backup using
+The owner completed a fresh checksummed production logical backup using
 `scripts/backup-supabase.ps1`. Docker Desktop must be running. In the existing
 production project's Connect panel choose the Session pooler URI on port 5432,
 retain `[YOUR-PASSWORD]`, and verify the username is
 `postgres.mtoyhpyxqhfwhcrysqon` before assigning `SUPABASE_DB_URL` locally.
 The script prompts securely for the password. Do not post the URL with a password
 or any SQL backup contents in chat. Only the completion summary/manifest path is
-needed. The current agent shell has no database URL, and only August backup
-directories were found; no October backup has yet been created or certified.
-
-After backup verification, restore it into a
-private rehearsal database, and test the reviewed migration sequence and a
-compatible rollback application before scheduling any production change.
+needed. The current agent shell has no database URL. Backup directory
+`production-20261018-220510` is now verified, and a network-isolated private
+application-data restore/upgrade rehearsal passed. See
+[PRODUCTION_UPGRADE_REHEARSAL_20261018.md](PRODUCTION_UPGRADE_REHEARSAL_20261018.md)
+for exact counts, source hashes, commands, evidence paths and scope limits.
+Comparing that private release reference with the supplied staging snapshot found
+30/31 routine hashes identical; only the draft-deletion definition differs and
+still needs the reviewed audit-contract correction on staging. Existing staging
+audit insertion and all four core revocations have already been verified.
+Managed Auth/Storage recovery and a compatible application rollback still need
+verification before scheduling any production change.
 Do not run `supabase/schema.sql`, restore synthetic staging data over production,
 or execute the manifest as an unreviewed bulk migration.
 
@@ -283,12 +290,14 @@ Record a compatible application fallback and operator decision before promotion.
   open. Owner-reported OCR timeout followed by immediate successful retry is
   recorded in the Safari handoff; no timeout behavior change is part of this pass.
 - Dedicated staging admin lifecycle and post-migration stale-assignment rejection
-  evidence are complete as scoped above. Production upgrade rehearsal and the
+  evidence are complete as scoped above. Application-data upgrade rehearsal is
+  complete; full managed-schema recovery, application rollback and the
   separate audit-order body/behavior target verification remain open.
 - Both owner-supplied catalog snapshots have been compared as scoped above.
   Current production integrity passed by owner report (`total: 0`). A fresh
-  backup and private restore/upgrade rehearsal still need operator action;
-  no connection secret is available in this shell. A fresh staging integrity
+  backup and private application-data restore/upgrade rehearsal are complete as
+  scoped in the linked report. Managed recovery and application rollback remain
+  open; no connection secret is available in this shell. A fresh staging integrity
   result is not inferred from production's report. Production remains unchanged.
 - Scheduler execution and independent failure/recovery notification evidence,
   provider-resource observations, rollback rehearsal, code-compromise containment

@@ -72,3 +72,12 @@ The owner subsequently reported production relational-integrity `total: 0` from
 the requested read-only SQL. Record this as operator-reported evidence, not a raw
 JSON artifact or a restore/migration pass. Fresh production backup and private
 restore/upgrade rehearsal are next; the agent has no production database URL.
+
+The fresh backup `production-20261018-220510` has now been independently
+checksummed. A network-isolated Docker rehearsal restored all seven application
+tables, applied all 20 migrations twice, preserved all original-column
+fingerprints/counts, and passed audit/conflict/operations/integrity tests. The
+container was removed. See `PRODUCTION_UPGRADE_REHEARSAL_20261018.md` for evidence
+and scope: managed Auth/Storage records were not restored, and application
+rollback behavior was not exercised. Those remaining gates are not closed by
+the application-data rehearsal.
