@@ -48,7 +48,14 @@ const CONFLICT_MESSAGES = new Set([
   "Active access code does not match.",
   "Idempotency key is already used for a different email job.",
   "No selected failed email deliveries can be retried.",
+  "Room assignments changed since this page loaded. Refresh before saving.",
+  "Idempotency key was already used for a different attendance request.",
   "The assignment page is missing its concurrency snapshot. Refresh and try again."
+]);
+
+const VALIDATION_MESSAGES = new Set([
+  "Wrong-room attendance requires explicit override.",
+  "A student in the correct room cannot be redirected."
 ]);
 
 function getKnownDomainStatus(error: unknown) {
@@ -61,6 +68,7 @@ function getKnownDomainStatus(error: unknown) {
     error.message.startsWith("Exams with attendance or incident history")
   ) return 409;
   if (
+    VALIDATION_MESSAGES.has(error.message) ||
     error.message.startsWith("Assignment payload ") ||
     error.message.startsWith("Allocate students before publishing.") ||
     error.message.startsWith("Assign invigilators before publishing.") ||

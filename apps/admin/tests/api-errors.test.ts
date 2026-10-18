@@ -67,6 +67,30 @@ test("classifies safe repository domain failures without exposing unknown errors
   );
 });
 
+test("preserves safe attendance validation errors without disguising them as server failures", () => {
+  for (const message of [
+    "Wrong-room attendance requires explicit override.",
+    "A student in the correct room cannot be redirected."
+  ]) {
+    const error = new Error(message);
+    assert.equal(getApiErrorStatus(error), 422);
+    assert.equal(getApiErrorCode(error), API_ERROR_CODES.validationError);
+    assert.equal(getApiClientMessage(error, 422), message);
+  }
+});
+
+test("reports stale assignments and reused attendance request IDs as conflicts", () => {
+  for (const message of [
+    "Room assignments changed since this page loaded. Refresh before saving.",
+    "Idempotency key was already used for a different attendance request."
+  ]) {
+    const error = new Error(message);
+    assert.equal(getApiErrorStatus(error), 409);
+    assert.equal(getApiErrorCode(error), API_ERROR_CODES.conflict);
+    assert.equal(getApiClientMessage(error, 409), message);
+  }
+});
+
 test("accepts only UUID-shaped inbound request IDs", () => {
   const valid = "123e4567-e89b-42d3-a456-426614174000";
   assert.equal(getRequestId(new Request("https://example.test", {
