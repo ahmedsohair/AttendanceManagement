@@ -81,3 +81,10 @@ container was removed. See `PRODUCTION_UPGRADE_REHEARSAL_20261018.md` for eviden
 and scope: managed Auth/Storage records were not restored, and application
 rollback behavior was not exercised. Those remaining gates are not closed by
 the application-data rehearsal.
+
+On 19 October the owner reported applying the final audit-contract correction to
+staging. The test now verifies authorization before nonexistent-exam lookup and
+returns a compact JSON summary before rolling back. The stronger private
+rehearsal passed; the live staging test/hash result is still requested. Managed
+Auth migration-only tooling has been source-reviewed, not yet exercised against
+the private backup. No production session was replayed or database changed.

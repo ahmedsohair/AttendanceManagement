@@ -96,6 +96,11 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.delete_draft_exam_session(gen_random_uuid(), 'Missing exam', v_invigilator_one);
+    raise exception 'Non-admin deletion reached exam lookup before authorization.';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.delete_draft_exam_session(v_delete_id, 'Wrong confirmation', v_admin_id);
     raise exception 'Deletion with wrong confirmation was accepted.';
   exception when check_violation then null;
@@ -125,5 +130,18 @@ begin
   end if;
 end;
 $$;
+
+select jsonb_build_object(
+  'auditRegressionPassed', true,
+  'deleteDefinitionMd5', md5(pg_get_functiondef(
+    'public.delete_draft_exam_session(uuid,text,uuid)'::regprocedure
+  )),
+  'legacyCoreBypassBlocked', not (
+    has_function_privilege('service_role', 'public.transition_exam_session(uuid,text)', 'EXECUTE')
+    or has_function_privilege('service_role', 'public.replace_room_assignments_atomic(uuid,jsonb,jsonb)', 'EXECUTE')
+    or has_function_privilege('service_role', 'public.stage_invigilator_access_code(uuid,text)', 'EXECUTE')
+    or has_function_privilege('service_role', 'public.activate_invigilator_access_code(uuid,text)', 'EXECUTE')
+  )
+);
 
 rollback;

@@ -94,6 +94,12 @@ The unit tests run in CI; the real backup is never used by hosted CI.
   correction to staging and verify its definition/rollback-only tests before
   declaring exact target parity. This comparison does not authorize applying it
   to production or imply that existing staging deletion lacked audit records.
+  On 19 October the owner reported applying that correction to staging. The
+  updated `supabase/tests/admin_audit_events_staging.sql` now also checks that a
+  non-admin actor is rejected before lookup of a nonexistent exam, then emits a
+  compact JSON result before rolling back. A fresh private rehearsal passed this
+  stronger test on both migration passes; the live staging result is requested,
+  not yet claimed passed.
 - The dump includes Auth users, sessions, identities and other managed records,
   but its schema file does not contain their complete managed schemas. This
   rehearsal does not restore or certify those records. A matching private
@@ -107,3 +113,22 @@ The unit tests run in CI; the real backup is never used by hosted CI.
 - Recheck live integrity and capture a fresh release-window backup if production
   changes after this rehearsal. Do not restore this backup over either existing
   live project or bootstrap production using `supabase/schema.sql`.
+
+## Managed Auth recovery approach
+
+The remaining Auth recovery check can use a separate private migration-only
+process, not a hosted production-data clone. Supabase's current
+[official Docker configuration](https://github.com/supabase/supabase/blob/master/docker/docker-compose.yml)
+specifies `supabase/gotrue:v2.197.0`; its
+[migration command](https://github.com/supabase/auth/blob/v2.197.0/cmd/migrate_cmd.go)
+applies the embedded Auth schema migrations. This has been source-reviewed but
+has not been executed as part of the current acceptance evidence.
+
+Before restoring any Auth records, pin the image digest, run the migration-only
+command against a disposable database sharing a network-disabled namespace, and
+verify every backed-up Auth table/column exists. Stop on missing managed-schema
+prerequisites rather than inventing table definitions or silently dropping
+records. Restore Auth COPY blocks privately and verify original-column
+round-trips/counts. Keep production tokens/password hashes out of logs and CI;
+do not replay a production session. A successful data restore alone does not
+prove provider configuration, signing-key recovery or authenticated rollback.

@@ -63,8 +63,10 @@ transaction, checks six audit events, typed confirmation, rejection of a non-adm
 delete, immutable history and core privilege restrictions. CI runs it after both
 the first complete migration pass and the second idempotency pass.
 
-The correction has not been applied to staging or production. Do not mark the
-database contract accepted until the target snapshot and rollback-only tests are
+On 19 October the owner reported applying the correction to staging; its
+post-installation live regression/fingerprint verification is pending. The
+correction has not been applied to production. Do not mark the database contract
+accepted until the target snapshot and rollback-only tests are
 verified there. Local Docker startup did not produce a usable engine; disposable
 hosted PostgreSQL CI is the SQL verification path for this checkpoint.
 That execution passed on both `1223a97` and `04da701`; the final conflict correction
@@ -226,7 +228,9 @@ application-data restore/upgrade rehearsal passed. See
 for exact counts, source hashes, commands, evidence paths and scope limits.
 Comparing that private release reference with the supplied staging snapshot found
 30/31 routine hashes identical; only the draft-deletion definition differs and
-still needs the reviewed audit-contract correction on staging. Existing staging
+needed the reviewed audit-contract correction on staging. The owner reported
+applying it on 19 October; the strengthened live rollback-only regression and
+definition hash are requested before marking parity passed. Existing staging
 audit insertion and all four core revocations have already been verified.
 Managed Auth/Storage recovery and a compatible application rollback still need
 verification before scheduling any production change.
