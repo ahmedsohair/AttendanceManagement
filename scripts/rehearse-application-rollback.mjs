@@ -153,7 +153,8 @@ try {
         assert.equal(r.status, 200, "Local Auth request failed");
         return r.json();
     };
-    const adminPassword = randomBytes(24).toString("hex"), invPassword = "AMS-RBCK-2468";
+    const adminPassword = randomBytes(24).toString("hex");
+    const invPassword = `AMS-${randomBytes(2).toString("hex").toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`;
     const admin = await authRequest("/admin/users", { email: "rollback-admin@example.com", password: adminPassword, email_confirm: true });
     const inv = await authRequest("/admin/users", { email: "rollback-invigilator@example.com", password: invPassword, email_confirm: true });
     const adminToken = (await authRequest("/token?grant_type=password", { email: admin.email, password: adminPassword }, anonKey)).access_token;

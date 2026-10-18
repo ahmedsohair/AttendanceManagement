@@ -1,0 +1,4 @@
+# Historical synthetic-only password in the private, network-disabled rollback
+# rehearsal. Never a production/staging credential; subsequent runs generate it.
+# Suppress this exact commit/file/rule/line only, not the generic-api-key rule.
+0e2640e4ec720a13c266ca572e3de56fd21a9383:scripts/rehearse-application-rollback.mjs:generic-api-key:156
