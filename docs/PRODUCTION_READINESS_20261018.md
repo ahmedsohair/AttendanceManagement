@@ -25,6 +25,7 @@ production credentials were loaded for these checks.
 | Authenticated synthetic admin lifecycle | Import, staffing, publication, marks/replays, override/redirect, export, closure and typed deletion/audit passed on staging. Post-migration stale-assignment rejection also passed: 409 in 630 ms with staffing and audit history unchanged. |
 | Current local web suite | 95/95 passed: 14 shared, 31 API, 20 server-unit and 30 scanner tests. Type-check also passed. |
 | Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression; documentation checkpoint `2125917` also passed. Conflict correction is installed and HTTP-verified on staging; the separate audit-order correction still needs target verification. |
+| Owner-supplied staging catalog snapshot | 16/16 expected tables present with RLS enabled; all 27 expected routine names present (31 overloads); three custom triggers enabled; four legacy audited cores inaccessible to service role; zero unvalidated constraints on the inspected tables. This is catalog evidence, not full policy/body or row-integrity acceptance. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -138,6 +139,32 @@ clean up these fixtures. Local ignored evidence: `test-results/admin-workflow-su
 
 ## Production database preflight
 
+Staging baseline received from the owner, captured at
+`2026-10-18T10:33:50.283561+00:00`, PostgreSQL 17.6, read-only transaction confirmed.
+The snapshot itself does not encode a Supabase project reference; its staging
+identity comes from the owner's workflow/context, not from the JSON alone.
+The raw metadata and its environment label are retained in the ignored local
+artifact `test-results/staging-catalog-snapshot-20261018.json` in the main and
+independent readiness checkouts. The source attachment is
+`b6631b38-a2c2-468d-bfc1-3e8bcfe00c71/Pasted text.txt`.
+
+Catalog checks found no missing expected tables or routine names, no disabled
+expected audit/integrity triggers, and no browser-role execution grants on any
+listed security-definer routine. Actor-aware lifecycle wrappers remain available
+to service role, while all four legacy unaudited cores and the audit-write helper
+are denied to it. The immutable audit trigger is enabled. Its invoker trigger
+function has default browser-role execution flags; this is not a listed
+security-definer business RPC and was not classified as an audit bypass.
+
+The four legacy-core protections are therefore already present in live staging;
+do not assume the audit-order repair is missing merely because its new migration
+filename has not been applied. Definition hashes are comparison signals, not
+proof of exact body equivalence. The full policies, constraint/index definitions,
+actor-rejection behavior and current relational data integrity are not established
+by this snapshot. No additional live mutation was performed to inspect it.
+Next obtain the same read-only snapshot from production and compare before
+selecting any required migration or changing either database.
+
 Use `supabase/tests/production_readiness_snapshot.sql` separately in the staging
 and production SQL editors. It uses a read-only transaction and reads catalogs,
 returning table/column/RLS presence, routine signatures and definition hashes,
@@ -197,8 +224,9 @@ Record a compatible application fallback and operator decision before promotion.
 - Dedicated staging admin lifecycle and post-migration stale-assignment rejection
   evidence are complete as scoped above. Production database preflight and the
   separate audit-order target verification remain open.
-- Production/staging catalog snapshots, fresh integrity checks and fresh backup
-  need operator database access; no connection secret is available in this shell.
+- Owner-supplied staging catalog baseline has been reviewed as scoped above.
+  Production comparison, fresh integrity checks and fresh backup still need
+  operator database access; no connection secret is available in this shell.
 - Scheduler execution and independent failure/recovery notification evidence,
   provider-resource observations, rollback rehearsal, code-compromise containment
   and manual-fallback reconciliation remain the finite Phase 8 acceptance list in

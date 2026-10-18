@@ -54,3 +54,9 @@ passed with 409 in 630 ms and unchanged staffing/audit history. The separate
 audit-order correction still needs target verification. A green disposable-database
 job is not evidence that Supabase received a migration. Physical acceptance and the
 remaining operator rehearsals above are not waived.
+
+The owner's 18 October staging catalog snapshot has now been reviewed: all 16
+expected tables have RLS enabled, all expected routine names are present, the
+three audit/integrity triggers are enabled, and all four legacy audited cores
+deny service-role execution. Production comparison, full audit-body/behavior and
+fresh relational-integrity validation remain separate from this catalog check.
