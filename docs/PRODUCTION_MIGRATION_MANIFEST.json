@@ -7,75 +7,75 @@
   "migrations": [
     {
       "file": "20260901_atomic_attendance_mark.sql",
-      "sha256": "744d9b0da46bef94674a58847e94131b5ad5c751975b23276e7c329bd664825b"
+      "sha256": "9d3cd7f2b9e9ca2991fdeda5c4e72fdde70d8207f3bb7446018af708209dedbf"
     },
     {
       "file": "20260901_atomic_exam_import.sql",
-      "sha256": "71c9ca4034e941b7b90beb169f5ca8ae4987db4dbcb5fd084b1c5f9d19321fa7"
+      "sha256": "33df0ecd2a6eeb94da2a0d61bef09a6be125915294f54345108777d9362f1c34"
     },
     {
       "file": "20260901_atomic_room_assignments.sql",
-      "sha256": "db0138e866d1e2f427b01ffcf154aa5d5390e52e4b069e78fdc115e3795881d0"
+      "sha256": "fe4241876da33dca466116705b7feb354712756a2df2ee9b43de5d3684ba3e14"
     },
     {
       "file": "20260901_attendance_idempotency.sql",
-      "sha256": "cfbfa6921248042c2eaac2b69559c9462263fff060d66796c7cb0772c358062c"
+      "sha256": "55cbc745f0b344ccbfda0156bc5164fb7a999ec8f15d1aa2a8a2b156ee420615"
     },
     {
       "file": "20260901_attendance_integrity_triggers.sql",
-      "sha256": "235a24d05c03f04a531cb767d91da3c7dabde1a62baadcb250621bb4c09120fa"
+      "sha256": "4080cb3b776f1dca007cd1d5542128fd397e42799c1038d65f65e852963c4922"
     },
     {
       "file": "20260901_auth_rate_limits.sql",
-      "sha256": "268076776ca43e4ad596dce8caee758175440afa0764a8c89abaeae7b6db2d67"
+      "sha256": "6ec76183a2a4eac7e80971848205bc1b997e3c45f771c90c5b4c19b0988c2876"
     },
     {
       "file": "20260902_email_delivery_queue.sql",
-      "sha256": "af714d142b65bb0c3aea216f06b8237a13ab8fdc943923bd4342c8aab3a8b47a"
+      "sha256": "a74583f03e6f04edcf108f1d7cb4e7f41d6bd2262d41f6403725027be91c1bca"
     },
     {
       "file": "20260902_exam_state_transitions.sql",
-      "sha256": "deb800eda6aceda018bc84e894f60fe5a9297a7ba48985bd3b5378d0264a29a2"
+      "sha256": "959f93a5c4690d20d28e571a4f483e86c5c99b6ff13caf5c24f8d3c0cc8a968b"
     },
     {
       "file": "20260902_staged_access_code_rotation.sql",
-      "sha256": "b2861b57275474c3e30b4f5e37bd50fb66fbfc78584ae54e4554dc2a20f5655f"
+      "sha256": "fbb0b3615f45fde97c6a5a3468f787f303236bfc36c480a3f7dfd68bff912748"
     },
     {
       "file": "20260903_admin_audit_events.sql",
-      "sha256": "680f0af75a5870ecdfb5ba10c93e1a63ab070623bc6e81b438f66a65b31b696b"
+      "sha256": "c4c630ed29ddfb7b4a5cd1566fde0467b6d3571acf96261373d179552c3c71c1"
     },
     {
       "file": "20260903_admin_dashboard_summary.sql",
-      "sha256": "9b1e5b4a74119c3cbcf4bcc558bf175cc2c1e6862eba36e9287c58a44846a11f"
+      "sha256": "df1d762edfa555b7686ee460ada243cfa7a94d6182db3caf73248d86db0172b8"
     },
     {
       "file": "20260903_attendance_audit_pagination.sql",
-      "sha256": "a301c0a0caf4473ea9a4032c58614c549f5f94ce9bdddf4b68485e66a6b8c570"
+      "sha256": "ee6a0d66e9771bc4cdf9c05173bf503dcc124f8d48df7050404c39b52620752c"
     },
     {
       "file": "20260903_confirm_exam_deletion.sql",
-      "sha256": "42542ec70d9e61739b2d935489091b65189d2de206fe811db703500aaf8caef2"
+      "sha256": "b35f7aa5558c4c4b0c05bf0ce32348c1849f8e5458aa19387462a0415565d96c"
     },
     {
       "file": "20260903_exam_session_pagination.sql",
-      "sha256": "cf26c48b10ed7f7fc11526b993e6223ddad390c8f73d9614b553d956de5ffa75"
+      "sha256": "43ef4bd3499d69080eefd6c4bd9380176a2063e609fc92b7b028647f1e9a5639"
     },
     {
       "file": "20260903_incident_audit_pagination.sql",
-      "sha256": "912d9d5eebcfc76d0b5c7e6552b8be531e88afdcf316715572936daf96c61092"
+      "sha256": "f701bce985f87558d85d476c32f2ae0481874929e8ecd0141e8f3f28db0bcd4a"
     },
     {
       "file": "20260903_invigilator_pagination.sql",
-      "sha256": "cf43c865eb02f3c8d6faf89d0f9492074c38260c2923e0fd0c543c66b30b0277"
+      "sha256": "48e261ce9ff749d33754ae6a4164d724b69d44072e79842beb172c7812c4753d"
     },
     {
       "file": "20260903_validate_import_counts_on_publish.sql",
-      "sha256": "0fcc47e372bb9c03be4a546b82f4d4e6aec84c382f2ed52cf4a3c423d93bad39"
+      "sha256": "227959753aacfbc68c4f333320add476c194ffc975f5b189afb268b3c2149418"
     },
     {
       "file": "20260904_operational_monitoring.sql",
-      "sha256": "c6c14b76e11527c0a112853f8924ffa2a9cdad947e34dc12faacfddf6bf2e5f1"
+      "sha256": "ea0504e66a5f338dadcb189378f6fcd45577a37b8913cc6368813114af0cfa19"
     },
     {
       "file": "20261018_preserve_admin_audit_contract.sql",
@@ -85,5 +85,6 @@
       "file": "20261018_stop_business_conflict_retries.sql",
       "sha256": "be45c11f8d9e59cab3a9ba5838eb671e32bded6931381c3aa7c1b311f6c4f9f0"
     }
-  ]
+  ],
+  "hashFormat": "SHA-256 of UTF-8 Git blob with LF line endings (not working-tree CRLF bytes)"
 }

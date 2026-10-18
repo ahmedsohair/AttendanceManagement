@@ -6,9 +6,11 @@ Not approved for production promotion. Continue the independent checks while the
 reported iPhone failure awaits retest. The owner's instruction to proceed with
 other checks does not classify the iPhone failure as passed or waive that gate.
 
-Application under test: staging `9d53294`; local documentation checkpoint
-`87fcea4` has the same application source. Production remains on its existing
-branch/deployment. No production credentials were loaded for these checks.
+Initial application under test: staging `9d53294`; authenticated lifecycle checks
+then exercised `04da701`, which corrects error classification. Staging branch now
+also contains migration preparation `e39764c`; pushing SQL files does not apply
+them to Supabase. Production remains on its existing branch/deployment. No
+production credentials were loaded for these checks.
 
 ## Evidence completed this checkpoint
 
@@ -20,6 +22,9 @@ branch/deployment. No production credentials were loaded for these checks.
 | Deployed staging API checks | 28 passed: invigilator identity/rooms/live counts, assigned-room restriction, anonymous denials, admin-only route denials, real correct/wrong-room lookups, draft rejection and input validation. |
 | Production baseline backup inventory | Local folders exist for 27 August 2026; these are historical evidence, not a fresh release backup. |
 | Migration-order source review | Found two final-state audit regressions; forward correction and final-state SQL tests prepared. SQL execution evidence is recorded separately below when available. |
+| Authenticated synthetic admin lifecycle | Import, staffing, publication, marks/replays, override/redirect, export, closure and typed deletion/audit passed on staging. Stale-assignment rejection remains blocked by the live retry issue below. |
+| Current local web suite | 95/95 passed: 14 shared, 31 API, 20 server-unit and 30 scanner tests. Type-check also passed. |
+| Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression. Live Supabase installation remains pending. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -57,6 +62,69 @@ The correction has not been applied to staging or production. Do not mark the
 database contract accepted until the target snapshot and rollback-only tests are
 verified there. Local Docker startup did not produce a usable engine; disposable
 hosted PostgreSQL CI is the SQL verification path for this checkpoint.
+That execution passed on both `1223a97` and `04da701`; the final conflict correction
+also passed on `e39764c` in [run 39119270274](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/39119270274).
+
+## Live business-conflict retry blocker
+
+The stale assignment baseline request timed out twice at 15 seconds and again
+at 90 seconds. Source inspection found intentional business exceptions using
+SQLSTATE `40001` in assignment saving, code rotation and email-claim ownership.
+[Supabase's troubleshooting advisory](https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b)
+describes a PostgREST 14 retry loop for this use of `40001`. This is a strong
+explanation for the observed behavior, not a verified live PostgREST version.
+
+The owner ran the read-only diagnostic on staging and returned:
+`assignmentUsesRetryCode: true`, `assignmentBackends: []`. The old definition is
+installed; no matching active backend was visible at that instant. Do not restart
+the project or terminate unspecified processes based on this result.
+
+Forward migration `20261018_stop_business_conflict_retries.sql` changes only the
+known conflict marker in five installed routines to `PT409`. It preserves their
+current definitions, signatures, security settings and grants; unexpected or
+missing definitions fail the migration rather than being blindly replaced.
+The final-state CI test asserts that stale staffing, mismatched access-code
+operations and an unowned email claim return `PT409`, with the original six-event
+audit lifecycle still intact. Both complete migration passes passed.
+
+Next: apply this correction to staging in one transaction, rerun the diagnostic,
+then perform one bounded stale-baseline HTTP retest and verify committed staffing
+and audit counts are unchanged. Do not repeat live stale requests while the old
+definition remains installed. If looping backends are subsequently observed,
+verify their exact PIDs against the matching database error logs before any
+operator-approved termination. This correction is not installed on either live
+database yet. Historical one-off migration scripts can restore old definitions;
+apply the reviewed final corrections last and rerun the final-state tests.
+
+## Authenticated lifecycle evidence
+
+The owner signed in through a dedicated staging test browser; no password or
+service-role key was shared. Tests used real HTTP APIs and exported workbooks,
+not direct privileged reads or mocked attendance writes. Browser RLS correctly
+restricted direct table reads even for the admin session.
+
+- Imported two workbooks with six distinct synthetic student IDs into two rooms.
+- Publication rejected missing staffing with 422; assignment save and publication
+  succeeded and the rooms became visible to the synthetic invigilator.
+- A mark, exact-request replay and a new duplicate request produced one mark.
+  Reusing that request ID for a different student returned 409 after `04da701`.
+- Wrong-room marking without override and correct-room redirection returned 422;
+  explicit mismatch override created a second mark. Redirect created an incident,
+  not attendance. All expected duplicate/override/redirect incidents were exported.
+- Export reconciled six allocated IDs, two unique marks and four `Absent` rows.
+  A helper initially expected lowercase `absent`; that assertion was corrected to
+  the established product contract, with no product change.
+- Closed exam rejected a fresh mark with 409 and retained both prior marks.
+- A separate draft was deleted through typed confirmation; its audit event and
+  the retained exam's staffing/publication/closure audit entries were verified.
+
+Final retained synthetic exam: `066667c8-4597-4d46-875e-90e0f0e3bd42`,
+`READINESS 2026-10-18 00B70D78`, closed, two marks. Deleted draft:
+`0b7d623c-aa3e-44d2-86ff-344cfb4d6854`. Earlier interrupted fixtures were safely
+closed and retained: `6af30afc-0861-4351-a4e0-d27502f12721` (zero marks) and
+`605e0b03-8b5a-4997-942e-92b5677def9d` (one mark). No production exam, existing
+seeded roster or email delivery was modified. Do not delete closed history to
+clean up these fixtures. Local ignored evidence: `test-results/admin-workflow-summary.json`.
 
 ## Production database preflight
 
@@ -115,8 +183,8 @@ Record a compatible application fallback and operator decision before promotion.
 - Same-device iPhone/Safari retest is deferred; Android acceptance also remains
   open. Owner-reported OCR timeout followed by immediate successful retry is
   recorded in the Safari handoff; no timeout behavior change is part of this pass.
-- Staging admin session requested through a dedicated test browser. No password
-  is requested in chat. Record workflow checks only after authenticated execution.
+- Dedicated staging admin lifecycle evidence is complete as scoped above; live
+  stale-assignment rejection still needs the database correction and retest.
 - Production/staging catalog snapshots, fresh integrity checks and fresh backup
   need operator database access; no connection secret is available in this shell.
 - Scheduler execution and independent failure/recovery notification evidence,

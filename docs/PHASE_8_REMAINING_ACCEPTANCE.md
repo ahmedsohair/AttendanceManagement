@@ -43,3 +43,12 @@ Completed on 4 September 2026 with monitoring enabled: 1,000 concurrent lookups,
 ## Completion rule
 
 Close only evidence-backed items. Scheduling/notification evidence, provider overhead evidence and the remaining live/operator rehearsals still need completion or explicit owner deferral. Do not silently reclassify those as passed or introduce further product work into this phase.
+
+## October production-readiness checkpoint
+
+See [PRODUCTION_READINESS_20261018.md](PRODUCTION_READINESS_20261018.md) for current
+staging API/scanner/admin lifecycle evidence and the two forward database
+corrections. Their final-state CI regression passed; live installation and the
+stale-assignment HTTP retest remain pending. A green disposable-database job is
+not evidence that Supabase received a migration. Physical acceptance and the
+remaining operator rehearsals above are not waived.
