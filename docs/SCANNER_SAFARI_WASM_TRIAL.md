@@ -57,7 +57,8 @@ browser testing cannot establish that this physical-device failure is fixed.
 - Reproduce browser suite from the isolated worktree with
   `NODE_PATH` set to `apps/admin/node_modules`, `CIRCLE_NODE_TOTAL=2`, and
   `npx.cmd --no-install playwright test --config playwright.b3.config.mjs --timeout=120000`.
-- Staging CI/deployment verification and the real-device retest are pending.
+- Staging CI/deployment verification completed as recorded below. The real-device
+  retest remains pending.
 
 ## Separate release-gate prerequisite
 
@@ -79,7 +80,8 @@ browser testing cannot establish that this physical-device failure is fixed.
 - Reinspected the patched production browser output: chunk
   `3267.7a2682fd750804ff.js` references the plain WASM binary and loader. No
   extended runtime artifact references were found. Model/library versions remain
-  unchanged. Hosted gate verification and the physical retest are still required.
+  unchanged. Hosted verification subsequently passed as recorded below; the
+  physical retest is still required.
 - Other advisory severities remain for separate triage.
 - Dependencies are installed in `C:/dev/AlgoAttendance-scanner-security`, which
   has independent dependency directories. Main and older worktree shared
@@ -104,6 +106,34 @@ reported device passes. Capture a screen recording and Safari/WebKit diagnostics
 if it still fails; the next controlled comparison is camera/manual operation
 without OCR initialization. Do not mask restarts by automatically reentering the
 room and reloading the failing runtime.
+
+## Staging deployment verified - 18 October 2026
+
+- Runtime change `e13c1cc` and separate security prerequisite `9d53294` are
+  integrated on `hardening/staging`. Deployed trial SHA:
+  `9d5329478e0a1df06e8725badca7c30f68e802ac`.
+- GitHub run `39109782219` passed all five jobs: critical dependency audit,
+  type-check/tests/build, secret scan, temporary database migrations and release
+  gate. https://github.com/ahmedsohair/AttendanceManagement/actions/runs/39109782219
+- Vercel staging deployment `4EEpPXm55RQU9qh5b581nTy1XzPb` reports success.
+  https://vercel.com/ahmadsohair-1977s-projects/exampulse-stagings/4EEpPXm55RQU9qh5b581nTy1XzPb
+- `/scan?trial=9d53294` returns HTTP 200. Followed the hosted scan page's dynamic
+  import to PaddleOCR chunk `1313.440bc242dc8bfd13.js`, which requests runtime
+  chunk 3267. The hosted Webpack map resolves that chunk to
+  `3267.cb68457c951f0744.js`; its HTTP 200 response references the plain
+  `ort-wasm-simd-threaded.wasm` and `.mjs` loader, with no extended runtime
+  artifact reference. The deployed hash differs from the Windows local build;
+  verification used the hosted dependency chain, not the local filename.
+- This is build/deployment artifact verification, not successful OCR inference
+  on the affected iPhone. Physical acceptance remains failed/pending retest.
+- Owner retest link:
+  https://exampulse-stagings.vercel.app/scan?trial=9d53294
+  Close the old scanner tab and use a fresh Safari tab on the same phone and OS.
+  The query label helps distinguish this test link; it is not a runtime feature
+  flag or proof of the cached device's downloaded build identity.
+- No production branch push/promotion, live business-data mutation or migration.
+  Main checkout dependencies remain older than the updated manifest; use the
+  independently installed security worktree for exact-version local verification.
 
 ## Rollback
 

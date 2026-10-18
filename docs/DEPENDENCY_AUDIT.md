@@ -41,3 +41,6 @@ No dependency versions changed in this audit-runner update. GitHub/Vercel releas
   https://github.com/advisories/GHSA-p293-qw3h-jr36
   https://github.com/advisories/GHSA-2xp9-vwfh-vxw4
   https://github.com/advisories/GHSA-pqg4-j6r4-53mv
+- Patched commit `9d53294` passed the hosted critical audit and all other release
+  gate jobs in run `39109782219`; Vercel staging deployment succeeded. Production
+  has not been updated. Non-critical triage remains open.
