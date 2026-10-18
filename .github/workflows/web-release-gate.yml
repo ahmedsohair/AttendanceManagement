@@ -38,6 +38,7 @@ jobs:
       - run: npm run typecheck:web
       - run: npm run test:web
       - run: npm run test:operations
+      - run: npm run test:rehearsal
       - run: npm --workspace @algo-attendance/admin run build
 
   dependency-audit:
