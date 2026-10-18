@@ -46,6 +46,11 @@ const nextConfig: NextConfig = {
   webpack(config, { isServer }) {
     if (!isServer) {
       config.resolve = config.resolve || {};
+      // PaddleOCR's default ORT import includes JSEP; our scanner only uses WASM.
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        "onnxruntime-web$": "onnxruntime-web/wasm"
+      };
       config.resolve.fallback = {
         ...(config.resolve.fallback || {}),
         fs: false

@@ -18,6 +18,6 @@ Record `Pass` or the exact failed step:
 | Browser | Result | Notes |
 | --- | --- | --- |
 | Android Chrome or Samsung Internet | Pending | |
-| iPhone Safari | Pending | |
+| iPhone Safari | Failed, owner-reported 18 October 2026 | iPhone 14 Pro / iOS 18.3.2: startup goes blank, then returns to room selection on staging. WASM-only runtime trial and exact-device retest pending; see `SCANNER_SAFARI_WASM_TRIAL.md`. |
 
 Phase 3 must remain inactive until both rows pass or an explicit exception is documented.
