@@ -3,7 +3,7 @@
   "purpose": "Review inventory only; not an execution or missing-migration list",
   "stagingProject": "bjoguceapwquyczbhlyp",
   "productionProject": "mtoyhpyxqhfwhcrysqon",
-  "order": "Filename ascending; review current target definitions and run final audit regression after selected sequence",
+  "order": "Filename ascending; review current target definitions and run final audit/conflict regression after selected sequence",
   "migrations": [
     {
       "file": "20260901_atomic_attendance_mark.sql",
@@ -80,6 +80,10 @@
     {
       "file": "20261018_preserve_admin_audit_contract.sql",
       "sha256": "7dd380e6b39a081c4a07a3c3f9332d4f22f2ba17e6cd207d1571a04001926e9a"
+    },
+    {
+      "file": "20261018_stop_business_conflict_retries.sql",
+      "sha256": "be45c11f8d9e59cab3a9ba5838eb671e32bded6931381c3aa7c1b311f6c4f9f0"
     }
   ]
 }

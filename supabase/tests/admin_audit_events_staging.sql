@@ -51,6 +51,13 @@ begin
   perform public.replace_room_assignments_atomic(
     v_session_id, v_expected, v_submitted, v_admin_id
   );
+  begin
+    perform public.replace_room_assignments_atomic(
+      v_session_id, v_expected, v_submitted, v_admin_id
+    );
+    raise exception 'Stale assignment baseline was accepted.';
+  exception when sqlstate 'PT409' then null;
+  end;
 
   insert into public.student_allocations (
     exam_session_id, student_id, student_name, room_id, zone
@@ -59,6 +66,26 @@ begin
   perform public.transition_exam_session(v_session_id, 'active', v_admin_id);
   perform public.transition_exam_session(v_session_id, 'closed', v_admin_id);
   perform public.stage_invigilator_access_code(v_invigilator_one, v_hash, v_admin_id);
+  begin
+    perform public.activate_invigilator_access_code(v_invigilator_one, 'wrong-hash', v_admin_id);
+    raise exception 'Mismatched pending access code was activated.';
+  exception when sqlstate 'PT409' then null;
+  end;
+  begin
+    perform public.cancel_pending_invigilator_access_code(v_invigilator_one, 'wrong-hash');
+    raise exception 'Mismatched pending access code was cancelled.';
+  exception when sqlstate 'PT409' then null;
+  end;
+  begin
+    perform public.record_invigilator_access_code_emailed(v_invigilator_one, 'wrong-hash');
+    raise exception 'Mismatched active access code was recorded as emailed.';
+  exception when sqlstate 'PT409' then null;
+  end;
+  begin
+    perform public.complete_email_delivery_attempt(gen_random_uuid(), 'wrong-worker', 'accepted');
+    raise exception 'Unowned email delivery claim was completed.';
+  exception when sqlstate 'PT409' then null;
+  end;
   perform public.activate_invigilator_access_code(v_invigilator_one, v_hash, v_admin_id);
 
   insert into public.exam_sessions (id, name, exam_date, start_time, status, published, created_by)
