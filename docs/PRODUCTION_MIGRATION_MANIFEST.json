@@ -1,0 +1,85 @@
+{
+  "preparedDate": "2026-10-18",
+  "purpose": "Review inventory only; not an execution or missing-migration list",
+  "stagingProject": "bjoguceapwquyczbhlyp",
+  "productionProject": "mtoyhpyxqhfwhcrysqon",
+  "order": "Filename ascending; review current target definitions and run final audit regression after selected sequence",
+  "migrations": [
+    {
+      "file": "20260901_atomic_attendance_mark.sql",
+      "sha256": "744d9b0da46bef94674a58847e94131b5ad5c751975b23276e7c329bd664825b"
+    },
+    {
+      "file": "20260901_atomic_exam_import.sql",
+      "sha256": "71c9ca4034e941b7b90beb169f5ca8ae4987db4dbcb5fd084b1c5f9d19321fa7"
+    },
+    {
+      "file": "20260901_atomic_room_assignments.sql",
+      "sha256": "db0138e866d1e2f427b01ffcf154aa5d5390e52e4b069e78fdc115e3795881d0"
+    },
+    {
+      "file": "20260901_attendance_idempotency.sql",
+      "sha256": "cfbfa6921248042c2eaac2b69559c9462263fff060d66796c7cb0772c358062c"
+    },
+    {
+      "file": "20260901_attendance_integrity_triggers.sql",
+      "sha256": "235a24d05c03f04a531cb767d91da3c7dabde1a62baadcb250621bb4c09120fa"
+    },
+    {
+      "file": "20260901_auth_rate_limits.sql",
+      "sha256": "268076776ca43e4ad596dce8caee758175440afa0764a8c89abaeae7b6db2d67"
+    },
+    {
+      "file": "20260902_email_delivery_queue.sql",
+      "sha256": "af714d142b65bb0c3aea216f06b8237a13ab8fdc943923bd4342c8aab3a8b47a"
+    },
+    {
+      "file": "20260902_exam_state_transitions.sql",
+      "sha256": "deb800eda6aceda018bc84e894f60fe5a9297a7ba48985bd3b5378d0264a29a2"
+    },
+    {
+      "file": "20260902_staged_access_code_rotation.sql",
+      "sha256": "b2861b57275474c3e30b4f5e37bd50fb66fbfc78584ae54e4554dc2a20f5655f"
+    },
+    {
+      "file": "20260903_admin_audit_events.sql",
+      "sha256": "680f0af75a5870ecdfb5ba10c93e1a63ab070623bc6e81b438f66a65b31b696b"
+    },
+    {
+      "file": "20260903_admin_dashboard_summary.sql",
+      "sha256": "9b1e5b4a74119c3cbcf4bcc558bf175cc2c1e6862eba36e9287c58a44846a11f"
+    },
+    {
+      "file": "20260903_attendance_audit_pagination.sql",
+      "sha256": "a301c0a0caf4473ea9a4032c58614c549f5f94ce9bdddf4b68485e66a6b8c570"
+    },
+    {
+      "file": "20260903_confirm_exam_deletion.sql",
+      "sha256": "42542ec70d9e61739b2d935489091b65189d2de206fe811db703500aaf8caef2"
+    },
+    {
+      "file": "20260903_exam_session_pagination.sql",
+      "sha256": "cf26c48b10ed7f7fc11526b993e6223ddad390c8f73d9614b553d956de5ffa75"
+    },
+    {
+      "file": "20260903_incident_audit_pagination.sql",
+      "sha256": "912d9d5eebcfc76d0b5c7e6552b8be531e88afdcf316715572936daf96c61092"
+    },
+    {
+      "file": "20260903_invigilator_pagination.sql",
+      "sha256": "cf43c865eb02f3c8d6faf89d0f9492074c38260c2923e0fd0c543c66b30b0277"
+    },
+    {
+      "file": "20260903_validate_import_counts_on_publish.sql",
+      "sha256": "0fcc47e372bb9c03be4a546b82f4d4e6aec84c382f2ed52cf4a3c423d93bad39"
+    },
+    {
+      "file": "20260904_operational_monitoring.sql",
+      "sha256": "c6c14b76e11527c0a112853f8924ffa2a9cdad947e34dc12faacfddf6bf2e5f1"
+    },
+    {
+      "file": "20261018_preserve_admin_audit_contract.sql",
+      "sha256": "7dd380e6b39a081c4a07a3c3f9332d4f22f2ba17e6cd207d1571a04001926e9a"
+    }
+  ]
+}

@@ -39,3 +39,4 @@ fi
 
 echo "All migrations applied twice against temporary PostgreSQL; 7 core tables verified."
 psql "${psql_args[@]}" --file supabase/tests/operational_monitoring_staging.sql
+psql "${psql_args[@]}" --file supabase/tests/production_readiness_snapshot.sql > /dev/null
