@@ -13,9 +13,15 @@ declare
   v_expected jsonb;
   v_submitted jsonb;
 begin
-  select id into strict v_admin_id from public.users where role = 'admin' limit 1;
-  select id into strict v_invigilator_one from public.users where role = 'invigilator' order by id limit 1;
-  select id into strict v_invigilator_two from public.users where role = 'invigilator' and id <> v_invigilator_one order by id limit 1;
+  insert into public.users (email, full_name, role)
+  values ('audit-' || gen_random_uuid()::text || '@example.invalid', 'Audit Test Admin', 'admin')
+  returning id into v_admin_id;
+  insert into public.users (email, full_name, role)
+  values ('audit-' || gen_random_uuid()::text || '@example.invalid', 'Audit Test Invigilator One', 'invigilator')
+  returning id into v_invigilator_one;
+  insert into public.users (email, full_name, role)
+  values ('audit-' || gen_random_uuid()::text || '@example.invalid', 'Audit Test Invigilator Two', 'invigilator')
+  returning id into v_invigilator_two;
 
   if has_function_privilege('service_role', 'public.transition_exam_session(uuid,text)', 'EXECUTE')
     or has_function_privilege('service_role', 'public.replace_room_assignments_atomic(uuid,jsonb,jsonb)', 'EXECUTE')
@@ -57,6 +63,20 @@ begin
 
   insert into public.exam_sessions (id, name, exam_date, start_time, status, published, created_by)
   values (v_delete_id, 'Audited deletion test', current_date, '10:00', 'draft', false, v_admin_id);
+  begin
+    perform public.delete_draft_exam_session(v_delete_id, 'Audited deletion test', v_invigilator_one);
+    raise exception 'Non-admin deletion was accepted.';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.delete_draft_exam_session(v_delete_id, 'Wrong confirmation', v_admin_id);
+    raise exception 'Deletion with wrong confirmation was accepted.';
+  exception when check_violation then null;
+  end;
+  if not exists (select 1 from public.exam_sessions where id = v_delete_id)
+    or exists (select 1 from public.admin_audit_events where entity_id = v_delete_id) then
+    raise exception 'Rejected deletion changed the exam or audit history.';
+  end if;
   perform public.delete_draft_exam_session(v_delete_id, 'Audited deletion test', v_admin_id);
 
   if (select count(*) from public.admin_audit_events where actor_user_id = v_admin_id

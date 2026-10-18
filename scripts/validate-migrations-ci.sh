@@ -18,7 +18,9 @@ apply_migrations() {
 }
 
 apply_migrations "first pass"
+psql "${psql_args[@]}" --file supabase/tests/admin_audit_events_staging.sql
 apply_migrations "idempotency pass"
+psql "${psql_args[@]}" --file supabase/tests/admin_audit_events_staging.sql
 
 table_count="$(psql "${psql_args[@]}" --tuples-only --no-align --command "
   select count(*)
