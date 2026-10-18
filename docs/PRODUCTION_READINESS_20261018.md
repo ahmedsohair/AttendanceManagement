@@ -22,9 +22,9 @@ production credentials were loaded for these checks.
 | Deployed staging API checks | 28 passed: invigilator identity/rooms/live counts, assigned-room restriction, anonymous denials, admin-only route denials, real correct/wrong-room lookups, draft rejection and input validation. |
 | Production baseline backup inventory | Local folders exist for 27 August 2026; these are historical evidence, not a fresh release backup. |
 | Migration-order source review | Found two final-state audit regressions; forward correction and final-state SQL tests prepared. SQL execution evidence is recorded separately below when available. |
-| Authenticated synthetic admin lifecycle | Import, staffing, publication, marks/replays, override/redirect, export, closure and typed deletion/audit passed on staging. Stale-assignment rejection remains blocked by the live retry issue below. |
+| Authenticated synthetic admin lifecycle | Import, staffing, publication, marks/replays, override/redirect, export, closure and typed deletion/audit passed on staging. Post-migration stale-assignment rejection also passed: 409 in 630 ms with staffing and audit history unchanged. |
 | Current local web suite | 95/95 passed: 14 shared, 31 API, 20 server-unit and 30 scanner tests. Type-check also passed. |
-| Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression. Live Supabase installation remains pending. |
+| Corrective migration CI | All five jobs passed on `e39764c`, including two complete migration passes and strict business-conflict/audit regression; documentation checkpoint `2125917` also passed. Conflict correction is installed and HTTP-verified on staging; the separate audit-order correction still needs target verification. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -65,7 +65,7 @@ hosted PostgreSQL CI is the SQL verification path for this checkpoint.
 That execution passed on both `1223a97` and `04da701`; the final conflict correction
 also passed on `e39764c` in [run 39119270274](https://github.com/ahmedsohair/AttendanceManagement/actions/runs/39119270274).
 
-## Live business-conflict retry blocker
+## Resolved staging business-conflict retry
 
 The stale assignment baseline request timed out twice at 15 seconds and again
 at 90 seconds. Source inspection found intentional business exceptions using
@@ -75,9 +75,9 @@ describes a PostgREST 14 retry loop for this use of `40001`. This is a strong
 explanation for the observed behavior, not a verified live PostgREST version.
 
 The owner ran the read-only diagnostic on staging and returned:
-`assignmentUsesRetryCode: true`, `assignmentBackends: []`. The old definition is
-installed; no matching active backend was visible at that instant. Do not restart
-the project or terminate unspecified processes based on this result.
+`assignmentUsesRetryCode: true`, `assignmentBackends: []`. The old definition was
+installed; no matching active backend was visible at that instant. No restart or
+backend termination was performed.
 
 Forward migration `20261018_stop_business_conflict_retries.sql` changes only the
 known conflict marker in five installed routines to `PT409`. It preserves their
@@ -87,14 +87,24 @@ The final-state CI test asserts that stale staffing, mismatched access-code
 operations and an unowned email claim return `PT409`, with the original six-event
 audit lifecycle still intact. Both complete migration passes passed.
 
-Next: apply this correction to staging in one transaction, rerun the diagnostic,
-then perform one bounded stale-baseline HTTP retest and verify committed staffing
-and audit counts are unchanged. Do not repeat live stale requests while the old
-definition remains installed. If looping backends are subsequently observed,
-verify their exact PIDs against the matching database error logs before any
-operator-approved termination. This correction is not installed on either live
-database yet. Historical one-off migration scripts can restore old definitions;
-apply the reviewed final corrections last and rerun the final-state tests.
+The owner applied the correction to staging and reported successful execution.
+The repeated read-only diagnostic returned `assignmentUsesRetryCode: false` and
+`assignmentBackends: []`. The agent then created one isolated, labelled draft,
+committed its staffing and sent one stale-baseline HTTP request with a ten-second
+bound. It returned 409 / `CONFLICT` in 630 ms with the expected refresh-before-saving
+message. Fresh reads verified unchanged staffing and audit history, one allocated
+student, zero attendance and zero incidents. The draft was deleted through typed
+confirmation, and its deletion audit entry was verified. Fixture:
+`d18cc6d7-2914-4135-b68b-f36133357456`, `READINESS CONFLICT 2026-10-18 A4498945`.
+Evidence captured at `2026-10-18T10:32:04.619Z` is included in the ignored
+`test-results/admin-workflow-summary.json`; that scoped workflow summary is now
+complete. This does not complete all production-readiness or Phase 8 gates.
+
+This correction has not been applied to production. Historical one-off migration
+scripts can restore old definitions; apply the reviewed final corrections last
+and rerun the final-state tests. If looping backends are subsequently observed,
+verify their exact PIDs against matching database error logs before any
+operator-approved termination.
 
 ## Authenticated lifecycle evidence
 
@@ -158,8 +168,9 @@ references; a snapshot alone does not certify complete migration installation.
    promotion. The August recovery exercise does not prove the current backup.
 2. Capture target snapshots and relational-integrity reports. Review differences
    and select only the required migrations in manifest order, with the new audit
-   correction last. Rehearse the exact selected sequence against a private
-   production-like copy with external email/monitoring disabled.
+   and business-conflict corrections after their historical definitions. Rehearse
+   the exact selected sequence against a private production-like copy with
+   external email/monitoring disabled.
 3. Verify synthetic staging admin import, assignment, publish, mark, export and
    close behavior on the intended deployed revision. Reconcile expected student
    IDs/counts and ensure invalid/duplicate marks cannot create duplicate rows.
@@ -183,8 +194,9 @@ Record a compatible application fallback and operator decision before promotion.
 - Same-device iPhone/Safari retest is deferred; Android acceptance also remains
   open. Owner-reported OCR timeout followed by immediate successful retry is
   recorded in the Safari handoff; no timeout behavior change is part of this pass.
-- Dedicated staging admin lifecycle evidence is complete as scoped above; live
-  stale-assignment rejection still needs the database correction and retest.
+- Dedicated staging admin lifecycle and post-migration stale-assignment rejection
+  evidence are complete as scoped above. Production database preflight and the
+  separate audit-order target verification remain open.
 - Production/staging catalog snapshots, fresh integrity checks and fresh backup
   need operator database access; no connection secret is available in this shell.
 - Scheduler execution and independent failure/recovery notification evidence,

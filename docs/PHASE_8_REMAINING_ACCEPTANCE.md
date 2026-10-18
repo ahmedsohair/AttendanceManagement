@@ -48,7 +48,9 @@ Close only evidence-backed items. Scheduling/notification evidence, provider ove
 
 See [PRODUCTION_READINESS_20261018.md](PRODUCTION_READINESS_20261018.md) for current
 staging API/scanner/admin lifecycle evidence and the two forward database
-corrections. Their final-state CI regression passed; live installation and the
-stale-assignment HTTP retest remain pending. A green disposable-database job is
-not evidence that Supabase received a migration. Physical acceptance and the
+corrections. Their final-state CI regression passed. The owner installed the
+business-conflict correction on staging; its bounded stale-assignment HTTP retest
+passed with 409 in 630 ms and unchanged staffing/audit history. The separate
+audit-order correction still needs target verification. A green disposable-database
+job is not evidence that Supabase received a migration. Physical acceptance and the
 remaining operator rehearsals above are not waived.
