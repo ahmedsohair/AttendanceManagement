@@ -44,3 +44,20 @@ No dependency versions changed in this audit-runner update. GitHub/Vercel releas
 - Patched commit `9d53294` passed the hosted critical audit and all other release
   gate jobs in run `39109782219`; Vercel staging deployment succeeded. Production
   has not been updated. Non-critical triage remains open.
+
+## Exposure triage - 19 October 2026
+
+The fresh bounded production-workspace audit and critical-threshold runner passed
+with **0 critical, 33 high, 12 moderate and 1 low**. Independent report review
+confirmed 46 vulnerable package groups, 52 distinct advisories and 101 affected
+lock paths. These counts are different units and include the deferred native
+workspace. No package versions or audit exemptions changed in this triage.
+
+See [DEPENDENCY_EXPOSURE_20261019.md](DEPENDENCY_EXPOSURE_20261019.md) for actual
+paths, source evidence, prerequisite limits, primary advisory references and
+verified fix candidates. This closes the missing exposure-classification work,
+not vulnerability remediation or owner acceptance. Web-relevant SMTP,
+spreadsheet/UUID, OCR leaves, image optimizer and pinned CSS-processing paths
+must not be dismissed as native-only. Same-major candidates need compatible
+lockfile updates and regression tests; major/out-of-range changes need separate
+review. No high/moderate residual risk has been accepted on the owner's behalf.
