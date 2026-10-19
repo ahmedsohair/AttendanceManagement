@@ -43,6 +43,41 @@ is deployed and verified. The live domain has not been promoted by the agent at
 this checkpoint. Production Vercel settings require account sign-in; a dedicated
 browser tab was opened for the owner, without requesting credentials in chat.
 
+### Production Vercel configuration inspection
+
+After the owner signed in, the agent verified the actual production project is
+`attendance-management-admin`, ID `prj_BUz1WBp22FSITsDwW3CiRszSe0sP`, serving
+`exampulse.xyz`. Its active deployment is still historical `be55c6f` on `main`;
+no hardened application promotion has occurred at this checkpoint. The existing
+project is connected to `ahmedsohair/AttendanceManagement` with root directory
+`apps/admin`, Next.js preset, no dashboard build/install override, and outside-root
+files enabled. The dashboard default Node version is 24.x; the reviewed app's
+`engines.node` requires 22.x. Verify the actual new deployment's runtime/build
+settings rather than assuming the dashboard default was used.
+
+Both public and server Supabase URL values were inspected through the project
+UI and point to `https://mtoyhpyxqhfwhcrysqon.supabase.co`. Existing publishable
+and service-role keys are present, as are mail/base-URL configuration and Resend/
+SMTP credentials. Their secret values were not revealed, copied from staging,
+or replaced. Presence alone is not live authentication/mail acceptance.
+
+The agent saved five new non-secret variables, scoped only to Production:
+`OPS_MONITORING_ENABLED=true`, `SCANNER_TELEMETRY_ENABLED=true`,
+`NEXT_PUBLIC_SCANNER_TELEMETRY_ENABLED=true`, `OPS_ALERTS_ENABLED=true`, and
+`OPS_ALERT_EMAIL=ahmad.sohair@gmail.com`. The UI confirmed success and that a new
+deployment is required. These are not activated in the running old deployment.
+
+`scripts/prepare-production-monitoring-secrets.ps1` generated two distinct
+32-byte random production-only secrets into an owner-only ACL-protected file
+outside Git. Values were not printed or stored in documentation. The owner was
+asked to import `OPS_HEALTH_SECRET` and `OPS_CHECK_SECRET` into this project's
+Production environment as Secret. Their save confirmation remains pending;
+do not claim the production checker or scheduler is active. Do not reuse the
+staging secrets or modify staging's scheduled job to guess a production secret.
+The current private file is under `C:\Users\ahmad\ExamPulseSecrets`; retain it
+securely for the production scheduler setup. Do not generate replacements
+accidentally after saving the initial values.
+
 ### Subsequent explicit owner decisions
 
 After the final read-only production integrity check returned zero for all ten
