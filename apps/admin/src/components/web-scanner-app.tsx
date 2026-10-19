@@ -1808,7 +1808,9 @@ export function WebScannerApp() {
           {scanHold && !scanPaused
             ? "Scanning paused. Use manual mode or resume scanning."
             : cameraActive && !ocrReady
-              ? "Camera ready. Manual entry is available."
+              ? ocrLoadError && !ocrLoadPromiseRef.current
+                ? "Scanning unavailable. Use manual entry or retry OCR."
+                : "Preparing scanner. Manual entry is available."
             : cameraActive
               ? ocrStatus || "Camera active"
               : ocrStatus || "Camera stopped"}
@@ -1828,6 +1830,8 @@ export function WebScannerApp() {
             slow={Boolean(ocrLoadError && ocrLoadPromiseRef.current)}
             error={ocrLoadError}
             onManualEntry={() => manualInputRef.current?.focus()}
+            onRetry={retryOcrLoad}
+            retryDisabled={busy || ocrLoading}
           />
         </div>
 
@@ -1961,16 +1965,6 @@ export function WebScannerApp() {
               disabled={busy}
             >
               Restart Camera
-            </button>
-          ) : null}
-          {cameraActive && !ocrReady && ocrLoadError ? (
-            <button
-              className="secondary"
-              type="button"
-              onClick={retryOcrLoad}
-              disabled={busy || ocrLoading}
-            >
-              {ocrLoading ? "Loading OCR..." : "Retry OCR Load"}
             </button>
           ) : null}
         </div>

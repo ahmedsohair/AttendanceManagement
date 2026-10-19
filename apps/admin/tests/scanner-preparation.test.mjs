@@ -19,7 +19,7 @@ new Function("require", "module", "exports", compiled)(
 );
 const { ScannerPreparation } = componentModule.exports;
 const render = overrides => renderToStaticMarkup(React.createElement(ScannerPreparation, {
-  active: true, ready: false, stage: "engine", slow: false, onManualEntry() {}, ...overrides
+  active: true, ready: false, stage: "engine", slow: false, onManualEntry() {}, onRetry() {}, retryDisabled: false, ...overrides
 }));
 
 test("engine preparation identifies the actual active stage without invented progress", () => {
@@ -72,4 +72,33 @@ test("manual recovery stays enabled and rotating tips are outside live announcem
 test("CSS supports both manual pause and a reduced-motion alternative", () => {
   assert.match(css, /data-motion="paused"[\s\S]*animation-play-state: paused/);
   assert.match(css, /prefers-reduced-motion: reduce[\s\S]*animation: none/);
+});
+
+test("retry is available beside manual entry for failures and long waits only", () => {
+  assert.doesNotMatch(render(), /Retry OCR/);
+  for (const overrides of [{ error: "Download failed" }, { slow: true }]) {
+    const html = render(overrides);
+    assert.match(html, /Retry OCR/);
+    assert.match(html, /Use manual entry/);
+    assert.doesNotMatch(html, /disabled/);
+  }
+  assert.match(render({ error: "Download failed", retryDisabled: true }), /class="retry" disabled=""/);
+});
+
+test("progress is indeterminate, names the real stage, and disappears on failure", () => {
+  assert.match(render(), /role="progressbar" aria-label="Scanner setup progress" aria-valuetext="Loading the scanner engine"/);
+  assert.match(render({ stage: "models" }), /aria-valuetext="Preparing recognition models"/);
+  assert.doesNotMatch(render(), /aria-valuenow/);
+  assert.doesNotMatch(render({ error: "Download failed" }), /role="progressbar"/);
+  assert.match(css, /data-motion="paused"\] \.progressSweep \{ animation-play-state: paused/);
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*\.progressSweep \{ animation: none/);
+});
+
+test("scanner integration wires retry once and does not claim camera readiness while loading", () => {
+  const scanner = readFileSync(new URL("../src/components/web-scanner-app.tsx", import.meta.url), "utf8");
+  assert.match(scanner, /onRetry=\{retryOcrLoad\}/);
+  assert.match(scanner, /retryDisabled=\{busy \|\| ocrLoading\}/);
+  assert.doesNotMatch(scanner, /Camera ready\. Manual entry|Retry OCR Load/);
+  assert.match(scanner, /Preparing scanner\. Manual entry is available/);
+  assert.match(scanner, /Scanning unavailable\. Use manual entry or retry OCR/);
 });

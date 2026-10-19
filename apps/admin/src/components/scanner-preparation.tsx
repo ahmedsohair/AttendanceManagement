@@ -18,9 +18,11 @@ type ScannerPreparationProps = {
   slow: boolean;
   error?: string;
   onManualEntry: () => void;
+  onRetry: () => void;
+  retryDisabled: boolean;
 };
 
-export function ScannerPreparation({ active, ready, stage, slow, error, onManualEntry }: ScannerPreparationProps) {
+export function ScannerPreparation({ active, ready, stage, slow, error, onManualEntry, onRetry, retryDisabled }: ScannerPreparationProps) {
   const [tip, setTip] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(true);
@@ -122,8 +124,21 @@ export function ScannerPreparation({ active, ready, stage, slow, error, onManual
             </li>
             <li><span aria-hidden="true" />Ready</li>
           </ol>
+          {!failed ? (
+            <div
+              className={styles.progress}
+              role="progressbar"
+              aria-label="Scanner setup progress"
+              aria-valuetext={stage === "engine" ? "Loading the scanner engine" : "Preparing recognition models"}
+            ><span className={styles.progressSweep} /></div>
+          ) : null}
           {!failed ? <p className={styles.tip} aria-live="off"><strong>Tip:</strong> {tips[tip]}</p> : null}
           <div className={styles.actions}>
+            {failed || slow ? (
+              <button type="button" className={styles.retry} onClick={onRetry} disabled={retryDisabled}>
+                Retry OCR
+              </button>
+            ) : null}
             <button type="button" className={styles.manual} onClick={onManualEntry} aria-controls="scanner-manual-student-id">
               Use manual entry
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5" /></svg>

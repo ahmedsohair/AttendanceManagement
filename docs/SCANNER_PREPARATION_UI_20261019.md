@@ -23,6 +23,17 @@ Production remains `d869264`. Self-service access recovery is still deferred.
   minimum wait blocks attendance work.
 - Long waits explain that setup continues and manual entry is available. Actual
   failures retain recovery guidance without pretending loading is progressing.
+- Follow-up after owner preview feedback: Retry OCR now sits inside the panel
+  beside manual entry for failures/long waits, wired to the existing retry
+  handler and disabled during busy/loading work. The old bottom duplicate was
+  removed. The standalone synthetic preview also exposes this recovery path.
+- The top strip says Preparing scanner while loading, not Camera ready. A
+  failed initializer says Scanning unavailable and offers manual entry/retry.
+- A four-pixel indeterminate progress track accompanies the actual Engine or
+  Models stage. It reports no numeric completion, download percentage or ETA;
+  the SDK does not expose measured byte progress here. It disappears on failure,
+  follows the existing animation pause/visibility controls, and remains static
+  for reduced motion. It adds only CSS/markup, not dependencies or downloads.
 - Ready shows a checkmark acknowledgement for about 1.1 seconds, then disappears.
   It has no pointer interaction and does not delay OCR readiness or the scan loop.
   A worker already ready when entering another room does not flash a new loader.
@@ -32,6 +43,16 @@ Production remains `d869264`. Self-service access recovery is still deferred.
 - Full web suite: **137 passed**, zero failed: shared 14, API 31, server-unit 31,
   scanner 61. Includes 23 startup/phase regression tests and eight new preparation
   rendering/accessibility-contract checks.
+- Retry/progress follow-up: **140 passed**, zero failed (scanner now 64, including
+  11 preparation checks), and the production build/lint/types passed again.
+  Added checks cover retry availability/disabled state, integration wiring,
+  truthful status copy, indeterminate progress semantics, failure removal and
+  progress pause/reduced-motion contracts. Mirrored candidate files matched
+  SHA256 hashes in the independent checkout; no dependency changes were copied.
+- Follow-up browser checks covered desktop 1024x900, mobile 390x844 and small
+  phone 320x640: synthetic Retry returns to Models, long waits offer Retry,
+  animation pause works and manual entry focuses the field. No horizontal
+  overflow; recovery buttons retain 44-pixel height and wrap on narrow screens.
 - Final Next.js 15.5.28 production build, lint/type checks and static generation
   passed in the independent dependency checkout. No dependencies were installed,
   pruned or changed. Source files were mirrored only for isolated verification.
@@ -50,6 +71,7 @@ Production remains `d869264`. Self-service access recovery is still deferred.
 Ignored screenshot evidence in the main checkout:
 `test-results/ocr-preparation-20261019/desktop.png`, `mobile.png` and
 `mobile-final.jpg`. These are explicitly local preview images, not production.
+Follow-up evidence: `failure-retry.jpg` and `progress-mobile.jpg` in that directory.
 Logs and the isolated preview project are under the same dated directory in
 `C:/dev/AlgoAttendance-scanner-security/test-results/`.
 The preview's node_modules junction must not be installed/pruned or recursively
