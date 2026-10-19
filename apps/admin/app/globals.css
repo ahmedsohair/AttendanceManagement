@@ -2219,7 +2219,7 @@ button.icon-button.danger:hover {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-rows: auto auto auto minmax(160px, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(min-content, 1fr) auto;
   gap: 12px;
   overflow-y: auto;
   padding:
@@ -2289,6 +2289,16 @@ button.icon-button.danger:hover {
 
 .web-torch-button {
   flex: 0 0 auto;
+}
+
+.web-scanner-stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.web-scanner-stage > * {
+  grid-area: 1 / 1;
 }
 
 .web-scan-guide {

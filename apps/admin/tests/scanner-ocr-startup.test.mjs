@@ -313,3 +313,26 @@ test("normal startup waits for usable camera playback then publishes OCR readine
   f.runReadyEffect();
   assert.equal(f.starts(), 1);
 });
+
+test("preparation stages follow actual module import and model creation, not timers", async () => {
+  const importGate = deferred();
+  const modelGate = deferred();
+  const stages = [];
+  const messages = [];
+  const factorySource = stripTypeScriptTypes(between(
+    "async function createDigitOcrWorker(", "function trackSupportsTorch("
+  )).replace('import("@paddleocr/paddleocr-js")', "importPaddle()");
+  const createWorker = new Function("importPaddle", "supportsWasmSimd", `${factorySource}; return createDigitOcrWorker;`)(
+    () => importGate.promise, () => false
+  );
+  const wait = createWorker(message => messages.push(message), stage => stages.push(stage));
+  assert.deepEqual(stages, ["engine"]);
+  importGate.resolve({ PaddleOCR: { create: () => modelGate.promise } });
+  await Promise.resolve();
+  assert.deepEqual(stages, ["engine", "models"]);
+  assert.equal(messages.some(message => message.includes("ready")), false);
+  const worker = { predict: async () => [], dispose: async () => undefined };
+  modelGate.resolve(worker);
+  assert.equal(await wait, worker);
+  assert.equal(messages.at(-1), "ONNX OCR ready.");
+});

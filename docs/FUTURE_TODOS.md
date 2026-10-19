@@ -33,6 +33,11 @@ phone speed improvement is claimed. See
 [SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md) for the candidate,
 asset-size evidence and remaining staging/device acceptance. The following
 observations describe the production baseline until that candidate is deployed.
+The owner subsequently approved an in-place preparation panel. That candidate
+now passes 137 web tests and a production build; visual/interaction checks and
+remaining hosted acceptance are in
+[SCANNER_PREPARATION_UI_20261019.md](SCANNER_PREPARATION_UI_20261019.md). Neither
+candidate is deployed, and actual model-speed optimization remains open.
 
 Priority: near-term scanner reliability investigation; higher urgency than
 self-service recovery. The owner reports repeated timeout followed by near-

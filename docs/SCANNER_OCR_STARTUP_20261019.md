@@ -1,5 +1,9 @@
 # OCR startup recovery - 19 October 2026
 
+Follow-up: the owner-approved, locally verified loading-panel refinement is
+recorded in [SCANNER_PREPARATION_UI_20261019.md](SCANNER_PREPARATION_UI_20261019.md).
+It adds truthful phase feedback and lightweight motion, not a model-speed claim.
+
 ## Status and scope
 
 The owner approved a focused fix after reporting repeated OCR timeout followed

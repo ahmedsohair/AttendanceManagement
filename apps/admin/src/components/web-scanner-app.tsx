@@ -9,6 +9,7 @@ import type {
   User
 } from "@algo-attendance/shared";
 import { ExamPulseLogo } from "@/components/exam-pulse-logo";
+import { ScannerPreparation, type OcrLoadStage } from "@/components/scanner-preparation";
 import { normalizeStudentId } from "@algo-attendance/shared";
 import { createReviewGuard } from "@/lib/scanner-review.mjs";
 import { formatScannerDuplicateTime } from "@/lib/audit-time";
@@ -183,10 +184,13 @@ async function withTimeout<T>(
 }
 
 async function createDigitOcrWorker(
-  onStatus: (message: string) => void
+  onStatus: (message: string) => void,
+  onStage: (stage: OcrLoadStage) => void
 ): Promise<OcrWorker> {
+  onStage("engine");
   onStatus("Loading OCR engine. Manual entry is available while you wait.");
   const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  onStage("models");
   onStatus("Downloading and preparing OCR models. Manual entry is available while you wait.");
   const ocr = await PaddleOCR.create({
     lang: "en",
@@ -271,6 +275,7 @@ export function WebScannerApp() {
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrReady, setOcrReady] = useState(false);
   const [ocrLoadError, setOcrLoadError] = useState("");
+  const [ocrLoadStage, setOcrLoadStage] = useState<OcrLoadStage>("engine");
   const [sessionRestoring, setSessionRestoring] = useState(true);
   const [busy, setBusy] = useState(false);
   const [roomsLoading, setRoomsLoading] = useState(false);
@@ -1522,6 +1527,8 @@ export function WebScannerApp() {
         ) {
           setOcrStatus(message);
         }
+      }, (stage) => {
+        if (componentActiveRef.current) setOcrLoadStage(stage);
       }).then(async (worker) => {
         if (!componentActiveRef.current) {
           await worker.dispose();
@@ -1800,14 +1807,28 @@ export function WebScannerApp() {
         <div className="web-ocr-status web-ocr-status-top">
           {scanHold && !scanPaused
             ? "Scanning paused. Use manual mode or resume scanning."
+            : cameraActive && !ocrReady
+              ? "Camera ready. Manual entry is available."
             : cameraActive
               ? ocrStatus || "Camera active"
               : ocrStatus || "Camera stopped"}
         </div>
 
-        <div className="web-scan-guide">
-          <div ref={scanRegionRef} className="web-scan-region" />
-          <span>Place student number here</span>
+        <div className="web-scanner-stage">
+          {ocrReady || !cameraActive ? (
+            <div className="web-scan-guide">
+              <div ref={scanRegionRef} className="web-scan-region" />
+              <span>Place student number here</span>
+            </div>
+          ) : null}
+          <ScannerPreparation
+            active={cameraActive && !scanPaused}
+            ready={ocrReady}
+            stage={ocrLoadStage}
+            slow={Boolean(ocrLoadError && ocrLoadPromiseRef.current)}
+            error={ocrLoadError}
+            onManualEntry={() => manualInputRef.current?.focus()}
+          />
         </div>
 
         <div className="web-camera-bottom">
@@ -1929,7 +1950,7 @@ export function WebScannerApp() {
           {!scanPaused && statusMessage ? (
             <div id="scanner-status" className="web-camera-note" aria-live="polite">{statusMessage}</div>
           ) : null}
-          {!scanPaused && ocrLoadError ? (
+          {!scanPaused && ocrLoadError && !cameraActive ? (
             <div className="web-camera-note" role="status">{ocrLoadError}</div>
           ) : null}
           {cameraRecoveryNeeded ? (
