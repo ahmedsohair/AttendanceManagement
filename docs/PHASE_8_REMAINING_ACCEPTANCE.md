@@ -3,12 +3,43 @@
 ## Boundary
 
 This is the finite outstanding acceptance list, not a new hardening phase. Production remains unchanged. Physical Android/iPhone acceptance is owner-deferred. Local production environment files must not be used for experiments.
+The owner's later 19 October decision explicitly removes phone/capacity testing
+as rollout blockers, without claiming success, and requires dependency fixes
+before public release. Final live production relational-integrity validation
+returned zero in every category. See the cutover report for current sequencing;
+earlier pending-decision language below is historical where superseded.
+Authorized security remediation `947db8a` now has zero reported web production
+vulnerabilities, a passing clean install/type-check/build, 106 passing web tests
+and a passing commit secret scan. Native findings remain separate. The old
+fallback does not certify the new lockfile; patched fallback/hosted verification
+and the guarded production cutover are the next release steps.
 
 19 October update: seven private technical drills now passed; exact results and
 scope are in [OPERATIONAL_DRILLS_20261019.md](OPERATIONAL_DRILLS_20261019.md).
-The owner confirmed the external scheduler is **still pending**. Remaining
+The owner configured the external scheduler and reported a manual HTTP 200
+`checked` response at 2026-10-19T03:29:09Z with no alert sends. The owner reported
+scheduled operation as "all good" without exact run timestamps. The notification
+test screenshot shows automatic 401 failures followed by 200 recovery, and the
+owner confirmed both notification emails arrived. Independent notification has
+passed; the owner subsequently confirmed temporary-job deletion. Scheduler setup
+and notifications are closed on owner-reported evidence; exact real-job run
+timestamps/ID were not supplied. Remaining
 dashboard/account/procedure actions are consolidated in
 [PHASE_8_OWNER_SIGNOFF_20261019.md](PHASE_8_OWNER_SIGNOFF_20261019.md).
+Owner-supplied 19 October database graphs now establish a quiet-period resource
+baseline: low CPU/connections/disk activity, but nonzero swap and commitment
+close to its limit with an apparent brief exceedance. Memory investigation,
+workload correlation and monitoring-overhead acceptance remain open; these
+screenshots do not establish exam-load capacity or blame the scheduler.
+The subsequent session snapshot showed five ordinary idle client sessions and
+no idle-in-transaction sessions. The supplied log window returned no entries;
+owner-reported server startup at 2026-10-18 07:46:48.227202 UTC excludes a full
+postmaster restart during the 19 October 02:53 UTC spike, not backend failures
+or crash recovery under the same postmaster. Memory capacity remains unresolved.
+The subsequent Vercel staging overview (Last 12 hours) displays 0% function
+errors, 0% timeouts and 3.78 s aggregate active CPU under sparse traffic. No
+function-duration percentiles or matched workload comparison were supplied;
+this does not close memory capacity or monitoring-overhead acceptance.
 Dependency exposure triage is now complete in
 [DEPENDENCY_EXPOSURE_20261019.md](DEPENDENCY_EXPOSURE_20261019.md), but fixes and
 any release-risk acceptance remain open. The fresh critical gate passes while
@@ -24,7 +55,13 @@ An external scheduler avoids that dependency. Suggested free option: [cron-job.o
 Configure one job, not both GitHub and an external scheduler:
 
 - Target: `https://exampulse-stagings.vercel.app/api/operations/check`
-- Method: POST; empty body; every five minutes.
+- Method: POST; empty body; every 15 minutes normally, increasing the same job
+  to every five minutes during exams, as agreed with the owner on 19 October.
+  Restore the normal interval afterward; do not run duplicate checkers.
+- At 15-minute intervals, one environment receives 2,880 checks per 30 days;
+  at five-minute intervals, 8,640, excluding retries and temporary tests.
+  Hosting execution and downstream database work still count as usage, not
+  deployment storage. Actual overhead remains subject to resource acceptance.
 - Header name: `Authorization`; value: `Bearer ` followed by the saved staging `OPS_CHECK_SECRET`. Never put it in the URL.
 - Enable failure and recovery notifications to the owner's verified account email, `ahmad.sohair@gmail.com`.
 - No public status page or public response history; do not share secret-bearing screenshots.
@@ -39,7 +76,7 @@ The existing 70-test web suite passed on 4 September; three new real-source pers
 - OCR: initialization error classification, prediction recovery and 200-frame reuse passed. The subsequent October staging browser suite verified model-load blocking/timeout and manual entry; physical crash recovery remains deferred, not established by those browser/unit tests.
 - Database/network: offline queue persistence/reconnect, request timeout/cancellation and terminal closed-exam conflict tests passed. The 19 October private real-Chromium drill also passed committed response loss, reload, same-request replay and closed conflict/Retry/Acknowledge without duplicate or forced attendance.
 - Monitoring: actual persistence function defers database access until the after-response callback; scheduler/database failures do not escape; storage identifiers are HMAC digests. Protected endpoint tests cover provider failure and unavailable metrics. These are controlled dependency tests, not a live database outage.
-- Email: real alert inbox and immediate repeat suppression passed. Scheduler CLI exits nonzero for unavailable/unauthorized/ambiguous delivery, malformed results and network failure, and refuses production URLs. The private missing-credentials drill recorded failed delivery, no false emailed timestamp and continued code resolution. Actual provider outage/retry/recipient fallback and scheduler notification remain separate.
+- Email: real alert inbox and immediate repeat suppression passed. Scheduler CLI exits nonzero for unavailable/unauthorized/ambiguous delivery, malformed results and network failure, and refuses production URLs. The private missing-credentials drill recorded failed delivery, no false emailed timestamp and continued code resolution. Independent scheduler failure/recovery emails are owner-confirmed on 19 October; actual email-provider outage/retry/recipient fallback remains separate.
 - Roster: malformed workbook, duplicate student rows and canonicalization tests passed. The private 19 October drill also rejected a duplicate import atomically and corrected an unmarked draft through typed audited deletion/reimport, verifying exact IDs. Institutional reconciliation approval remains pending.
 - Deployment: local application replacement/fallback compatibility passed on 19 October with real synthetic Auth/REST and preserved committed attendance. Hosted rollback activation, target deployment/environment selection and alternate-origin behavior were not exercised; see the October report.
 - Compromised code: private Auth v2.197.0/application drills verified old-code rejection, ban rejection of an issued token, global sign-out/refresh rejection and new-code recovery. Hosted Auth behavior/direct Data API JWT revocation and operator procedure are not certified. Rotation alone is not containment; no live account was changed.
@@ -53,7 +90,7 @@ Completed on 4 September 2026 with monitoring enabled: 1,000 concurrent lookups,
 
 ## Completion rule
 
-Close only evidence-backed items. Scheduling/notification evidence, provider overhead evidence and the remaining live/operator rehearsals still need completion or explicit owner deferral. Do not silently reclassify those as passed or introduce further product work into this phase.
+Close only evidence-backed items. Scheduling/notification acceptance is now closed on the owner-reported evidence above. Provider overhead evidence and the remaining live/operator rehearsals still need completion or explicit owner deferral. Do not silently reclassify those as passed or introduce further product work into this phase.
 
 ## October production-readiness checkpoint
 

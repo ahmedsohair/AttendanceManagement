@@ -2,9 +2,18 @@
 
 ## Decision
 
-Not approved for production promotion. Continue the independent checks while the
-reported iPhone failure awaits retest. The owner's instruction to proceed with
-other checks does not classify the iPhone failure as passed or waive that gate.
+Updated 19 October: the owner explicitly authorizes rollout with physical-phone
+and memory/capacity checks as non-blocking follow-ups, while requiring dependency
+findings fixed before public release. These checks are deferred, not passed.
+Web dependency remediation `947db8a` now passes the local zero-finding web audit,
+106 web tests, clean install/type-check/production build and secret scan. Hosted
+release verification and the guarded production upgrade remain outstanding;
+production has not yet been migrated or promoted. See
+`PRODUCTION_CUTOVER_20261019.md` for the current owner decisions and sequence.
+
+The initial 18 October decision was not to promote while the reported iPhone
+failure awaited retest. The later explicit owner decision above supersedes that
+release gate without claiming the device issue fixed.
 
 Initial application under test: staging `9d53294`; authenticated lifecycle checks
 then exercised `04da701`, which corrects error classification. Staging branch now
