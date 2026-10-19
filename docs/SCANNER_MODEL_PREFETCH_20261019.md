@@ -1,11 +1,16 @@
 # Early scanner model downloads - 19 October 2026
 
+**Rolled back:** the owner reported immediate OCR failure after `738d522`.
+Production is restored to `5e2c182`; the integration correction is local only.
+Read [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md)
+before any release. Hosted success below is historical, not current acceptance.
+
 ## Status and owner intent
 
 Implemented after the owner approved downloading model assets as soon as /scan
 opens, while preserving the existing login/room/scanner flow. Subsequently the
-owner explicitly requested a push so they could test it. Production is now
-`738d522`; deployment/public checks passed as recorded below. No migration,
+owner explicitly requested a push so they could test it. `738d522` was deployed
+and then rolled back after device testing found an SDK configuration error. No migration,
 hosted setting, attendance write, account change or real email is involved.
 
 The owner reported one successful production load of about 30 seconds total,
@@ -20,8 +25,9 @@ controlled benchmark or evidence that downloads caused the entire delay.
   sessions, open the camera or start scanning.
 - Each URL has a shared in-flight/completed download for this mounted visit.
   PaddleOCR's supported custom fetch receives these same bytes when the camera
-  is ready. Its explicit asset descriptors pin the unchanged URLs; tests compare
-  them with the installed pinned SDK. Detection and recognition stay unchanged.
+  is ready. The corrected local candidate uses the SDK's existing model defaults,
+  not explicit asset overrides; actual SDK validation checks the resolved URLs.
+  Detection and recognition stay unchanged.
 - Only these two fixed public archives are prefetched. Requests use CORS,
   credentials omit and no-referrer, with no access code, token or application
   record in the request. Other SDK requests are not intercepted.

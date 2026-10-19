@@ -37,7 +37,7 @@ import {
   getScannerBackAction
 } from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { createScannerModelDownloads, scannerModelAssets } from "@/lib/scanner-model-downloads";
+import { createScannerModelDownloads } from "@/lib/scanner-model-downloads";
 
 type RoomWithSession = Room & {
   session?: {
@@ -199,8 +199,6 @@ async function createDigitOcrWorker(
     ocrVersion: "PP-OCRv5",
     worker: false,
     fetch: modelFetch,
-    textDetectionModelAsset: scannerModelAssets.detection,
-    textRecognitionModelAsset: scannerModelAssets.recognition,
     textDetectionBatchSize: 1,
     textRecognitionBatchSize: 4,
     ortOptions: {

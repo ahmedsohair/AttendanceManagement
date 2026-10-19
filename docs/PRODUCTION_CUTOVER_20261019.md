@@ -16,6 +16,18 @@ remain separate from deployment success.
 
 ## Production application is deployed
 
+### Current: prefetch release rolled back to 5e2c182
+
+After the owner reported immediate OCR failure and unusable Retry in `738d522`,
+Vercel Instant Rollback restored deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, release
+`5e2c182`. The public canonical scanner serves its previous bundle and no prefetch
+helper. No database/data/credential change occurred. GitHub main still points to
+`738d522`; Vercel automatic promotion is stopped by rollback mode. Keep it stopped.
+The faulty asset-override configuration was reproduced against the real SDK;
+a correction and stronger real-SDK tests are local only, not re-promoted.
+Read [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md)
+before any subsequent deployment. Release entries below are historical.
+
 ### Early-download follow-up release: 738d522
 
 The owner explicitly requested pushing the tested prefetch change for phone

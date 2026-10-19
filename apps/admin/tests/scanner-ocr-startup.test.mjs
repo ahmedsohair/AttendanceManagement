@@ -332,8 +332,8 @@ test("preparation stages follow actual module import and model creation, not tim
   assert.deepEqual(stages, ["engine"]);
   importGate.resolve({ PaddleOCR: { create: options => {
     assert.equal(options.fetch, modelFetch);
-    assert.deepEqual(options.textDetectionModelAsset, scannerModelAssets.detection);
-    assert.deepEqual(options.textRecognitionModelAsset, scannerModelAssets.recognition);
+    assert.equal(options.textDetectionModelAsset, undefined);
+    assert.equal(options.textRecognitionModelAsset, undefined);
     return modelGate.promise;
   } } });
   await Promise.resolve();
@@ -343,4 +343,55 @@ test("preparation stages follow actual module import and model creation, not tim
   modelGate.resolve(worker);
   assert.equal(await wait, worker);
   assert.equal(messages.at(-1), "ONNX OCR ready.");
+});
+
+test("real pinned SDK reproduces the rejected asset-only configuration before downloading", async () => {
+  const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  await assert.rejects(PaddleOCR.create({
+    worker: false, initialize: false, lang: "en", ocrVersion: "PP-OCRv5",
+    fetch: async () => { throw new Error("This configuration test must not download models"); },
+    textDetectionModelAsset: scannerModelAssets.detection,
+    textRecognitionModelAsset: scannerModelAssets.recognition
+  }), /text_detection_model_dir requires text_detection_model_name/);
+});
+
+test("real SDK accepts the exact production worker options and resolves the prefetched defaults", async () => {
+  const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  const factorySource = stripTypeScriptTypes(between(
+    "async function createDigitOcrWorker(", "function trackSupportsTorch("
+  )).replace('import("@paddleocr/paddleocr-js")', "importPaddle()");
+  const modelFetch = async () => { throw new Error("Configuration-only check must not initialize or download models"); };
+  // Only disable initialization in this test; the library still validates/resolves
+  // every option produced by the actual application's worker factory.
+  const createWorker = new Function("importPaddle", "supportsWasmSimd", `${factorySource}; return createDigitOcrWorker;`)(
+    async () => ({ PaddleOCR: { create: options => PaddleOCR.create({ ...options, initialize: false }) } }),
+    () => false
+  );
+  const worker = await createWorker(() => {}, () => {}, modelFetch);
+  assert.equal(worker.options.fetch, modelFetch);
+  assert.deepEqual(worker.pipelineConfig.assets, { det: scannerModelAssets.detection, rec: scannerModelAssets.recognition });
+  assert.deepEqual(worker.pipelineConfig.modelSelection, {
+    textDetectionModelName: "PP-OCRv5_mobile_det", textRecognitionModelName: "PP-OCRv5_mobile_rec"
+  });
+  await worker.dispose();
+});
+
+test("immediate real SDK configuration rejection releases Retry's loading guard", async () => {
+  const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  const f = fixture();
+  f.state.createDigitOcrWorker = () => PaddleOCR.create({
+    worker: false, initialize: false, lang: "en", ocrVersion: "PP-OCRv5",
+    textDetectionModelAsset: scannerModelAssets.detection
+  });
+  await f.render().retryOcrLoad();
+  assert.equal(f.state.ocrLoading, false);
+  assert.equal(f.state.ocrReady, false);
+  assert.equal(f.state.ocrLoadPromiseRef.current, null);
+  assert.match(f.state.ocrLoadError, /could not be initialized/);
+  f.state.createDigitOcrWorker = () => PaddleOCR.create({ worker: false, initialize: false, lang: "en", ocrVersion: "PP-OCRv5" });
+  await f.render().retryOcrLoad();
+  assert.equal(f.state.ocrLoading, false);
+  assert.equal(f.state.ocrLoadError, "");
+  assert.equal(f.state.ocrReady, true);
+  await f.state.ocrWorkerRef.current.dispose();
 });
