@@ -37,6 +37,7 @@ import {
   getScannerBackAction
 } from "@/lib/scanner-runtime.mjs";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { createScannerModelDownloads, scannerModelAssets } from "@/lib/scanner-model-downloads";
 
 type RoomWithSession = Room & {
   session?: {
@@ -185,7 +186,8 @@ async function withTimeout<T>(
 
 async function createDigitOcrWorker(
   onStatus: (message: string) => void,
-  onStage: (stage: OcrLoadStage) => void
+  onStage: (stage: OcrLoadStage) => void,
+  modelFetch: typeof fetch = fetch
 ): Promise<OcrWorker> {
   onStage("engine");
   onStatus("Loading OCR engine. Manual entry is available while you wait.");
@@ -196,6 +198,9 @@ async function createDigitOcrWorker(
     lang: "en",
     ocrVersion: "PP-OCRv5",
     worker: false,
+    fetch: modelFetch,
+    textDetectionModelAsset: scannerModelAssets.detection,
+    textRecognitionModelAsset: scannerModelAssets.recognition,
     textDetectionBatchSize: 1,
     textRecognitionBatchSize: 4,
     ortOptions: {
@@ -234,6 +239,7 @@ export function WebScannerApp() {
   const cameraGenerationRef = useRef(0);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
+  const modelDownloadsRef = useRef<ReturnType<typeof createScannerModelDownloads> | null>(null);
   const preprocessingBuffersRef = useRef<ReturnType<typeof preprocessLowLightImageData> | null>(null);
   const componentActiveRef = useRef(true);
   const startOcrLoopRef = useRef<() => void>(() => undefined);
@@ -350,6 +356,16 @@ export function WebScannerApp() {
       }
     });
   }
+
+  useEffect(() => {
+    const downloads = createScannerModelDownloads();
+    modelDownloadsRef.current = downloads;
+    downloads.preload();
+    return () => {
+      downloads.dispose();
+      if (modelDownloadsRef.current === downloads) modelDownloadsRef.current = null;
+    };
+  }, []);
 
   const roomStats = useMemo(
     () => ({
@@ -1529,7 +1545,7 @@ export function WebScannerApp() {
         }
       }, (stage) => {
         if (componentActiveRef.current) setOcrLoadStage(stage);
-      }).then(async (worker) => {
+      }, modelDownloadsRef.current?.fetch).then(async (worker) => {
         if (!componentActiveRef.current) {
           await worker.dispose();
           throw new Error("OCR loading was cancelled because the scanner was closed.");

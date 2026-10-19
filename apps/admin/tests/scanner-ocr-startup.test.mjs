@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 import { describeOcrLoadError } from "../src/lib/scanner-ocr-runtime.mjs";
+import { scannerModelAssets } from "../src/lib/scanner-model-downloads.ts";
 
 // Exercise the actual component functions with controlled async dependencies,
 // without loading the camera, models, React renderer or hosted services.
@@ -43,6 +44,7 @@ function fixture() {
     componentActiveRef: { current: true }, cameraGenerationRef: { current: 1 },
     selectedRoomRef: { current: { id: "room-a" } }, scanPausedRef: { current: false },
     ocrWorkerRef: { current: null }, ocrLoadPromiseRef: { current: null },
+    modelDownloadsRef: { current: null },
     streamRef: { current: { getVideoTracks: () => [{ readyState: "live" }] } },
     document: { visibilityState: "visible" },
     onnxModelTimeoutMs: 45000,
@@ -322,12 +324,18 @@ test("preparation stages follow actual module import and model creation, not tim
   const factorySource = stripTypeScriptTypes(between(
     "async function createDigitOcrWorker(", "function trackSupportsTorch("
   )).replace('import("@paddleocr/paddleocr-js")', "importPaddle()");
-  const createWorker = new Function("importPaddle", "supportsWasmSimd", `${factorySource}; return createDigitOcrWorker;`)(
-    () => importGate.promise, () => false
+  const createWorker = new Function("importPaddle", "supportsWasmSimd", "scannerModelAssets", `${factorySource}; return createDigitOcrWorker;`)(
+    () => importGate.promise, () => false, scannerModelAssets
   );
-  const wait = createWorker(message => messages.push(message), stage => stages.push(stage));
+  const modelFetch = async () => new Response("unused");
+  const wait = createWorker(message => messages.push(message), stage => stages.push(stage), modelFetch);
   assert.deepEqual(stages, ["engine"]);
-  importGate.resolve({ PaddleOCR: { create: () => modelGate.promise } });
+  importGate.resolve({ PaddleOCR: { create: options => {
+    assert.equal(options.fetch, modelFetch);
+    assert.deepEqual(options.textDetectionModelAsset, scannerModelAssets.detection);
+    assert.deepEqual(options.textRecognitionModelAsset, scannerModelAssets.recognition);
+    return modelGate.promise;
+  } } });
   await Promise.resolve();
   assert.deepEqual(stages, ["engine", "models"]);
   assert.equal(messages.some(message => message.includes("ready")), false);
