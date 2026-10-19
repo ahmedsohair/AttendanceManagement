@@ -27,6 +27,13 @@ by this backlog entry.
 
 ## OCR startup timeout and late readiness
 
+Current status: a scoped recovery fix is now prepared locally, with 128 passing
+web tests and a passing type-check/production build. It is not deployed, and no
+phone speed improvement is claimed. See
+[SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md) for the candidate,
+asset-size evidence and remaining staging/device acceptance. The following
+observations describe the production baseline until that candidate is deployed.
+
 Priority: near-term scanner reliability investigation; higher urgency than
 self-service recovery. The owner reports repeated timeout followed by near-
 instant success on Retry. This is separate from the unresolved iPhone blank-
@@ -55,8 +62,9 @@ page/process-restart report; one does not prove the cause of the other.
 - Verify delayed success before/after timeout and Retry, genuine failure/retry,
   manual-mode interaction, background/foreground, room changes and teardown.
 
-Likely scope: `apps/admin/src/components/web-scanner-app.tsx`, OCR runtime helper,
-scanner lifecycle/browser tests and coarse timing diagnostics. No scanner code,
-dependencies, timeout value or deployment was changed in this investigation.
+Implemented local scope: `apps/admin/src/components/web-scanner-app.tsx`, OCR
+error copy and startup regression tests. Dependencies, the timeout value and
+production deployment remain unchanged. Actual cold-start optimization and
+device timing/acceptance remain open; this backlog item is not fully closed.
 See [SCANNER_SAFARI_WASM_TRIAL.md](SCANNER_SAFARI_WASM_TRIAL.md) for the source
 analysis and reproduction scope.

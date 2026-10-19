@@ -27,7 +27,7 @@ test("caps OCR images at the model input limit", () => {
 });
 
 test("classifies actionable OCR initialization failures", () => {
-  assert.match(describeOcrLoadError(new Error("request timed out")), /timed out/i);
+  assert.match(describeOcrLoadError(new Error("request timed out")), /still loading in the background/i);
   assert.match(describeOcrLoadError(new Error("Out of memory")), /memory/i);
   assert.match(describeOcrLoadError(new TypeError("Failed to fetch")), /downloaded/i);
   assert.match(describeOcrLoadError(new Error("WebAssembly unsupported")), /not supported/i);

@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:scanner": "node --experimental-strip-types --test tests/scanner-runtime.test.mjs tests/scanner-requests.test.mjs tests/scanner-ocr-runtime.test.mjs tests/scanner-outbox.test.mjs tests/scanner-review.test.mjs tests/scanner-review-time.test.ts",
+    "test:scanner": "node --experimental-strip-types --test tests/scanner-runtime.test.mjs tests/scanner-requests.test.mjs tests/scanner-ocr-runtime.test.mjs tests/scanner-ocr-startup.test.mjs tests/scanner-outbox.test.mjs tests/scanner-review.test.mjs tests/scanner-review-time.test.ts",
     "test:api": "node --experimental-strip-types --test tests/api-errors.test.ts tests/telemetry-summary.test.ts tests/scanner-telemetry.test.ts tests/ops-monitoring.test.ts tests/ops-endpoint.test.ts tests/ops-persistence.test.ts",
     "test:server-unit": "node --experimental-strip-types --test tests/access-code.test.ts tests/spreadsheet.test.ts tests/exam-staffing.test.mjs tests/email-transport.test.mjs tests/dependency-compatibility.test.mjs"
   },

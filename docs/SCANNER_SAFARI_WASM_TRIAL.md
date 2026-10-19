@@ -1,5 +1,10 @@
 # Safari OCR WASM-only trial
 
+Current follow-up: [SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md)
+records the locally verified timeout/late-readiness recovery candidate and
+asset-size investigation. It is not deployed or a successful physical iPhone
+retest; the earlier report and reproduction below are historical baselines.
+
 ## Report - 18 October 2026
 
 - Device: iPhone 14 Pro, iOS 18.3.2, Safari.

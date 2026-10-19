@@ -185,8 +185,9 @@ async function withTimeout<T>(
 async function createDigitOcrWorker(
   onStatus: (message: string) => void
 ): Promise<OcrWorker> {
-  onStatus("Loading ONNX OCR models... first load can take 20-40 seconds.");
+  onStatus("Loading OCR engine. Manual entry is available while you wait.");
   const { PaddleOCR } = await import("@paddleocr/paddleocr-js");
+  onStatus("Downloading and preparing OCR models. Manual entry is available while you wait.");
   const ocr = await PaddleOCR.create({
     lang: "en",
     ocrVersion: "PP-OCRv5",
@@ -226,6 +227,7 @@ export function WebScannerApp() {
   const reviewHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const reviewReturnFocusRef = useRef<HTMLElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const cameraGenerationRef = useRef(0);
   const ocrWorkerRef = useRef<OcrWorker | null>(null);
   const ocrLoadPromiseRef = useRef<Promise<OcrWorker> | null>(null);
   const preprocessingBuffersRef = useRef<ReturnType<typeof preprocessLowLightImageData> | null>(null);
@@ -267,6 +269,8 @@ export function WebScannerApp() {
   const [statusMessage, setStatusMessage] = useState("");
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrReady, setOcrReady] = useState(false);
+  const [ocrLoadError, setOcrLoadError] = useState("");
   const [sessionRestoring, setSessionRestoring] = useState(true);
   const [busy, setBusy] = useState(false);
   const [roomsLoading, setRoomsLoading] = useState(false);
@@ -291,6 +295,7 @@ export function WebScannerApp() {
   >("checking");
 
   authExpiryHandlerRef.current = () => {
+    cameraGenerationRef.current += 1;
     const hadEstablishedSession = establishedAuthRef.current || Boolean(userRef.current);
     reviewGuardRef.current.invalidate();
     lookupPendingRef.current = false;
@@ -691,6 +696,7 @@ export function WebScannerApp() {
   }, []);
 
   const releaseCameraStream = useCallback((updateState = true) => {
+    cameraGenerationRef.current += 1;
     streamRef.current?.getTracks().forEach((track) => {
       track.onended = null;
       track.stop();
@@ -706,6 +712,20 @@ export function WebScannerApp() {
       setTorchMessage("");
     }
   }, [requestJson]);
+
+  useEffect(() => {
+    if (
+      !ocrReady || !cameraActive || !user || !selectedRoom ||
+      !componentActiveRef.current || scanPaused || scanHold ||
+      document.visibilityState === "hidden" ||
+      streamRef.current?.getVideoTracks()[0]?.readyState !== "live"
+    ) {
+      return;
+    }
+
+    setOcrStatus("Looking for a student number...");
+    startOcrLoopRef.current();
+  }, [ocrReady, cameraActive, user, selectedRoom, scanPaused, scanHold]);
 
   useEffect(() => {
     let active = true;
@@ -1260,11 +1280,15 @@ export function WebScannerApp() {
     cancelRequests("lookup", "live-state");
     stopOcrLoop();
     releaseCameraStream();
+    const generation = cameraGenerationRef.current;
+    const ownsCamera = () => componentActiveRef.current &&
+      cameraGenerationRef.current === generation && selectedRoomRef.current?.id === room.id;
     selectedRoomRef.current = room;
     setSelectedRoom(room);
     setStatusMessage("");
+    setOcrLoadError("");
     setOcrStatus("Starting camera...");
-    setCameraActive(true);
+    setCameraActive(false);
     setCameraRecoveryNeeded(false);
     setScanHold(false);
     resetForNextScan();
@@ -1278,11 +1302,15 @@ export function WebScannerApp() {
         },
         audio: false
       }));
+      if (!ownsCamera()) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       const videoTrack = stream.getVideoTracks()[0] as TorchMediaTrack | undefined;
       if (videoTrack) {
         videoTrack.onended = () => {
-          if (!selectedRoomRef.current) {
+          if (!ownsCamera() || streamRef.current !== stream) {
             return;
           }
           reportScannerEvent("camera", "error");
@@ -1310,23 +1338,25 @@ export function WebScannerApp() {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
+      if (!ownsCamera()) return;
+      setCameraActive(true);
 
       if (!ocrWorkerRef.current) {
+        setOcrLoading(true);
         setOcrStatus("Loading OCR engine...");
         try {
           await loadOcrWorker();
         } catch (error) {
+          if (!ownsCamera()) return;
           setOcrStatus("");
-          setStatusMessage(
-            describeOcrLoadError(error)
-          );
+          setOcrLoadError(describeOcrLoadError(error));
           return;
+        } finally {
+          if (ownsCamera()) setOcrLoading(false);
         }
       }
-
-      setOcrStatus("Looking for a student number...");
-      startOcrLoop();
     } catch (error) {
+      if (!ownsCamera()) return;
       setCameraActive(false);
       setOcrStatus("");
       setStatusMessage(
@@ -1485,13 +1515,23 @@ export function WebScannerApp() {
     }
 
     if (!ocrLoadPromiseRef.current) {
-      const loadPromise = createDigitOcrWorker(setOcrStatus).then(async (worker) => {
+      const loadPromise = createDigitOcrWorker((message) => {
+        if (
+          componentActiveRef.current && selectedRoomRef.current && !scanPausedRef.current &&
+          streamRef.current?.getVideoTracks()[0]?.readyState === "live"
+        ) {
+          setOcrStatus(message);
+        }
+      }).then(async (worker) => {
         if (!componentActiveRef.current) {
           await worker.dispose();
           throw new Error("OCR loading was cancelled because the scanner was closed.");
         }
 
         ocrWorkerRef.current = worker;
+        setOcrLoadError("");
+        setOcrLoading(false);
+        setOcrReady(true);
         return worker;
       });
       ocrLoadPromiseRef.current = loadPromise;
@@ -1503,6 +1543,18 @@ export function WebScannerApp() {
     }
 
     const pendingWorker = ocrLoadPromiseRef.current;
+    const generation = cameraGenerationRef.current;
+    // The wait can time out before initialization fails; keep that late error truthful.
+    void pendingWorker.catch((error) => {
+      if (
+        componentActiveRef.current && cameraGenerationRef.current === generation &&
+        selectedRoomRef.current && streamRef.current?.getVideoTracks()[0]?.readyState === "live"
+      ) {
+        setOcrLoading(false);
+        setOcrStatus("");
+        setOcrLoadError(describeOcrLoadError(error));
+      }
+    });
     return measureScannerOperation("ocr_init", () => withTimeout(
       pendingWorker,
       onnxModelTimeoutMs,
@@ -1511,23 +1563,25 @@ export function WebScannerApp() {
   }
 
   async function retryOcrLoad() {
-    if (ocrLoading || ocrWorkerRef.current) {
+    if (ocrLoading) {
       return;
     }
 
+    const generation = cameraGenerationRef.current;
+    const ownsCamera = () => componentActiveRef.current &&
+      cameraGenerationRef.current === generation && Boolean(selectedRoomRef.current);
     setOcrLoading(true);
-    setStatusMessage("");
+    setOcrLoadError("");
     try {
       await loadOcrWorker();
-      setOcrStatus("Looking for a student number...");
-      startOcrLoop();
+      if (ownsCamera()) setOcrReady(true);
     } catch (error) {
-      setOcrStatus("");
-      setStatusMessage(
-          describeOcrLoadError(error)
-      );
+      if (ownsCamera()) {
+        setOcrStatus("");
+        setOcrLoadError(describeOcrLoadError(error));
+      }
     } finally {
-      setOcrLoading(false);
+      if (ownsCamera()) setOcrLoading(false);
     }
   }
 
@@ -1748,7 +1802,7 @@ export function WebScannerApp() {
             ? "Scanning paused. Use manual mode or resume scanning."
             : cameraActive
               ? ocrStatus || "Camera active"
-              : "Camera stopped"}
+              : ocrStatus || "Camera stopped"}
         </div>
 
         <div className="web-scan-guide">
@@ -1875,6 +1929,9 @@ export function WebScannerApp() {
           {!scanPaused && statusMessage ? (
             <div id="scanner-status" className="web-camera-note" aria-live="polite">{statusMessage}</div>
           ) : null}
+          {!scanPaused && ocrLoadError ? (
+            <div className="web-camera-note" role="status">{ocrLoadError}</div>
+          ) : null}
           {cameraRecoveryNeeded ? (
             <button
               className="secondary"
@@ -1885,7 +1942,7 @@ export function WebScannerApp() {
               Restart Camera
             </button>
           ) : null}
-          {cameraActive && !ocrWorkerRef.current && statusMessage ? (
+          {cameraActive && !ocrReady && ocrLoadError ? (
             <button
               className="secondary"
               type="button"

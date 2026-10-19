@@ -87,7 +87,7 @@ export function describeOcrLoadError(error) {
   const normalized = message.toLowerCase();
 
   if (normalized.includes("timed out") || normalized.includes("timeout")) {
-    return "OCR loading timed out. Use manual entry now, or tap Retry OCR when the connection improves.";
+    return "OCR is taking longer than expected and is still loading in the background. Use manual entry while you wait, or retry OCR.";
   }
   if (
     normalized.includes("out of memory") ||
