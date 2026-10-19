@@ -2,7 +2,16 @@
 
 ## Boundary
 
-This is the finite outstanding acceptance list, not a new hardening phase. Production remains unchanged. Physical Android/iPhone acceptance is owner-deferred. Local production environment files must not be used for experiments.
+This is the finite outstanding acceptance list, not a new hardening phase.
+19 October update: production's 20-migration upgrade committed and release
+`d869264` is live at `exampulse.xyz`. Public-domain admin sign-in/reload,
+read-only dashboard/history/Health checks and the protected operational checker
+passed. Production job `8675994` is now enabled every 15 minutes, with an external
+manual 200/checked test and saved failure/recovery notification settings. Actual
+scheduled-run history and controlled write/delivery checks remain separate. See
+`PRODUCTION_CUTOVER_20261019.md` for the latest evidence; older
+"production unchanged" and pre-remediation decisions below are historical.
+Physical Android/iPhone acceptance is owner-deferred. Local production environment files must not be used for experiments.
 The owner's later 19 October decision explicitly removes phone/capacity testing
 as rollout blockers, without claiming success, and requires dependency fixes
 before public release. Final live production relational-integrity validation

@@ -12,8 +12,12 @@ private fallback and guarded upgrade rehearsals also passed. The owner has now
 reported a successful live production upgrade: 20 migrations committed, original
 rows preserved and integrity/catalog/audit checks passed. Production release
 `d869264` is now Ready/Current at `exampulse.xyz`; public authorization smoke
-checks and the authenticated operational checker passed. Authenticated workflow,
-scheduled monitoring and actual delivery/webhook checks remain outstanding. See
+checks and the authenticated operational checker passed. Canonical-domain admin
+sign-in/reload and read-only history/Health checks subsequently passed.
+Production cron job `8675994` is enabled every 15 minutes with a successful
+external manual test and failure/recovery notifications configured. Scheduled
+production runs, controlled attendance/write workflows and actual delivery/
+webhook checks remain outstanding. See
 `PRODUCTION_CUTOVER_20261019.md` for the current owner decisions and sequence.
 
 The initial 18 October decision was not to promote while the reported iPhone

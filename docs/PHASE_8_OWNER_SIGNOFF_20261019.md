@@ -24,8 +24,12 @@ rehearsals. The owner subsequently reported the successful guarded production
 database commit (20 migrations, original records preserved, precommit and audit
 checks passed). Production release `d869264` has now been independently verified
 Ready/Current at `exampulse.xyz`; public authorization and authenticated checker
-smoke tests passed. Authenticated workflows, the production scheduler and actual
-delivery/webhook checks remain pending; these are not inferred from deployment.
+smoke tests passed. Canonical-domain admin sign-in/reload, read-only history and
+Health also passed. Production cron job `8675994` is enabled every 15 minutes;
+its external manual test returned 200/checked and failure/recovery notifications
+are configured. Automatic production run history, controlled attendance/write
+workflows and actual delivery/webhook checks remain pending, not inferred from
+deployment or a manual scheduler test.
 
 This is the remaining operator checklist, not a new hardening phase or production
 promotion authorization. The owner configured an external scheduler and reported

@@ -59,19 +59,49 @@ persisted API observations with zero 5xx in the small current window. Health
 captured `2026-10-19T08:56:17.418Z`, with monitoring query round trip 59 ms and no
 threshold warnings. This is not a capacity test or a device/crash guarantee.
 
-The canonical `exampulse.xyz` browser tab was still signed out; authentication
-cookies are host-specific. The owner was asked to sign in there separately. Do
-not copy cookies/tokens between origins or claim canonical authenticated UI
-acceptance from the immutable-host sign-in alone. No student records or access
-codes were printed for the read-only invigilator check.
+Initially the canonical `exampulse.xyz` browser tab was signed out because
+authentication cookies are host-specific. The owner subsequently signed into
+the actual public domain. The agent independently verified its authenticated
+dashboard, session persistence after reload, and protected Health page.
+At `2026-10-19T09:21:07.976Z`, Health displayed two active exams, no scanner
+observations, no threshold warnings, monitoring query round trip 56 ms, and two
+admin-login observations with zero 5xx. Attendance history rendered a 51-row
+table (header included; not the total record count) and incidents a 17-row table
+(header included). No student names, access codes or individual attendance
+records were printed for these read-only checks. No cookies or tokens were
+copied between origins.
 
-Invigilator/attendance write workflows, production scheduler configuration and
-real delivery/webhook acceptance remain pending. A separate cron-job.org tab was
-opened and required owner sign-in. The proposed production job is every 15
-minutes with the protected production endpoint and the new production checker
-token, entered by the owner. No job has been created or enabled yet. Leave the
-staging job intact. Do not present deployment success as full workflow
-acceptance or infer that staging's scheduler monitors production.
+Invigilator/attendance write workflows and real delivery/webhook acceptance
+remain pending. After the owner signed into
+cron-job.org, read-only dashboard inspection found only the existing staging
+job, with recent successful scheduled runs. The owner first chose to configure
+production themselves, then explicitly requested that the agent do it.
+
+After explicit action-time owner approval to store the existing production
+checker token with cron-job.org and enable the job, the agent created the
+separate enabled job `ExamPulse production operations`, ID `8675994`:
+`https://console.cron-job.org/jobs/8675994`.
+Target `https://exampulse.xyz/api/operations/check`,
+POST, empty body, every 15 minutes in Australia/Sydney, 30-second timeout,
+response history enabled, failure notification after one failure, recovery
+notification enabled, existing all-channel notification selection, and no
+redirect-as-success setting. The production Authorization header was populated
+from the existing private production file without printing its token. No token
+was regenerated, stored in Git, or put into a URL. The saved settings and
+failure/recovery notification checkboxes were independently re-opened and
+verified. The staging job is unchanged.
+
+The external provider's manual test passed on 19 October at
+`2026-10-19T09:26:07Z` (20:26:07 Australia/Sydney), HTTP 200, duration 2.82 s,
+`{"status":"checked","accepted":0,"unknown":0,"suppressed":0}`;
+request ID `0feec514-37f5-48c4-b311-106b9e8897b1`. No alert email was sent by this
+test. The saved UI listed next scheduled executions at 20:30 and 20:45 Sydney.
+Two actual scheduled production successes have not yet been observed, and
+production-job failure/recovery inbox delivery is not claimed from a successful
+manual test. The same account's staging notification evidence remains separate.
+Proof: ignored `test-results/production-cutover-20261019/cron-production-test-ok.png`.
+Do not present deployment success as full workflow acceptance or infer that
+staging's scheduler monitors production.
 
 ## Live database upgrade committed
 
@@ -134,7 +164,8 @@ outside Git. Values were not printed or stored in documentation. The owner was
 asked to import `OPS_HEALTH_SECRET` and `OPS_CHECK_SECRET` into this project's
 Production environment as Secret. Both saves were subsequently independently
 verified in the UI, and the authenticated checker passed on production. The
-production scheduler remains unconfigured/unverified. Do not reuse the
+production scheduler is now configured and its external manual test passed as
+recorded above; actual scheduled-run history still needs observation. Do not reuse the
 staging secrets or modify staging's scheduled job to guess a production secret.
 The current private file is under `C:\Users\ahmad\ExamPulseSecrets`; retain it
 securely for the production scheduler setup. Do not generate replacements
