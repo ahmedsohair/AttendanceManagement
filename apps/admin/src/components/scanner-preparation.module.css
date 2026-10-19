@@ -31,9 +31,6 @@
 .stages [aria-current="step"] { color: #fff; font-weight: 700; }
 .stages [aria-current="step"] span { border-color: #ff7088; background: #ff7088; }
 .stages [data-complete="true"] span { background: #8ee0bc; border-color: #8ee0bc; }
-.progress { height: 4px; margin-top: 12px; overflow: hidden; border-radius: 2px; background: #344962; }
-.progressSweep { display: block; width: 35%; height: 100%; border-radius: inherit; background: #ff7088; animation: prepare-progress 2.4s ease-in-out infinite alternate; }
-.panel[data-motion="paused"] .progressSweep { animation-play-state: paused; }
 .tip { min-height: 39px; margin: 14px 0 0; color: var(--prep-muted); font-size: 12px; line-height: 1.6; }
 .tip strong { color: #fff; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
@@ -53,7 +50,6 @@
 .check { stroke: #a3efcb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 
 @keyframes prepare-scan { from { transform: translateY(-17px); } to { transform: translateY(17px); } }
-@keyframes prepare-progress { from { transform: translateX(0); } to { transform: translateX(185%); } }
 @keyframes prepare-ready { 0%, 75% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (max-width: 430px) {
@@ -65,6 +61,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .beam, .ready, .progressSweep { animation: none; }
+  .beam, .ready { animation: none; }
   .panel button { transition: none; }
 }

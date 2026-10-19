@@ -29,11 +29,11 @@ Production remains `d869264`. Self-service access recovery is still deferred.
   removed. The standalone synthetic preview also exposes this recovery path.
 - The top strip says Preparing scanner while loading, not Camera ready. A
   failed initializer says Scanning unavailable and offers manual entry/retry.
-- A four-pixel indeterminate progress track accompanies the actual Engine or
-  Models stage. It reports no numeric completion, download percentage or ETA;
-  the SDK does not expose measured byte progress here. It disappears on failure,
-  follows the existing animation pause/visibility controls, and remains static
-  for reduced motion. It adds only CSS/markup, not dependencies or downloads.
+- The owner requested removal of the indeterminate progress track because its
+  back-and-forth motion looked like measured progress. The track, its animation
+  and progressbar semantics are removed. Only the actual Engine/Models/Ready
+  stages and the decorative scanner animation remain; no percentage or ETA is
+  claimed. Retry, manual entry and existing motion controls are unchanged.
 - Ready shows a checkmark acknowledgement for about 1.1 seconds, then disappears.
   It has no pointer interaction and does not delay OCR readiness or the scan loop.
   A worker already ready when entering another room does not flash a new loader.
@@ -53,6 +53,11 @@ Production remains `d869264`. Self-service access recovery is still deferred.
   phone 320x640: synthetic Retry returns to Models, long waits offer Retry,
   animation pause works and manual entry focuses the field. No horizontal
   overflow; recovery buttons retain 44-pixel height and wrap on narrow screens.
+- Progress-bar removal: all **140 tests passed** again, including a replacement
+  regression check that Engine, Models, long-wait and failure states expose no
+  unmeasured progress bar or percentage. Desktop/mobile synthetic preview checks
+  confirmed the bar is absent, stages remain visible and Retry still returns to
+  the Models state. No OCR initialization or attendance behavior was changed.
 - Final Next.js 15.5.28 production build, lint/type checks and static generation
   passed in the independent dependency checkout. No dependencies were installed,
   pruned or changed. Source files were mirrored only for isolated verification.
@@ -72,6 +77,8 @@ Ignored screenshot evidence in the main checkout:
 `test-results/ocr-preparation-20261019/desktop.png`, `mobile.png` and
 `mobile-final.jpg`. These are explicitly local preview images, not production.
 Follow-up evidence: `failure-retry.jpg` and `progress-mobile.jpg` in that directory.
+Current bar-free preview evidence: `no-progress-mobile.jpg`; the earlier progress
+image records the superseded design, not the current candidate.
 Logs and the isolated preview project are under the same dated directory in
 `C:/dev/AlgoAttendance-scanner-security/test-results/`.
 The preview's node_modules junction must not be installed/pruned or recursively

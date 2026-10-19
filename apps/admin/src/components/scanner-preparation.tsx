@@ -124,14 +124,6 @@ export function ScannerPreparation({ active, ready, stage, slow, error, onManual
             </li>
             <li><span aria-hidden="true" />Ready</li>
           </ol>
-          {!failed ? (
-            <div
-              className={styles.progress}
-              role="progressbar"
-              aria-label="Scanner setup progress"
-              aria-valuetext={stage === "engine" ? "Loading the scanner engine" : "Preparing recognition models"}
-            ><span className={styles.progressSweep} /></div>
-          ) : null}
           {!failed ? <p className={styles.tip} aria-live="off"><strong>Tip:</strong> {tips[tip]}</p> : null}
           <div className={styles.actions}>
             {failed || slow ? (

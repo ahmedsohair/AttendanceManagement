@@ -85,13 +85,13 @@ test("retry is available beside manual entry for failures and long waits only", 
   assert.match(render({ error: "Download failed", retryDisabled: true }), /class="retry" disabled=""/);
 });
 
-test("progress is indeterminate, names the real stage, and disappears on failure", () => {
-  assert.match(render(), /role="progressbar" aria-label="Scanner setup progress" aria-valuetext="Loading the scanner engine"/);
-  assert.match(render({ stage: "models" }), /aria-valuetext="Preparing recognition models"/);
-  assert.doesNotMatch(render(), /aria-valuenow/);
-  assert.doesNotMatch(render({ error: "Download failed" }), /role="progressbar"/);
-  assert.match(css, /data-motion="paused"\] \.progressSweep \{ animation-play-state: paused/);
-  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*\.progressSweep \{ animation: none/);
+test("preparation shows actual setup stages without an unmeasured progress bar", () => {
+  for (const overrides of [{}, { stage: "models" }, { slow: true }, { error: "Download failed" }]) {
+    const html = render(overrides);
+    assert.match(html, /aria-label="Scanner setup stages"/);
+    assert.doesNotMatch(html, /role="progressbar"|aria-valuenow|\d+%/);
+  }
+  assert.doesNotMatch(css, /progressSweep|prepare-progress/);
 });
 
 test("scanner integration wires retry once and does not claim camera readiness while loading", () => {
