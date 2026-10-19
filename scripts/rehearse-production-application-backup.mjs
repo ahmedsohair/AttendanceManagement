@@ -44,7 +44,16 @@ export function extractApplicationData(text) {
   return { tables, omitted, sql: [...tables.values()].map((table) => table.lines.join("\n")).join("\n") + "\n" };
 }
 
-export async function rehearse(backupDirectory) {
+export function readUpgradeBundle(path) {
+  assert(!/^[a-z]+:\/\//i.test(path), "Upgrade bundle must be a local file, never a database URL");
+  const sql = readFileSync(resolve(path), "utf8").replaceAll("\r\n", "\n");
+  assert(sql.startsWith("-- ExamPulse one-off production upgrade, verified 19 October 2026.\n"), "Unexpected upgrade bundle header");
+  assert(sql.includes("savepoint exampulse_regression;"), "Missing rollback-only regression boundary");
+  assert(sql.includes("rollback to savepoint exampulse_regression;"), "Missing regression rollback");
+  return sql;
+}
+
+export async function rehearse(backupDirectory, upgradeBundlePath) {
   const backup = resolve(backupDirectory);
   const manifest = parseManifest(readFileSync(join(backup, "manifest.json"), "utf8"));
   const expected = ["data.sql", "roles.sql", "schema.sql"];
@@ -63,6 +72,12 @@ export async function rehearse(backupDirectory) {
     assert.equal(sha256(sql), entry.sha256, `Release migration hash mismatch: ${entry.file}`);
     return sql;
   });
+  const upgradeBundle = upgradeBundlePath ? readUpgradeBundle(upgradeBundlePath) : null;
+  if (upgradeBundle) {
+    for (let i = 0; i < migrations.length; i++) {
+      assert(upgradeBundle.includes(`-- Reviewed migration: ${release.migrations[i].file}\n${migrations[i]}`), "Upgrade bundle differs from reviewed migrations");
+    }
+  }
   const run = randomUUID();
   const container = `exampulse-private-rehearsal-${run}`;
   const output = join(dirname(backup), `application-rehearsal-${run}`);
@@ -72,6 +87,7 @@ export async function rehearse(backupDirectory) {
     scope: "Seven public application tables; managed Auth/Storage data is NOT restored or certified.",
     sourceIdentity: "Owner-selected production backup; source project reference is not encoded in this backup manifest.",
     network: "none", publishedPorts: false, migrations: release.migrations,
+    upgradeBundleSha256: upgradeBundle ? sha256(upgradeBundle) : null,
     expectedCounts: Object.fromEntries([...data.tables].map(([name, table]) => [name, table.rows])),
     managedTablesNotRestored: data.omitted, phases: [], completed: false
   };
@@ -142,8 +158,22 @@ export async function rehearse(backupDirectory) {
     for (const [name, expectedRows] of Object.entries(summary.expectedCounts)) assert.equal(before[name].rows, expectedRows, `Restore count mismatch: ${name}`);
     summary.integrityBefore = integrity("restored integrity");
     summary.restored = before; summary.phases.push("Seven application tables restored with exact backup counts and zero relational-integrity violations"); save();
+    if (upgradeBundle) {
+      const expectRollback = (phase, sql, expectedReason) => {
+        let rejected = false;
+        try { psql(phase, sql); } catch { rejected = true; }
+        assert(rejected, `${phase}: unsafe bundle unexpectedly committed`);
+        const diagnostic = join(output, `${logIndex}-${phase.replace(/[^a-z0-9-]/gi, "-")}.log`);
+        assert(readFileSync(diagnostic, "utf8").includes(expectedReason), `${phase}: failed for a different reason; inspect private diagnostic`);
+        assert.deepEqual(fingerprints(`${phase} preserved fingerprints`), before);
+        assert.equal(psql(`${phase} rolled-back schema`, "select to_regclass('public.attendance_requests') is null;").trim(), "t");
+      };
+      expectRollback("drift rejection", `begin; update public.users set full_name=full_name || ' PRIVATE-DRIFT-PROBE' where id=(select id from public.users limit 1);\n${upgradeBundle}\ncommit;`, "Production preservation guard failed");
+      expectRollback("late failure rollback", `begin;\n${upgradeBundle}\n do $$ begin raise exception 'Intentional private precommit failure'; end $$;\ncommit;`, "Intentional private precommit failure");
+      summary.phases.push("Exact guarded bundle rejected record drift and rolled back all DDL after an intentional late failure; original rows and baseline schema preserved"); save();
+    }
     for (const pass of ["upgrade", "idempotency"]) {
-      psql(`${pass} migration bundle`, `begin; set local lock_timeout='5s'; set local statement_timeout='30s';\n${migrations.join("\n")}\ncommit;`);
+      psql(`${pass} migration bundle`, `begin; set local lock_timeout='5s'; set local statement_timeout='30s';\n${upgradeBundle || migrations.join("\n")}\ncommit;`);
       const after = fingerprints(`${pass} original-column fingerprints`);
       assert.deepEqual(after, before, `${pass}: original production rows changed`);
       psql(`${pass} audit and business conflict regression`, readFileSync(join(repository, "supabase/tests/admin_audit_events_staging.sql"), "utf8"));
@@ -176,7 +206,11 @@ if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.m
     console.error("Requires --confirm-private-rehearsal --backup-directory <verified local backup directory>. Never accepts a database URL.");
     process.exitCode = 1;
   } else {
-    try { await rehearse(process.argv[index + 1]); }
+    const bundleIndex = process.argv.indexOf("--upgrade-bundle");
+    try {
+      assert(bundleIndex < 0 || process.argv[bundleIndex + 1], "Missing local upgrade bundle path");
+      await rehearse(process.argv[index + 1], bundleIndex < 0 ? undefined : process.argv[bundleIndex + 1]);
+    }
     catch (error) { console.error(error.message); process.exitCode = 1; }
   }
 }

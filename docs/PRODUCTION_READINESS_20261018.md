@@ -7,7 +7,9 @@ and memory/capacity checks as non-blocking follow-ups, while requiring dependenc
 findings fixed before public release. These checks are deferred, not passed.
 Web dependency remediation `947db8a` now passes the local zero-finding web audit,
 106 web tests, clean install/type-check/production build and secret scan. Hosted
-release verification and the guarded production upgrade remain outstanding;
+CI and both Vercel branch deployments have now passed for `01bdd3b`; the patched
+private fallback and guarded upgrade rehearsals also passed. The live production
+upgrade and production-configured domain deployment remain outstanding;
 production has not yet been migrated or promoted. See
 `PRODUCTION_CUTOVER_20261019.md` for the current owner decisions and sequence.
 

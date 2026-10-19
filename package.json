@@ -48,7 +48,7 @@
     "audit:web": "node scripts/audit-web-dependencies.mjs",
     "test:audit": "node --test scripts/tests/audit-dependencies.test.mjs scripts/tests/audit-web-dependencies.test.mjs",
     "test:operations": "node --test scripts/tests/operations-check.test.mjs",
-    "test:rehearsal": "node --test scripts/tests/production-rehearsal.test.mjs scripts/tests/managed-auth-rehearsal.test.mjs scripts/tests/private-operations.test.mjs scripts/tests/rehearsal-revisions.test.mjs",
+    "test:rehearsal": "node --test scripts/tests/production-rehearsal.test.mjs scripts/tests/managed-auth-rehearsal.test.mjs scripts/tests/private-operations.test.mjs scripts/tests/rehearsal-revisions.test.mjs scripts/tests/production-upgrade.test.mjs",
     "dev:admin": "npm --workspace @algo-attendance/admin run dev",
     "dev:mobile": "npm --workspace @algo-attendance/mobile run start",
     "build:mobile:configure": "npm --prefix apps/mobile run build:configure",

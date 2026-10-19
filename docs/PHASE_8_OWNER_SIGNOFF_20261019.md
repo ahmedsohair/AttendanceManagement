@@ -18,7 +18,10 @@ requiring dependency findings fixed before public release. No security exception
 was accepted; this supersedes the earlier absence of a device/capacity decision.
 The authorized web fixes are now in `947db8a` with zero reported web production
 vulnerabilities and passing local clean-install/build/type-check, 106 web tests
-and a secret scan. Hosted verification and the guarded cutover remain pending.
+and a secret scan. Hosted CI and both Vercel branch deployments subsequently
+passed for `01bdd3b`, as did the patched private fallback and guarded-upgrade
+rehearsals. The live production cutover and production configuration/smoke checks
+remain pending; successful previews are not production-domain promotion.
 
 This is the remaining operator checklist, not a new hardening phase or production
 promotion authorization. The owner configured an external scheduler and reported
