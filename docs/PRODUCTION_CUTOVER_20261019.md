@@ -72,7 +72,8 @@ records were printed for these read-only checks. No cookies or tokens were
 copied between origins.
 
 Invigilator/attendance write workflows and real delivery/webhook acceptance
-remain pending. After the owner signed into
+were initially pending; the later controlled smoke results below supersede
+that checkpoint within their stated scope. After the owner signed into
 cron-job.org, read-only dashboard inspection found only the existing staging
 job, with recent successful scheduled runs. The owner first chose to configure
 production themselves, then explicitly requested that the agent do it.
@@ -96,12 +97,82 @@ The external provider's manual test passed on 19 October at
 `{"status":"checked","accepted":0,"unknown":0,"suppressed":0}`;
 request ID `0feec514-37f5-48c4-b311-106b9e8897b1`. No alert email was sent by this
 test. The saved UI listed next scheduled executions at 20:30 and 20:45 Sydney.
-Two actual scheduled production successes have not yet been observed, and
-production-job failure/recovery inbox delivery is not claimed from a successful
-manual test. The same account's staging notification evidence remains separate.
+Two actual scheduled production successes were subsequently observed:
+
+- Scheduled `2026-10-19T09:30:00Z` (20:30 Sydney), executed 20:30:30,
+  displayed jitter 30.61 s, duration 1.29 s, Successful / HTTP 200.
+- Scheduled `2026-10-19T09:45:00Z` (20:45 Sydney), executed 20:45:19,
+  displayed jitter 19.42 s, duration 2.88 s, Successful / HTTP 200.
+
+The automatic scheduling check is complete. Production-job failure/recovery
+inbox delivery is not claimed from these successful runs. The same account's
+staging notification evidence remains separate.
 Proof: ignored `test-results/production-cutover-20261019/cron-production-test-ok.png`.
 Do not present deployment success as full workflow acceptance or infer that
 staging's scheduler monitors production.
+
+## Controlled production workflow acceptance
+
+The owner explicitly approved a new synthetic exam, the limited invigilator
+`ahmad.sohair+exampulse-smoke@gmail.com`, its access-code email, fake attendance
+and closure with labeled history retained. Existing exams, rosters and staff
+were not edited. No credential was printed or added to Git.
+
+- Test exam: **PRODUCTION SMOKE TEST - 2026-10-19 - NOT A REAL EXAM**,
+  ID `b6e92109-28a5-48fe-9e9f-606e80ba5b79`, date 19 October, start 20:30 Sydney.
+- Created **PRODUCTION SMOKE TEST - Invigilator** through the normal admin UI.
+  The provider accepted its access-code email; the owner confirmed inbox receipt
+  and that its scanner link targets `https://exampulse.xyz/scan`. This is actual
+  inbox confirmation, not a claim that provider webhook tracking was configured.
+- CSV import produced four synthetic allocations and two rooms, `SMOKE-A` and
+  `SMOKE-B`. Saved assignments to only the new test account and published through
+  the normal review flow. Scanner login showed only those two test rooms.
+- Manual lookup/mark of synthetic `9991001` in `SMOKE-A` synchronized normally
+  at `2026-10-19T09:39:06.874732Z`. A repeated lookup showed Already marked and
+  no Mark Present action; export confirms only one attendance row for that ID.
+  This checks duplicate UI behavior, not a newly forced network replay drill.
+- Synthetic `9991003` reported Wrong room detected with expected `SMOKE-B`.
+  The explicit Mark present in SMOKE-A action recorded a mismatch at
+  `2026-10-19T09:39:33.542247Z`, retaining its original allocation and adding one
+  `wrong_room_present_override` incident. Neither action used a real student.
+- The public-domain admin report showed two attendance records, one mismatch
+  and one incident. An XLSX export contained Summary, Register, Attendance and
+  Incidents sheets: four distinct allocated IDs, two recorded attendees and two
+  absent students. Expected-room and actual-room counts reconciled separately.
+- The test exam is now **Closed**. A second XLSX export has identical sheet
+  records to the active-exam export; ZIP-level file hashes differ. Independent
+  ExcelJS assertions passed for every count, ID, override and before/after row.
+  Active export SHA-256 `6c9e552012ea5a1a25eb1ba2c839c61996d7f778af5a314f220cfb62dade1fad`;
+  closed export SHA-256 `ebb47efc3a6b12fe3024ded02a734bb5eafac487254d299a0cc32bcd8228723d`.
+- After closure the owner signed in with the test email's code. The agent
+  independently verified **No active rooms assigned**, then signed the account
+  out and verified the empty login form. A stale-client post-closure mutation
+  was not submitted in this live pass; its server rejection has separate private
+  rehearsal evidence. Do not call this a new production 409-response test.
+
+The synthetic exam, account, assignments and audit history are intentionally
+retained, not deleted. No queued test mark remained after synchronization.
+The real exam roster is still an owner preparation task. Freeze unrelated
+deployments, reconcile that import and confirm on-site/paper recovery ownership
+before inviting staff. Physical-device and capacity follow-ups remain explicitly
+owner-deferred, not newly passed by this small desktop smoke test.
+
+Ignored local evidence under `test-results/production-cutover-20261019/`:
+`production-synthetic-exam-closed.png`, `production-synthetic-closed-no-rooms.png`,
+`cron-production-two-scheduled-successes.png`, both synthetic exports and
+`verify-synthetic-exports.cjs`. The verifier passed at `2026-10-19T09:45:27.379Z`.
+
+### Import fixture limitation, not a silent compatibility pass
+
+An initial artifact-tool XLSX fixture failed validation before any exam was
+created. Its XML uses namespace-prefixed elements (`x:workbook` / `x:worksheet`);
+the deployed ExcelJS reader independently failed with an undefined `sheets`
+error, then the existing CSV fallback produced a misleading Row 22 / cell-length
+message. The five-row synthetic fixture was therefore imported as supported
+CSV. No application code or dependencies were changed during this smoke test.
+The app-generated XLSX exports read successfully. This does not certify import
+of every valid namespace-prefixed XLSX; retain reader/error-classification
+compatibility as a follow-up and validate the owner's actual roster format.
 
 ## Live database upgrade committed
 

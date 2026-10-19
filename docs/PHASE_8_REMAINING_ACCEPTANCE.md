@@ -7,8 +7,15 @@ This is the finite outstanding acceptance list, not a new hardening phase.
 `d869264` is live at `exampulse.xyz`. Public-domain admin sign-in/reload,
 read-only dashboard/history/Health checks and the protected operational checker
 passed. Production job `8675994` is now enabled every 15 minutes, with an external
-manual 200/checked test and saved failure/recovery notification settings. Actual
-scheduled-run history and controlled write/delivery checks remain separate. See
+manual 200/checked test and saved failure/recovery notification settings. Two
+actual scheduled production checks now passed at 09:30/09:45 UTC. The authorized
+synthetic production workflow also passed limited invigilator access, CSV import,
+staffing/publication, normal and explicit wrong-room attendance, duplicate UI
+protection, reconciled XLSX export and closure/no-active-room access. The test
+email's inbox receipt and public scanner link are owner-confirmed. Its closed
+exam/account/audit history are retained and the test account signed out.
+Webhook tracking, production-job failure/recovery inbox delivery and remaining
+owner recovery/procedure items are not inferred from this smoke test. See
 `PRODUCTION_CUTOVER_20261019.md` for the latest evidence; older
 "production unchanged" and pre-remediation decisions below are historical.
 Physical Android/iPhone acceptance is owner-deferred. Local production environment files must not be used for experiments.

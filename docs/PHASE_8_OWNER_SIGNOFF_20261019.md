@@ -27,9 +27,17 @@ Ready/Current at `exampulse.xyz`; public authorization and authenticated checker
 smoke tests passed. Canonical-domain admin sign-in/reload, read-only history and
 Health also passed. Production cron job `8675994` is enabled every 15 minutes;
 its external manual test returned 200/checked and failure/recovery notifications
-are configured. Automatic production run history, controlled attendance/write
-workflows and actual delivery/webhook checks remain pending, not inferred from
-deployment or a manual scheduler test.
+are configured. Two automatic production runs at 09:30 and 09:45 UTC have now
+returned HTTP 200 (1.29 s and 2.88 s). The authorized synthetic production
+lifecycle also passed: limited test-account login, CSV import/staffing/publish,
+normal mark, duplicate UI protection, explicit wrong-room override, reconciled
+XLSX exports and closure. The owner confirmed its access-code email in their
+inbox with the correct public-domain link. After closure the agent verified no
+active rooms and signed the test account out. Labeled history remains retained.
+See the cutover report for exact evidence and its XLSX-import fixture limitation.
+Provider webhook tracking, production-job failure/recovery inbox delivery,
+physical devices, capacity and the institutional recovery/roster preparation
+items below are not silently certified by these results.
 
 This is the remaining operator checklist, not a new hardening phase or production
 promotion authorization. The owner configured an external scheduler and reported
