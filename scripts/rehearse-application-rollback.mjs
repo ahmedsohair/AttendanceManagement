@@ -6,6 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync, symlinkSync, existsSync, openSy
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runPrivateOperationalDrills } from "./rehearse-private-operations.mjs";
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ExcelJS = createRequire(join(repository, "apps/admin/package.json"))("exceljs");
 const postgresImage = "public.ecr.aws/supabase/postgres@sha256:b15d862126dd2dac02da524696ccfde2dcce2ceaee0a58973b2727befe492706";
@@ -218,8 +219,8 @@ try {
         }
         throw new Error(`${label} server readiness bound exceeded`);
     };
-    const request = async (path, { token = adminToken, body, form, status = 200, cookie } = {}) => {
-        const r = await fetch(base + path, { redirect: "manual", method: body !== undefined || form ? "POST" : "GET", headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(cookie ? { cookie } : {}), ...(body !== undefined ? { "content-type": "application/json" } : {}) }, ...(form ? { body: form } : body !== undefined ? { body: JSON.stringify(body) } : {}) });
+    const request = async (path, { token = adminToken, body, form, status = 200, cookie, method, headers = {} } = {}) => {
+        const r = await fetch(base + path, { redirect: "manual", signal: AbortSignal.timeout(30000), method: method || (body !== undefined || form ? "POST" : "GET"), headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(cookie ? { cookie } : {}), ...(body !== undefined ? { "content-type": "application/json" } : {}), ...headers }, ...(form ? { body: form } : body !== undefined ? { body: JSON.stringify(body) } : {}) });
         if (r.status !== status) {
             writeFileSync(join(output, "last-http-error.json"), JSON.stringify({ path, status: r.status, body: await r.text() }));
             throw new Error(`Local ${path} expected ${status}, received ${r.status}; private diagnostic saved`);
@@ -273,6 +274,9 @@ try {
     summary.evidence = evidence;
     summary.integrityTotal = integrity.total;
     summary.phases.push("Fallback preserved existing cookies and committed attendance; identical replay, duplicate, changed-request conflict, lookup, new mark, wrong-room validation/override, export, closure and audited draft deletion passed");
+    if (process.argv.includes("--include-operations-drills")) {
+        summary.operationalDrills = await runPrivateOperationalDrills({ base, backend, admin, inv, invPassword, invToken, serviceKey, anonKey, psql, query, request, output, saveProgress: phase => { summary.phases.push(phase); save(); } });
+    }
     summary.completed = true;
     save();
 }
