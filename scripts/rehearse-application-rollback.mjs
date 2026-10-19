@@ -7,14 +7,14 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runPrivateOperationalDrills } from "./rehearse-private-operations.mjs";
+import { rehearsalRevisions, assertInstalledRehearsalLock } from "./lib/rehearsal-revisions.mjs";
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ExcelJS = createRequire(join(repository, "apps/admin/package.json"))("exceljs");
 const postgresImage = "public.ecr.aws/supabase/postgres@sha256:b15d862126dd2dac02da524696ccfde2dcce2ceaee0a58973b2727befe492706";
 const authImage = "supabase/gotrue@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b";
 const restImage = "postgrest/postgrest@sha256:c7cd7e265a85b05248abf53f4473fcec7e327c282d0bd0cf60f1551996d09fcf";
 const nodeImage = "node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392";
-const fallback = "04da701";
-const candidate = "72d8b4e";
+const { candidate, fallback } = rehearsalRevisions(process.argv.slice(2));
 const run = randomUUID();
 const output = join(repository, "test-results", `rollback-rehearsal-${run}`);
 const prefix = `exampulse-private-rollback-${run}`;
@@ -56,6 +56,13 @@ try {
     summary.fallback = git("rev-parse", `${fallback}^{commit}`).trim();
     summary.applicationSourceIdentical = !git("diff", "--name-only", fallback, candidate, "--", "apps/admin", "packages/shared", "package-lock.json").trim();
     assert(summary.applicationSourceIdentical, "Review changed application source before reusing this bounded fallback scenario");
+    assertInstalledRehearsalLock(readFileSync(join(repository, "package-lock.json"), "utf8"), git("show", `${summary.candidate}:package-lock.json`));
+    for (const file of ["package.json", "apps/admin/package.json"]) {
+        const working = JSON.parse(readFileSync(join(repository, file), "utf8"));
+        const selected = JSON.parse(git("show", `${summary.candidate}:${file}`));
+        for (const key of ["dependencies", "overrides", "packageManager", "engines"])
+            assert.deepEqual(working[key], selected[key], "Installed dependency declaration differs from the candidate");
+    }
     save();
     for (const image of [postgresImage, authImage, restImage, nodeImage])
         docker("image verification", ["image", "inspect", image, "--format", "{{.Id}}"]);

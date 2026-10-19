@@ -32,9 +32,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 22.22.2
           cache: npm
-      - run: npm ci --no-audit --no-fund
+      - run: npx --yes npm@12.2.1 ci --workspace @algo-attendance/admin --include-workspace-root --no-audit --no-fund
       - run: npm run typecheck:web
       - run: npm run test:web
       - run: npm run test:operations
@@ -49,10 +49,12 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 22.22.2
           cache: npm
-      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx --yes npm@12.2.1 ci --workspace @algo-attendance/admin --include-workspace-root --ignore-scripts --no-audit --no-fund
       - run: npm run test:audit
+      - name: Require zero reported web production vulnerabilities
+        run: npm run audit:web
       - name: Audit dependencies (npm with fail-closed OSV fallback)
         timeout-minutes: 6
         run: npm run audit:dependencies

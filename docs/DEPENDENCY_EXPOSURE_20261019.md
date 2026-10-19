@@ -2,6 +2,12 @@
 
 Scope: non-critical advisory triage for the WEB release versus deferred native release. This is a lockfile/source-path review, not a dependency update, exploit test, deployment-artifact inspection, or risk acceptance. No application or database service, environment file, browser state, backup, or secret was accessed.
 
+Subsequent authorized web remediation is tracked in
+[WEB_DEPENDENCY_REMEDIATION_20261019.md](WEB_DEPENDENCY_REMEDIATION_20261019.md).
+Its updated web production tree reports zero vulnerabilities and has passed local
+clean-install/build and regression verification. The inventory below remains the
+pre-remediation baseline; native findings are not declared fixed by that web check.
+
 ## Fresh audit
 
 - Branch: `readiness/production-20261018`. The production-workspace audit used `npm audit --json --omit=dev --fetch-timeout=15000 --fetch-retries=0` with a 45-second child-process bound. The first `npm.cmd` shell-shim attempt timed out. The existing `npm run audit:dependencies` runner then passed its critical-only threshold. A subsequent raw audit invoked through the same npm CLI form used by `scripts/audit-dependencies.mjs` completed with valid JSON (exit 1 for non-critical findings); no OSV fallback was needed.

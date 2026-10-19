@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npx --yes npm@12.2.1 ci --prefix ../.. --workspace @algo-attendance/admin --include-workspace-root --no-audit --no-fund",
   "regions": ["sin1"]
 }
