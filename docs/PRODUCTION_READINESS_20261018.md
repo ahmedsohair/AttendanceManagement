@@ -8,9 +8,10 @@ findings fixed before public release. These checks are deferred, not passed.
 Web dependency remediation `947db8a` now passes the local zero-finding web audit,
 106 web tests, clean install/type-check/production build and secret scan. Hosted
 CI and both Vercel branch deployments have now passed for `01bdd3b`; the patched
-private fallback and guarded upgrade rehearsals also passed. The live production
-upgrade and production-configured domain deployment remain outstanding;
-production has not yet been migrated or promoted. See
+private fallback and guarded upgrade rehearsals also passed. The owner has now
+reported a successful live production upgrade: 20 migrations committed, original
+rows preserved and integrity/catalog/audit checks passed. The production-configured
+domain deployment, smoke checks and production monitoring remain outstanding. See
 `PRODUCTION_CUTOVER_20261019.md` for the current owner decisions and sequence.
 
 The initial 18 October decision was not to promote while the reported iPhone

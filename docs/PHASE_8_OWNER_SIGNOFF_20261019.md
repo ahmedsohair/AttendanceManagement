@@ -9,8 +9,8 @@ yet in production. Controlled release preparation is recorded in
 does not waive the remaining gates or authorize a particular production mutation.
 The fresh cutover backup `production-20261019-150032` is now independently
 checksummed and matches all 38 dumped tables' columns/row multisets from the
-rehearsed backup. See the cutover report for the comparison scope; no production
-migration or deployment has occurred.
+rehearsed backup. See the cutover report for the comparison scope and the later
+successful production migration; application deployment remains separate.
 The owner subsequently supplied a live production relational-integrity result
 with total and all ten categories zero. They explicitly instructed rollout with
 iPhone and memory/capacity checks as non-blocking, unverified follow-ups, while
@@ -20,8 +20,10 @@ The authorized web fixes are now in `947db8a` with zero reported web production
 vulnerabilities and passing local clean-install/build/type-check, 106 web tests
 and a secret scan. Hosted CI and both Vercel branch deployments subsequently
 passed for `01bdd3b`, as did the patched private fallback and guarded-upgrade
-rehearsals. The live production cutover and production configuration/smoke checks
-remain pending; successful previews are not production-domain promotion.
+rehearsals. The owner subsequently reported the successful guarded production
+database commit (20 migrations, original records preserved, precommit and audit
+checks passed). The production-configured app deployment, smoke checks and
+production monitoring remain pending; successful previews are not domain promotion.
 
 This is the remaining operator checklist, not a new hardening phase or production
 promotion authorization. The owner configured an external scheduler and reported

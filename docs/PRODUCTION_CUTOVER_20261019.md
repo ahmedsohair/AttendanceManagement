@@ -9,8 +9,39 @@ to verify it before travel, not an exam-eve emergency deployment.
 
 Those initial statements alone did not prove there had been no production writes
 since the backup, confirm that no browser had unresolved queued marks, or waive
-remaining risks. The subsequent owner decisions below are explicit. No production
-migration, deployment or secret change has occurred during this preparation.
+remaining risks. The subsequent owner decisions below are explicit. Production
+database migration has now committed as reported below; application deployment
+and production monitoring acceptance remain separate.
+
+## Live database upgrade committed
+
+On 19 October 2026 (Australia/Sydney), the owner supplied the guarded executor's
+successful production result for project `mtoyhpyxqhfwhcrysqon`:
+
+```json
+{"deleteDefinitionMd5":"be3e0a522dde77ce55780f92fdb48101","auditRegressionPassed":true,"legacyCoreBypassBlocked":true}
+{"migrationCount":20,"originalRowsPreserved":true,"precommitChecksPassed":true}
+```
+
+The executor completed with `Production upgrade committed`, confirming its psql
+process returned success after the single-transaction commit. This is
+operator-reported live evidence, not an independent agent database connection.
+The `ROLLBACK` printed between regression output and final checks is the intended
+rollback to the regression savepoint, not rollback of the migration transaction.
+Original records, relational integrity, required RLS/catalog and monitoring
+privileges, and rollback-only audit acceptance checks passed.
+
+The first attempt failed during TLS certificate verification, before opening a
+database session or executing migrations. The subsequent successful attempt
+followed instructions to supply the official project CA via `-RootCertPath`,
+without disabling TLS verification. The certificate's local path was not
+reported and is not assumed.
+
+Do not rerun the migration or restore the pre-upgrade backup as an application
+rollback. Keep staff out until the matching production-configured application
+is deployed and verified. The live domain has not been promoted by the agent at
+this checkpoint. Production Vercel settings require account sign-in; a dedicated
+browser tab was opened for the owner, without requesting credentials in chat.
 
 ### Subsequent explicit owner decisions
 
@@ -89,8 +120,9 @@ Do not run another backup merely to execute this command. On success, report the
 final committed message before proceeding with the production-configured app
 deployment. On failure, stop and inspect the error; do not skip a guard. A
 connection lost while COMMIT is acknowledged can leave an unknown outcome, so
-do not blindly rerun or restore a backup. No production mutation has occurred
-as of this recorded preparation.
+do not blindly rerun or restore a backup. This step is now completed as recorded
+in the live upgrade section above; the command is retained for traceability,
+not as an instruction to run it again.
 
 ## Preparation baseline and security follow-up
 
