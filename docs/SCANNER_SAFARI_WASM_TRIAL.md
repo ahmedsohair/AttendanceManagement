@@ -139,3 +139,38 @@ room and reloading the failing runtime.
 
 Remove the exact client alias in `apps/admin/next.config.ts`, rebuild and deploy
 to staging. No database or business-data rollback is required.
+
+## OCR timeout follow-up - 19 October 2026
+
+The owner again reports a slow OCR load, timeout, then near-instant success on
+Retry. Source inspection of production release `d869264` finds a 45,000 ms
+deadline in `web-scanner-app.tsx`. `withTimeout` uses `Promise.race`; it does not
+abort the original `PaddleOCR.create` operation. `loadOcrWorker` retains the same
+in-flight promise, and Retry awaits that promise rather than necessarily starting
+a new download. This explains how quick retry completion is possible. The exact
+slow stage on the owner's phone has not been measured.
+
+There is also a late-completion lifecycle gap: the success callback stores the
+worker but does not start the scan loop or clear the earlier timeout message.
+If that happens before Retry, `retryOcrLoad` returns immediately because the
+worker exists. The Retry control can also disappear on a subsequent render.
+Camera resume/reentry has separate loop-start paths; do not describe this as
+proof of a permanent failure or as the cause of the iPhone process-reset report.
+
+A local controlled reproduction extracted the actual timeout, loader and Retry
+functions from source, stripped TypeScript annotations with Node's built-in
+utility, and substituted only dependencies plus a 5 ms test deadline. Both
+timing paths reproduced: Retry while pending reuses one initializer and starts
+the loop; completion before Retry stores the worker but leaves the loop stopped,
+and Retry returns without starting it. Ignored fixture:
+`test-results/ocr-startup-20261019/reproduce-timeout.mjs`.
+This is a lifecycle reproduction, not mobile performance/network/inference data.
+
+Track the scoped fix and representative cold/warm timing checks in
+[FUTURE_TODOS.md](FUTURE_TODOS.md). Manual access-code recovery remains explicitly
+deferred until after the exam; scanner startup is a separate near-term issue.
+No runtime source, dependencies, timeout value, hosted configuration or production
+business data changed during this investigation. Earlier physical-device release
+gates in this historical trial are superseded by the owner's explicit rollout
+deferrals in [PRODUCTION_CUTOVER_20261019.md](PRODUCTION_CUTOVER_20261019.md), not
+by a newly successful iPhone test.

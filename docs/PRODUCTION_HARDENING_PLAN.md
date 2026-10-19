@@ -2,6 +2,10 @@
 
 ## Purpose
 
+Current post-rollout follow-ups, including owner-deferred invigilator access
+recovery and OCR startup/late-readiness investigation, are tracked separately in
+[FUTURE_TODOS.md](FUTURE_TODOS.md). Their status does not imply a new deployment.
+
 This document tracks the work required to make the ExamPulse admin web app and cross-platform web scanner robust, secure, responsive, and operationally safe for real examinations. The plan is based on the production audit completed on 27 August 2026.
 
 The work is divided into phases so that high-risk changes are isolated, tested, deployed, and observed before the next phase begins. Every implementation item should normally be delivered as its own commit unless two changes are inseparable.
