@@ -28,13 +28,20 @@ by this backlog entry.
 ## OCR startup timeout and late readiness
 
 Follow-up: download-on-/scan-open release `738d522` was rolled back to `5e2c182`
-after an actual SDK configuration error. The correction is local only; see
+after an actual SDK configuration error. The correction and subsequent release
+are documented in
 [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md).
-Full real-browser model initialization must pass before another deployment.
-Persistent caching and phone speed/memory acceptance remain open.
+Real desktop-browser initialization, recognition and failure/retry passed on
+20 October using synthetic auth/data/camera and the real OCR runtime/models.
+The owner reported the `51bb652` staging test working, then explicitly approved
+production rollout on 20 October. It is now current on exampulse.xyz after both
+hosted release gates and public scanner-route/bundle/auth-guard checks passed.
+Prior `5e2c182` is retained for rollback. Measured physical-phone startup/peak
+memory, renewed production camera/OCR acceptance and persistent-caching work
+remain open; no measured speed improvement or iPhone crash resolution is claimed.
 
-Current status: the scoped recovery fix and in-place preparation panel are
-deployed as production release `5e2c182`, after owner-approved direct rollout,
+Earlier recovery/UI baseline: the scoped recovery fix and preparation panel were
+deployed as release `5e2c182`, after owner-approved direct rollout,
 140 passing web tests/build and both hosted branch release gates. Public route
 and scanner-bundle checks passed; physical-phone camera/OCR acceptance and actual
 model-speed optimization remain open. See

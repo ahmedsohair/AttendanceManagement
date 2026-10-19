@@ -16,7 +16,45 @@ remain separate from deployment success.
 
 ## Production application is deployed
 
-### Current: prefetch release rolled back to 5e2c182
+### Current: corrected prefetch release 51bb652 - 20 October
+
+After real desktop-browser model initialization/recognition/retry/lifecycle
+checks and 159 passing local tests, the corrected candidate passed hosted gate
+`39335059581` and was deployed to staging. The owner reported that staging worked
+and explicitly requested "ok send to production".
+
+Main was fast-forwarded without force from `738d522` to exact tested
+`51bb6528438699bd2634ab477835d9f0c35e2948`. Repeat main gate `39338321599` passed
+all jobs. Production project attendance-management-admin built deployment
+`83vuD9cUDpjqrXX8RB7h4W2eSgk7` in 47 seconds using production settings, initially
+Staged under rollback protection. After the gate passed, that exact production
+build was manually promoted; Vercel confirmed Ready / Production / Current and
+exampulse.xyz assigned. This was not a cross-project staging promotion.
+
+Immutable URL: https://attendance-management-admin-chhptd9f3.vercel.app.
+Current public scanner: https://exampulse.xyz/scan. Its bundle
+`/_next/static/chunks/app/scan/page-651ddcf4c05df443.js` contains both prefetched
+mobile-model URLs and Retry OCR, omits the rejected explicit model-asset options,
+and points to production Supabase, not staging. Public scanner/login render and
+HTTP checks passed: /scan and /login 200, /api/auth/me 401, /health 307 to login,
+unauthenticated POST /api/operations/check 401 with no-store.
+
+No migration, environment/credential/account/attendance change, real email,
+scheduler edit or queue clearing occurred. Prior working `5e2c182`, deployment
+`6W36WRbULxgjx8GysDnHrstpZz4j`, remains available for application rollback. Its
+dipvm4pm2 immutable URL will continue serving old code, so current release tests
+must use the public canonical scanner link above. Phone timing/memory and the
+separate iPhone blank-page report are not newly resolved by these release checks.
+
+Ignored evidence: `test-results/ocr-preparation-20261019/` contains
+`corrected-prefetch-production-ready.jpg` and
+`corrected-prefetch-production-login.jpg`. Full local/staging/release evidence
+is in [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md).
+
+### Historical: prefetch release rolled back to 5e2c182
+
+The following records the 19 October rollback checkpoint, superseded by the
+corrected owner-approved release above.
 
 After the owner reported immediate OCR failure and unusable Retry in `738d522`,
 Vercel Instant Rollback restored deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, release
@@ -24,7 +62,7 @@ Vercel Instant Rollback restored deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, rele
 helper. No database/data/credential change occurred. GitHub main still points to
 `738d522`; Vercel automatic promotion is stopped by rollback mode. Keep it stopped.
 The faulty asset-override configuration was reproduced against the real SDK;
-a correction and stronger real-SDK tests are local only, not re-promoted.
+a correction and stronger real-SDK tests were initially local, not re-promoted.
 Read [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md)
 before any subsequent deployment. Release entries below are historical.
 

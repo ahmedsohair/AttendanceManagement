@@ -1,9 +1,22 @@
 # Early scanner model downloads - 19 October 2026
 
-**Rolled back:** the owner reported immediate OCR failure after `738d522`.
-Production is restored to `5e2c182`; the integration correction is local only.
+**Current production:** corrected `51bb652`, deployment
+`83vuD9cUDpjqrXX8RB7h4W2eSgk7`, on https://exampulse.xyz/scan after the owner's
+working staging test and explicit production approval on 20 October. Both
+candidate gate `39335059581` and main gate `39338321599` passed. Public
+scanner-bundle/login/auth-guard checks passed. Previous `5e2c182` is retained
+for rollback; failed `738d522` must not be re-promoted.
 Read [SCANNER_PREFETCH_INCIDENT_20261019.md](SCANNER_PREFETCH_INCIDENT_20261019.md)
-before any release. Hosted success below is historical, not current acceptance.
+for the incident, correction and current production evidence. Earlier release
+success below is historical, not acceptance of the failed configuration.
+The corrected local candidate passed real desktop-browser initialization,
+recognition, failure/retry and lifecycle checks on 20 October; see the incident
+follow-up for isolation details and remaining phone/hosted acceptance.
+Staging test link: https://exampulse-stagings.vercel.app/scan. Hosted gate
+`39335059581` passed; staging deployment `FYDdi12ZS7Awx6xAPkCpvNDxnpEL` is Ready.
+The subsequent production promotion used a separate production-project build,
+not this staging artifact. No database/configuration/business-data changes were
+made. Physical-phone startup timing/memory measurements remain open.
 
 ## Status and owner intent
 
