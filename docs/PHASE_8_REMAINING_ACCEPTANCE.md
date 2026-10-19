@@ -4,6 +4,17 @@
 
 This is the finite outstanding acceptance list, not a new hardening phase. Production remains unchanged. Physical Android/iPhone acceptance is owner-deferred. Local production environment files must not be used for experiments.
 
+19 October update: seven private technical drills now passed; exact results and
+scope are in [OPERATIONAL_DRILLS_20261019.md](OPERATIONAL_DRILLS_20261019.md).
+The owner confirmed the external scheduler is **still pending**. Remaining
+dashboard/account/procedure actions are consolidated in
+[PHASE_8_OWNER_SIGNOFF_20261019.md](PHASE_8_OWNER_SIGNOFF_20261019.md).
+Dependency exposure triage is now complete in
+[DEPENDENCY_EXPOSURE_20261019.md](DEPENDENCY_EXPOSURE_20261019.md), but fixes and
+any release-risk acceptance remain open. The fresh critical gate passes while
+33 high, 12 moderate and one low vulnerable package groups remain across all
+workspaces; some have web-runtime paths and are not dismissed as native-only.
+
 ## Scheduled checks and independent notifications
 
 Read-only GitHub inspection on 4 September 2026 confirmed: default branch `main`; no Actions secrets; no `STAGING_OPS_CHECK_ENABLED` variable; monitoring workflow absent from `main`. Consequently there is no verified active GitHub scheduler. Do not merge the application into production just to enable scheduling.
@@ -25,14 +36,14 @@ Acceptance: observe two actual scheduled successful runs, not only manual tests.
 
 The existing 70-test web suite passed on 4 September; three new real-source persistence tests and three scheduler-process tests also passed. Type-check passed. Tests use isolated dependencies/fake IndexedDB, not production services.
 
-- OCR: initialization error classification, prediction recovery and 200-frame reuse passed. Browser model-download blocking/manual fallback and physical crash recovery are not established by these tests.
-- Database/network: offline queue persistence/reconnect, request timeout/cancellation and terminal closed-exam conflict tests passed. A full browser committed-but-response-lost rehearsal remains unverified.
+- OCR: initialization error classification, prediction recovery and 200-frame reuse passed. The subsequent October staging browser suite verified model-load blocking/timeout and manual entry; physical crash recovery remains deferred, not established by those browser/unit tests.
+- Database/network: offline queue persistence/reconnect, request timeout/cancellation and terminal closed-exam conflict tests passed. The 19 October private real-Chromium drill also passed committed response loss, reload, same-request replay and closed conflict/Retry/Acknowledge without duplicate or forced attendance.
 - Monitoring: actual persistence function defers database access until the after-response callback; scheduler/database failures do not escape; storage identifiers are HMAC digests. Protected endpoint tests cover provider failure and unavailable metrics. These are controlled dependency tests, not a live database outage.
-- Email: real alert inbox and immediate repeat suppression passed. Scheduler CLI exits nonzero for unavailable/unauthorized/ambiguous delivery, malformed results and network failure, and refuses production URLs. Provider/invigilator-email fallback and scheduler notification acceptance are separate.
-- Roster: malformed workbook, duplicate student rows and canonicalization tests passed. An operator correction/reconciliation exercise remains pending.
+- Email: real alert inbox and immediate repeat suppression passed. Scheduler CLI exits nonzero for unavailable/unauthorized/ambiguous delivery, malformed results and network failure, and refuses production URLs. The private missing-credentials drill recorded failed delivery, no false emailed timestamp and continued code resolution. Actual provider outage/retry/recipient fallback and scheduler notification remain separate.
+- Roster: malformed workbook, duplicate student rows and canonicalization tests passed. The private 19 October drill also rejected a duplicate import atomically and corrected an unmarked draft through typed audited deletion/reimport, verifying exact IDs. Institutional reconciliation approval remains pending.
 - Deployment: local application replacement/fallback compatibility passed on 19 October with real synthetic Auth/REST and preserved committed attendance. Hosted rollback activation, target deployment/environment selection and alternate-origin behavior were not exercised; see the October report.
-- Compromised code: existing-session containment remains a real gap. Do not claim password/code rotation revokes already-issued sessions. A disposable staging account and authorized operator access are needed to test the supported containment procedure without disrupting test users.
-- Manual fallback: institutional owner approval and mixed paper/queued/committed reconciliation tabletop remain pending; they cannot be certified by an agent-only unit test.
+- Compromised code: private Auth v2.197.0/application drills verified old-code rejection, ban rejection of an issued token, global sign-out/refresh rejection and new-code recovery. Hosted Auth behavior/direct Data API JWT revocation and operator procedure are not certified. Rotation alone is not containment; no live account was changed.
+- Manual fallback: the private browser/API/export scenario reconciled mixed synthetic paper/queued/committed records by IDs/totals without timestamp changes. Institutional owner approval and actual operational sign-off remain pending; an agent cannot approve those procedures.
 
 ## Performance acceptance
 

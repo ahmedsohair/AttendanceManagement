@@ -697,6 +697,17 @@ configuration recovery, target fallback deployment/environment selection,
 physical-device acceptance and the remaining operator drills are not certified
 by these local checks. Production remains unchanged; Phase 8 is still open.
 
+Operational drill follow-up (19 October): seven private technical scenarios now
+passed, including real Chromium uncertain-commit/reload/replay, origin isolation,
+closed queue Retry/Acknowledge, synthetic reconciliation, failed-email state,
+audited draft-roster correction and local Auth ban/global sign-out/recovery.
+See `docs/OPERATIONAL_DRILLS_20261019.md` for exact scope. Exposure triage is also
+complete in `docs/DEPENDENCY_EXPOSURE_20261019.md`; non-critical vulnerabilities
+are not remediated or accepted by that report. The owner confirmed scheduling is
+still pending. Remaining dashboard/configuration/institutional acceptance is
+consolidated in `docs/PHASE_8_OWNER_SIGNOFF_20261019.md`; no extra migration is
+needed to set up the scheduler and no production promotion is implied.
+
 - [ ] Scanner unavailable or model CDN unavailable.
 - [ ] Supabase paused, degraded, or unreachable.
 - [ ] Vercel deployment/domain failure.

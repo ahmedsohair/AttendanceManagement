@@ -35,7 +35,7 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 
 **Recovery check:** page stays open, manual lookup works, and OCR initializes on representative affected devices. Confirm uncertain attendance against admin records before repeating a mark. Resume OCR without delaying the manual queue.
 
-**Rehearsal pending:** block model downloads in isolated browser testing; verify manual access and retry. Physical iPhone crash/recovery testing remains required. JavaScript error reporting cannot guarantee capture of a killed browser process.
+**Rehearsal:** October staging Chromium testing passed model blocking/timeout with manual controls available. The private 19 October browser drill also used manual scanning while model hosts were blocked. Physical iPhone crash/recovery testing remains required. JavaScript error reporting cannot guarantee capture of a killed browser process.
 
 ## 2. Database Paused, Degraded, or Unreachable
 
@@ -49,7 +49,7 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 
 **Recovery check:** login/room access and read-only lookup work; authorized workflow verification succeeds; queue counts drain or every remaining item has an owner and reconciliation decision. Check exam-specific attendance, not only aggregate totals.
 
-**Rehearsal pending:** controlled network timeout/reconnect with synthetic marks, including a committed response lost in transit. Do not deliberately pause production.
+**19 October private rehearsal:** a real endpoint committed a mark before its response was discarded; IndexedDB survived reload and the original request replay left exactly one event. An offline mark stayed queued without a server write. This was controlled Chromium/network interception, not a hosted database outage or physical crash. Do not deliberately pause production. See `OPERATIONAL_DRILLS_20261019.md`.
 
 ## 3. Deployment or Domain Failure
 
@@ -66,6 +66,11 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 **19 October local rehearsal:** candidate `72d8b4e` was replaced by independently built fallback `04da701a5caecc90c84b74ce29d5ee5beda9dca0` against the fully upgraded synthetic database. Real Auth sessions, committed attendance, replay/conflict controls, new marks, export and closure passed. See `PRODUCTION_UPGRADE_REHEARSAL_20261018.md` for scope and reproduction. The two revisions have identical application/shared source and lockfile; this does not approve arbitrary older builds. The old production `main` is not a post-upgrade fallback. Before an authorized hosted rollback, identify/retain a target deployment built from the tested revision with the correct production environment. Do not reverse migrations, drop audit tables, change origin or discard queues as part of application rollback.
 
 **Still pending:** hosted deployment/environment selection, domain/TLS and alternate-origin behavior. No live failover was performed by the local rehearsal.
+
+The 19 October private Chromium drill additionally verified a different loopback
+hostname had neither the original login nor its IndexedDB queue; original-origin
+pending evidence remained intact. This proves the browser-origin boundary, not
+real DNS/TLS or hosted domain failover.
 
 ## 4. Email Delivery Failure
 
@@ -106,7 +111,7 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 
 **Recovery check:** new-sign-in credential exposure contained, existing sessions explicitly assessed/contained, legitimate staff access restored, and suspicious records reviewed. Do not close the incident merely because a new code was emailed.
 
-**Rehearsal pending:** disposable-account rotation and session behavior. Full session containment remains an explicit operational gap requiring a verified procedure before this runbook can be accepted.
+**19 October private rehearsal:** code rotation rejected old sign-ins; on pinned Auth v2.197.0 a ban rejected an issued token at an app endpoint, global sign-out invalidated two sessions/refresh, and new-code reauthentication recovered access. No real account was changed. This does not certify the hosted Auth version or immediate direct Data API/RLS token revocation. The synthetic test temporarily unbanned its account to exercise separate controls; do not copy that window into a real incident without safe access/assignment restrictions and an authorized procedure. See `OPERATIONAL_DRILLS_20261019.md` and Supabase's session/JWT limits. Full hosted containment remains an operator acceptance item, not a tested one-click action.
 
 ## 7. Pending Marks After Exam Closure
 
@@ -121,7 +126,7 @@ Staging is NOT a substitute production attendance system. Do not enter real exam
 
 **Recovery check:** every queue item matched to an existing record or documented owner-approved reconciliation outcome; no unresolved evidence discarded. Owner signs off before devices are cleared.
 
-**Rehearsal pending:** closed-exam conflict, committed-but-response-lost case, Retry, and Acknowledge using disposable fixtures.
+**19 October private rehearsal:** closed-exam replay remained a conflict without marking; Retry kept that conflict; cancelling Acknowledge preserved the item and accepting removed only the local item. The committed-response-lost case separately replayed the original request without duplicating attendance. This does not authorize acknowledging unresolved real records.
 
 ## 8. Manual Fallback and Reconciliation
 
@@ -136,7 +141,7 @@ Use an institution-approved paper sheet or secure institutional document, not pu
 
 **Recovery check:** no unexplained missing or duplicate attendance, exceptions retained, pending queues resolved, and owner sign-off recorded.
 
-**Rehearsal pending:** mixed paper/queued/committed records and closed-exam reconciliation tabletop. Use synthetic data only.
+**19 October private technical scenario:** mixed synthetic committed/queued/paper records reconciled to exact student-ID sets and two marks/two absences without backdating or forced post-closure writes. Institutional procedure approval, retention and operational tabletop sign-off remain pending; the agent cannot approve those on the institution's behalf.
 
 ## Backups and Escalation
 
@@ -150,13 +155,13 @@ For each incident record: owner; environment/deployment; start/end time with tim
 
 | Runbook | Source reviewed | Controlled rehearsal | Remaining acceptance |
 | --- | --- | --- | --- |
-| Scanner/OCR | Yes | Not run here | Model outage and physical crash/recovery |
-| Database | Yes, queue boundaries | Not run here | Reconnect and uncertain commit |
+| Scanner/OCR | Yes | October Chromium model blocking/manual controls | Physical crash/recovery |
+| Database | Yes, queue boundaries | Private Chromium uncertain commit/reload/replay passed 19 October | Real provider outage/operator response |
 | Deployment/domain | Environment boundaries documented | Local synthetic application fallback passed 19 October | Hosted deployment/environment selection and origin isolation |
-| Email | Yes, job status/retry UI | Not run here | Failure handling and recipient fallback |
-| Roster | Import/operational boundaries documented | Not run here | Synthetic correction/reconciliation |
-| Code compromise | Yes, activation warning | Not run here | Verified existing-session containment |
-| Post-closure queue | Yes, Retry/Acknowledge controls | Not run here | Closed conflict and evidence preservation |
-| Manual fallback | Procedure drafted | Not run here | Tabletop and institutional approval |
+| Email | Yes, job status/retry UI | Private missing-credentials failure, no false accepted/emailed state | Actual provider outage/retry/recipient fallback |
+| Roster | Import/operational boundaries documented | Private duplicate rejection and audited draft correction/reimport | Institutional reconciliation approval |
+| Code compromise | Yes, activation warning | Private ban/global sign-out/new-code recovery passed | Hosted version, direct Data API/JWT limits and operator procedure |
+| Post-closure queue | Yes, Retry/Acknowledge controls | Private conflict/Retry/cancelled and accepted Acknowledge passed | Real record reconciliation sign-off |
+| Manual fallback | Procedure drafted | Private mixed synthetic ID-set/total reconciliation passed | Institutional tabletop/retention approval |
 
 No production infrastructure or business data was modified while preparing these runbooks. The dashboard, alert-check pipeline and client telemetry are now implemented locally; activation and controlled alert-firing instructions are in `PHASE_8_ACTIVATION.md`. Local automated tests do not replace the controlled rehearsals listed above. Existing-session containment and operator/institutional sign-off remain outstanding.

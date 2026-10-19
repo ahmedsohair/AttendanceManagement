@@ -32,6 +32,8 @@ production credentials were loaded for these checks.
 | Private application-database restore/upgrade rehearsal | Passed: seven table counts, all 20 migrations twice, exact original-column fingerprints, rollback-only audit/conflict and operations tests, zero integrity violations, and container removal. Managed Auth/Storage recovery and application rollback are not certified. See the dedicated rehearsal report. |
 | Separate managed Auth data recovery | Passed on 19 October: official pinned Auth schema, all 26 backup tables and original columns restored, exact COPY round-trips, 24 foreign keys checked, sequence reconciled and migration replay fingerprints preserved. Both private containers removed. Hosted Auth settings/signing keys are outside this data-only evidence. |
 | Compatible local application fallback | Passed on 19 October: independently production-built `72d8b4e` and `04da701`, real synthetic Auth/REST, preserved admin cookies and committed attendance across replacement, replay/duplicate/conflict/new-mark behavior, export, closure and audited deletion. Zero final integrity violations/emails; owned containers removed. This is not hosted deployment activation or physical-device acceptance. |
+| Additional private operational drills | Seven passed on 19 October: real Chromium uncertain-commit/reload/replay and origin isolation, post-closure Retry/Acknowledge, synthetic paper reconciliation, missing-email-credentials failure, audited roster correction, and Auth ban/global sign-out/new-code recovery. See `OPERATIONAL_DRILLS_20261019.md` for platform/provider/institutional limits. |
+| Current staging Health page | Read-only admin GET returned 200 with metrics and alerts enabled, no heartbeat-configuration warning, query round trip 121 ms at `2026-10-19T02:58:02.370Z`. One observation is not performance overhead or availability acceptance. |
 
 Browser command (independent dependency checkout):
 `npx.cmd --no-install playwright test --config playwright.config.mjs --retries=0`.
@@ -328,3 +330,8 @@ Record a compatible application fallback and operator decision before promotion.
 
 This checklist prepares a production release. It is not production deployment
 authorization and does not claim that incomplete operator checks have passed.
+
+The 19 October technical drill checkpoint is in `OPERATIONAL_DRILLS_20261019.md`.
+The remaining owner actions are now consolidated in
+`PHASE_8_OWNER_SIGNOFF_20261019.md`, including the owner-confirmed pending
+scheduler. No additional migration is needed merely to configure that scheduler.
