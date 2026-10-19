@@ -2,9 +2,10 @@
 
 ## Status and owner intent
 
-Implemented locally after the owner approved downloading model assets as soon
-as /scan opens, while preserving the existing login/room/scanner flow. Production
-remains `5e2c182`; this follow-up has not been pushed or deployed. No migration,
+Implemented after the owner approved downloading model assets as soon as /scan
+opens, while preserving the existing login/room/scanner flow. Subsequently the
+owner explicitly requested a push so they could test it. Production is now
+`738d522`; deployment/public checks passed as recorded below. No migration,
 hosted setting, attendance write, account change or real email is involved.
 
 The owner reported one successful production load of about 30 seconds total,
@@ -49,13 +50,37 @@ Login, room selection, manual entry, loading-panel copy, Retry, camera lifecycle
 attendance confirmation/outbox, model selection, WASM/thread settings and the
 database/API rules are otherwise unchanged. No extra screen or mandatory task.
 
-Before release, compare the same public origin on a representative phone:
+For owner acceptance, compare the same public origin on a representative phone:
 open /scan, enter a code normally, select a room and time the remaining wait.
 Compare immediate room entry against a normal pause for code entry, then a repeat
 visit. Verify slow/offline preload does not block login/manual use, Retry works,
 and page exit/back/re-entry releases old requests. Do not mark real students for
-this check. Retain production `5e2c182` as the application fallback if authorized
-to deploy; a database rollback is not needed for this client-only change.
+this check. The prior production `5e2c182` is retained as the application fallback;
+a database rollback is not needed for this client-only change.
+
+## Hosted release
+
+- Exact SHA `738d522b16168d4744c2ae9b941648d6968f951b` passed branch release
+  gate `39245428897` before main was fast-forwarded from `5e2c182`, without force.
+  Repeat main gate `39245689194` passed. No source changes were made between
+  those gates and deployment.
+- Production Vercel deployment `CDshdyXMEcKY7AuT1sd1Pysud4Z1`, immutable URL
+  `https://attendance-management-admin-e6vbltk4c.vercel.app`, reported Ready,
+  Production, Current, with `https://exampulse.xyz` assigned; build duration 53s.
+- Prior deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, release `5e2c182`, was
+  verified Ready before rollout and is the application rollback target.
+- Post-deploy canonical checks passed: GET /login and /scan 200, unauthenticated
+  GET /health 307 to login, GET /api/auth/me 401, and unauthenticated POST
+  /api/operations/check 401 with no-store. The public scanner login rendered.
+- The deployed bundle `/_next/static/chunks/app/scan/page-1b9186fc1e65eb1c.js`
+  contains early-download code, both unchanged asset URLs, size guards,
+  no-referrer configuration and the existing preparation panel. The removed
+  unmeasured progress-bar label is absent.
+- Evidence: ignored
+  `test-results/production-cutover-20261019/prefetch-production-ready.jpg`.
+  No new authenticated camera/OCR, memory or speed acceptance is claimed. The
+  owner will test on their phone. Use `https://exampulse.xyz/scan`, not the
+  previous immutable dipvm4pm2.vercel.app deployment, which cannot update.
 
 ## Verification evidence
 

@@ -27,10 +27,10 @@ by this backlog entry.
 
 ## OCR startup timeout and late readiness
 
-Follow-up: owner-approved download-on-/scan-open is prepared locally in
+Follow-up: owner-approved download-on-/scan-open is deployed as `738d522`; see
 [SCANNER_MODEL_PREFETCH_20261019.md](SCANNER_MODEL_PREFETCH_20261019.md). It overlaps
-asset transfer with code entry; production remains `5e2c182` until separately
-authorized release. Persistent caching and phone speed measurements remain open.
+asset transfer with code entry; hosted release/public checks passed. Persistent
+caching and phone speed/memory acceptance remain open.
 
 Current status: the scoped recovery fix and in-place preparation panel are
 deployed as production release `5e2c182`, after owner-approved direct rollout,

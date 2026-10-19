@@ -16,6 +16,20 @@ remain separate from deployment success.
 
 ## Production application is deployed
 
+### Early-download follow-up release: 738d522
+
+The owner explicitly requested pushing the tested prefetch change for phone
+testing. Current production is now `738d522b16168d4744c2ae9b941648d6968f951b`,
+Vercel deployment `CDshdyXMEcKY7AuT1sd1Pysud4Z1`, Ready / Production / Current
+on `https://exampulse.xyz`. Candidate gate `39245428897` and main gate
+`39245689194` passed. Public login/scanner, authentication guards and compiled
+prefetch-bundle checks passed; there were no database/configuration/data edits.
+Prior production `5e2c182`, deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, is retained
+as the application fallback. Phone timing/memory and real camera/OCR acceptance
+of this new optimization remain pending, not inferred from deployment success.
+See [SCANNER_MODEL_PREFETCH_20261019.md](SCANNER_MODEL_PREFETCH_20261019.md)
+for exact evidence and test instructions. All release history below is retained.
+
 ### Scanner follow-up release: 5e2c182
 
 After reviewing the local preview, the owner explicitly approved direct production
