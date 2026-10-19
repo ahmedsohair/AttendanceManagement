@@ -10,8 +10,10 @@ Web dependency remediation `947db8a` now passes the local zero-finding web audit
 CI and both Vercel branch deployments have now passed for `01bdd3b`; the patched
 private fallback and guarded upgrade rehearsals also passed. The owner has now
 reported a successful live production upgrade: 20 migrations committed, original
-rows preserved and integrity/catalog/audit checks passed. The production-configured
-domain deployment, smoke checks and production monitoring remain outstanding. See
+rows preserved and integrity/catalog/audit checks passed. Production release
+`d869264` is now Ready/Current at `exampulse.xyz`; public authorization smoke
+checks and the authenticated operational checker passed. Authenticated workflow,
+scheduled monitoring and actual delivery/webhook checks remain outstanding. See
 `PRODUCTION_CUTOVER_20261019.md` for the current owner decisions and sequence.
 
 The initial 18 October decision was not to promote while the reported iPhone

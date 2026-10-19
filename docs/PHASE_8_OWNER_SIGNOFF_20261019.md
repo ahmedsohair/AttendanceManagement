@@ -22,8 +22,10 @@ and a secret scan. Hosted CI and both Vercel branch deployments subsequently
 passed for `01bdd3b`, as did the patched private fallback and guarded-upgrade
 rehearsals. The owner subsequently reported the successful guarded production
 database commit (20 migrations, original records preserved, precommit and audit
-checks passed). The production-configured app deployment, smoke checks and
-production monitoring remain pending; successful previews are not domain promotion.
+checks passed). Production release `d869264` has now been independently verified
+Ready/Current at `exampulse.xyz`; public authorization and authenticated checker
+smoke tests passed. Authenticated workflows, the production scheduler and actual
+delivery/webhook checks remain pending; these are not inferred from deployment.
 
 This is the remaining operator checklist, not a new hardening phase or production
 promotion authorization. The owner configured an external scheduler and reported

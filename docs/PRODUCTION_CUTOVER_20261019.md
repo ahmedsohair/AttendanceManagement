@@ -10,8 +10,68 @@ to verify it before travel, not an exam-eve emergency deployment.
 Those initial statements alone did not prove there had been no production writes
 since the backup, confirm that no browser had unresolved queued marks, or waive
 remaining risks. The subsequent owner decisions below are explicit. Production
-database migration has now committed as reported below; application deployment
-and production monitoring acceptance remain separate.
+database migration and the production application deployment have now completed
+as reported below. Authenticated workflow and scheduled monitoring acceptance
+remain separate from deployment success.
+
+## Production application is deployed
+
+The agent verified both production monitoring secrets were saved as Secret with
+Production-only scope, without revealing values. Release-gate run `39225198957`
+passed for `d869264369034fb335546636cd97d273ecd78a6a` on `hardening/staging`.
+With the database upgrade committed and production configuration prepared,
+`main` was fast-forwarded from `be55c6f` to that exact tested SHA. No force push,
+staging-data restore, or staging artifact promotion was used.
+
+Vercel built the commit using the production project's environment and reported
+deployment `8EZWuRA61gymbAPFMyKX3LXGdozf` Ready, Production, Current, with
+`https://exampulse.xyz` assigned. Build duration was 1 minute 40 seconds. Its
+immutable deployment URL is `https://attendance-management-admin-omc16bbgm.vercel.app`.
+The deployment settings show region `sin1` and the app's Node 22.x runtime
+alongside the dashboard's 24.x default. The repeat `main` release-gate run
+`39225715249` also completed successfully.
+
+Production smoke checks completed by the agent:
+
+- `/login` and `/scan`: HTTP 200; production admin login rendered correctly.
+- Unauthenticated `/health`: HTTP 307 to `/login?next=%2Fhealth`.
+- Unauthenticated `/api/auth/me`: HTTP 401.
+- Unauthenticated POST `/api/operations/check`: HTTP 401 with `no-store`.
+- Scanner telemetry without Origin: HTTP 403; the same unauthenticated request
+  with the correct Origin returned HTTP 401. Both checks blocked access; the
+  origin-less rejection is not a failed authentication regression.
+- Authenticated POST to the exact production `/api/operations/check` endpoint
+  using the newly saved production checker secret: HTTP 200,
+  `{"status":"checked","accepted":0,"unknown":0,"suppressed":0}`;
+  request ID `5e4ff440-463e-45cc-95af-c668107270d1`. This verifies the configured
+  checker and database query path, not inbox delivery or a running scheduler.
+
+No production attendance marks, roster imports, assignment/account edits,
+exports, or real emails were submitted during these smoke checks. Diagnostic
+observations may be recorded by the enabled telemetry. Deployment proof is saved
+in ignored `test-results/production-cutover-20261019/vercel-production-ready.png`.
+
+The owner signed into the immutable production deployment URL through Vercel's
+Visit link, without sharing a password. Read-only authenticated UI checks passed:
+dashboard rendered, six existing sessions were listed (two active, four closed,
+no drafts), the invigilator screen rendered 21 invigilators, and Health showed
+persisted API observations with zero 5xx in the small current window. Health
+captured `2026-10-19T08:56:17.418Z`, with monitoring query round trip 59 ms and no
+threshold warnings. This is not a capacity test or a device/crash guarantee.
+
+The canonical `exampulse.xyz` browser tab was still signed out; authentication
+cookies are host-specific. The owner was asked to sign in there separately. Do
+not copy cookies/tokens between origins or claim canonical authenticated UI
+acceptance from the immutable-host sign-in alone. No student records or access
+codes were printed for the read-only invigilator check.
+
+Invigilator/attendance write workflows, production scheduler configuration and
+real delivery/webhook acceptance remain pending. A separate cron-job.org tab was
+opened and required owner sign-in. The proposed production job is every 15
+minutes with the protected production endpoint and the new production checker
+token, entered by the owner. No job has been created or enabled yet. Leave the
+staging job intact. Do not present deployment success as full workflow
+acceptance or infer that staging's scheduler monitors production.
 
 ## Live database upgrade committed
 
@@ -39,16 +99,17 @@ reported and is not assumed.
 
 Do not rerun the migration or restore the pre-upgrade backup as an application
 rollback. Keep staff out until the matching production-configured application
-is deployed and verified. The live domain has not been promoted by the agent at
-this checkpoint. Production Vercel settings require account sign-in; a dedicated
-browser tab was opened for the owner, without requesting credentials in chat.
+is deployed and verified. Application deployment and its initial public/monitoring
+smoke checks subsequently passed as recorded above; authenticated workflow and
+scheduler checks remain outstanding. Production Vercel settings were inspected
+after the owner signed into a dedicated tab, without sharing credentials.
 
 ### Production Vercel configuration inspection
 
 After the owner signed in, the agent verified the actual production project is
 `attendance-management-admin`, ID `prj_BUz1WBp22FSITsDwW3CiRszSe0sP`, serving
-`exampulse.xyz`. Its active deployment is still historical `be55c6f` on `main`;
-no hardened application promotion has occurred at this checkpoint. The existing
+`exampulse.xyz`. At the initial inspection the active deployment was historical
+`be55c6f` on `main`; it has since been replaced by the release recorded above. The existing
 project is connected to `ahmedsohair/AttendanceManagement` with root directory
 `apps/admin`, Next.js preset, no dashboard build/install override, and outside-root
 files enabled. The dashboard default Node version is 24.x; the reviewed app's
@@ -65,14 +126,15 @@ The agent saved five new non-secret variables, scoped only to Production:
 `OPS_MONITORING_ENABLED=true`, `SCANNER_TELEMETRY_ENABLED=true`,
 `NEXT_PUBLIC_SCANNER_TELEMETRY_ENABLED=true`, `OPS_ALERTS_ENABLED=true`, and
 `OPS_ALERT_EMAIL=ahmad.sohair@gmail.com`. The UI confirmed success and that a new
-deployment is required. These are not activated in the running old deployment.
+deployment is required. They are now included in the production release above.
 
 `scripts/prepare-production-monitoring-secrets.ps1` generated two distinct
 32-byte random production-only secrets into an owner-only ACL-protected file
 outside Git. Values were not printed or stored in documentation. The owner was
 asked to import `OPS_HEALTH_SECRET` and `OPS_CHECK_SECRET` into this project's
-Production environment as Secret. Their save confirmation remains pending;
-do not claim the production checker or scheduler is active. Do not reuse the
+Production environment as Secret. Both saves were subsequently independently
+verified in the UI, and the authenticated checker passed on production. The
+production scheduler remains unconfigured/unverified. Do not reuse the
 staging secrets or modify staging's scheduled job to guess a production secret.
 The current private file is under `C:\Users\ahmad\ExamPulseSecrets`; retain it
 securely for the production scheduler setup. Do not generate replacements
