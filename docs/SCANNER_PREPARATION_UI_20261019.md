@@ -2,9 +2,11 @@
 
 ## Status
 
-Owner-approved refinement of the existing web scanner. Implemented and verified
-locally on top of startup-recovery commit `7532cc4`; not pushed or deployed.
-Production remains `d869264`. Self-service access recovery is still deferred.
+Owner-approved refinement of the existing web scanner, on top of startup-recovery
+commit `7532cc4`. Released to production as `5e2c182` on 19 October after explicit
+owner approval for direct production rollout and passing hosted release gates.
+See [PRODUCTION_CUTOVER_20261019.md](PRODUCTION_CUTOVER_20261019.md) for deployment,
+public checks and rollback evidence. Self-service access recovery remains deferred.
 
 ## Experience
 
@@ -86,9 +88,11 @@ removed; preserve the workspace/link safety rules.
 
 ## Release boundary
 
-No push, deployment, hosted configuration edit, migration, real email or live
-business-data mutation occurred. Verify the combined recovery/panel candidate
-on an authorized staging deployment with synthetic rooms before any production
-update. The loading UI does not reduce model size or certify the unresolved
+The earlier local-only boundary is superseded by the owner's explicit approval
+for direct production deployment. The tested commit was pushed to main and built
+with the production project's existing configuration, not promoted from staging.
+No hosted configuration edit, migration, real email or live business-data mutation
+was performed for this release. Public route/bundle verification passed; real-phone
+camera/OCR acceptance remains open. The loading UI does not reduce model size or certify the unresolved
 iPhone restart issue. See [SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md)
 for the cold-start evidence and scoped recovery behavior.

@@ -7,8 +7,10 @@ It adds truthful phase feedback and lightweight motion, not a model-speed claim.
 ## Status and scope
 
 The owner approved a focused fix after reporting repeated OCR timeout followed
-by near-instant Retry success. The candidate is prepared and tested locally;
-it has not been pushed or deployed. Production remains release `d869264`.
+by near-instant Retry success. It is now deployed with the loading panel as
+production release `5e2c182`, after explicit direct-rollout approval and hosted
+release-gate success. See [PRODUCTION_CUTOVER_20261019.md](PRODUCTION_CUTOVER_20261019.md)
+for release/rollback evidence. Physical-phone acceptance remains open.
 No attendance/Auth/API contracts, model versions, dependencies, database schema,
 hosting settings, CPU-thread settings or production records were changed.
 
@@ -98,7 +100,8 @@ The old timeout reproduction fixture is historical evidence; use committed
 
 ## Before deployment and further optimization
 
-Use an authorized staging deployment and synthetic invigilator/room, then check
+The owner chose direct production rollout rather than a separate staged acceptance
+pass. Use an authorized synthetic invigilator/room for remaining device checks:
 cold and warm startup on representative Android and iPhone browsers. Confirm
 automatic late readiness, manual lookup during loading, pause/review preservation,
 Back, camera restart and background/foreground behavior. Do not treat local

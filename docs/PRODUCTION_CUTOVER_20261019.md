@@ -16,6 +16,44 @@ remain separate from deployment success.
 
 ## Production application is deployed
 
+### Scanner follow-up release: 5e2c182
+
+After reviewing the local preview, the owner explicitly approved direct production
+rollout of the scanner startup recovery/loading UI, rather than waiting for a
+separate staging/device acceptance pass. This supersedes the earlier local-only
+scanner reports; it does not certify phone performance or the unresolved iPhone
+blank-page/restart issue.
+
+- Exact release SHA: `5e2c1829e396fdcac99037a12baa6f1e3d2bcbf9`.
+- Pre-production hosted gate on hardening/staging: run `39240897950`, success.
+  Quality/tests/build, dependency audit, secret scan and temporary migration
+  validation all passed. Local candidate verification: 140 tests and build passed.
+- Main was fast-forwarded from `d869264` to the exact tested SHA without force.
+  Repeat main gate `39241156606` passed. No dependency/schema/config changes.
+- Production Vercel deployment `6W36WRbULxgjx8GysDnHrstpZz4j`, immutable URL
+  `https://attendance-management-admin-dipvm4pm2.vercel.app`, reported Ready,
+  Production, Current, with `https://exampulse.xyz` assigned. Build: 1m 18s.
+- Retain prior patched deployment `8EZWuRA61gymbAPFMyKX3LXGdozf`, release
+  `d869264`, as the application rollback target. It was independently observed
+  Ready before rollout; do not delete it. No database restore is involved.
+- Canonical-domain HTTP checks after activation: GET /login and /scan 200;
+  unauthenticated GET /health 307 to /login?next=%2Fhealth; GET /api/auth/me 401;
+  unauthenticated POST /api/operations/check 401 with no-store.
+- The actual public scanner bundle
+  `/_next/static/chunks/app/scan/page-0a05b1a0ed768cc9.js` contains the preparation
+  panel, real setup-stage labels, Retry action and late-load recovery copy; the
+  removed progress-bar label and misleading Camera ready message are absent.
+  Browser verification showed the canonical public invigilator login rendering.
+- No exam/roster/account/attendance changes, real emails, migrations, credential
+  changes or scheduler edits were performed for this follow-up release. The
+  prior closed synthetic exam remains closed. No authenticated camera/OCR or
+  real-phone acceptance is claimed from login/bundle checks; ask the owner to
+  test their phone using an existing authorized room without marking students.
+
+Proof: ignored
+`test-results/production-cutover-20261019/scanner-release-ready.jpg`.
+The original deployment and smoke history below remain historical evidence.
+
 The agent verified both production monitoring secrets were saved as Secret with
 Production-only scope, without revealing values. Release-gate run `39225198957`
 passed for `d869264369034fb335546636cd97d273ecd78a6a` on `hardening/staging`.

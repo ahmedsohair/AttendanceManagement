@@ -27,17 +27,15 @@ by this backlog entry.
 
 ## OCR startup timeout and late readiness
 
-Current status: a scoped recovery fix is now prepared locally, with 128 passing
-web tests and a passing type-check/production build. It is not deployed, and no
-phone speed improvement is claimed. See
-[SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md) for the candidate,
-asset-size evidence and remaining staging/device acceptance. The following
-observations describe the production baseline until that candidate is deployed.
-The owner subsequently approved an in-place preparation panel. That candidate
-now passes 137 web tests and a production build; visual/interaction checks and
-remaining hosted acceptance are in
-[SCANNER_PREPARATION_UI_20261019.md](SCANNER_PREPARATION_UI_20261019.md). Neither
-candidate is deployed, and actual model-speed optimization remains open.
+Current status: the scoped recovery fix and in-place preparation panel are
+deployed as production release `5e2c182`, after owner-approved direct rollout,
+140 passing web tests/build and both hosted branch release gates. Public route
+and scanner-bundle checks passed; physical-phone camera/OCR acceptance and actual
+model-speed optimization remain open. See
+[SCANNER_OCR_STARTUP_20261019.md](SCANNER_OCR_STARTUP_20261019.md) for asset-size
+evidence and [SCANNER_PREPARATION_UI_20261019.md](SCANNER_PREPARATION_UI_20261019.md)
+for visual/interaction evidence. The timing-gap observations below describe
+the pre-fix baseline, not an outstanding known gap in the released source.
 
 Priority: near-term scanner reliability investigation; higher urgency than
 self-service recovery. The owner reports repeated timeout followed by near-
@@ -67,9 +65,9 @@ page/process-restart report; one does not prove the cause of the other.
 - Verify delayed success before/after timeout and Retry, genuine failure/retry,
   manual-mode interaction, background/foreground, room changes and teardown.
 
-Implemented local scope: `apps/admin/src/components/web-scanner-app.tsx`, OCR
-error copy and startup regression tests. Dependencies, the timeout value and
-production deployment remain unchanged. Actual cold-start optimization and
+Implemented scope: `apps/admin/src/components/web-scanner-app.tsx`, loading panel,
+OCR error copy and startup regression tests. Dependencies and the timeout value
+remain unchanged; production was updated as recorded above. Actual cold-start optimization and
 device timing/acceptance remain open; this backlog item is not fully closed.
 See [SCANNER_SAFARI_WASM_TRIAL.md](SCANNER_SAFARI_WASM_TRIAL.md) for the source
 analysis and reproduction scope.
