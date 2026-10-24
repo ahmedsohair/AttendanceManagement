@@ -1,5 +1,15 @@
 # Phase 8: activation and acceptance
 
+## Current monitoring policy: 24 October 2026
+
+The October 24 update described below is deployed to staging and production at
+source `5fddf53`. Missing telemetry requires observed scanner API attempts and
+its notifications have a 24-hour rolling cap per environment. Other alert
+categories retain their original policies. Both test exams remain Active.
+Read `OPERATIONS_INVESTIGATION_20261024.md` for exact release gates, deployment
+references and the owner-approved dependency remediation. Older activation and
+"local update" checkpoints below are historical.
+
 ## Live checkpoint: 4 September 2026
 
 - Owner reports the staging migration and seven monitoring variables saved; subsequently enabled staging alerts and redeployed for the controlled test below.

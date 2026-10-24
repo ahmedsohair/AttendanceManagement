@@ -563,3 +563,22 @@ If a hard gate fails, retain the maintenance boundary, investigate and set a new
 cutover time. An application fallback must preserve newer attendance/audit data
 and the upgraded schema. A database restore is not an automatic rollback and
 must never discard writes or unresolved device queues to make a release pass.
+
+## Monitoring and security follow-up - 24 October 2026
+
+Current canonical production is source `5fddf5301db1271bd308485110c02e05b833abed`,
+deployment `HWp5BG1tf6uCDKixhsEdUZ23WHSC`, on `https://exampulse.xyz`. Both the
+candidate and repeat main release gates passed, including the all-severity web
+dependency audit. Nodemailer is pinned to 10.2.1 and shared validation uses patched
+Zod 4.6.7 with explicit preservation of prior identifier/email input formats.
+
+Missing telemetry now needs observed scanner API attempts, not merely an Active
+exam, and its notifications have a persistent rolling 24-hour cap per environment.
+Other category thresholds and scheduler settings are unchanged. The owner
+explicitly chose to keep both older test exams Active; their states and data were
+not changed. No hosted migration or credential change was needed.
+
+Read `OPERATIONS_INVESTIGATION_20261024.md` for the investigation, previously
+blocked candidate, approved scope expansion, compatibility tests, exact gates,
+staging/production evidence and rollback limitations. Earlier source/deployment
+references in this cutover document are historical, not the current runtime.

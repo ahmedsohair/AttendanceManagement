@@ -267,3 +267,65 @@ covering acceptance and normalized results. The oversized-array tests separately
 cover the intentional resource-exhaustion fix rather than expecting old issue
 enumeration behavior. Hosted release-gate and deployment results remain to be
 recorded after the updated candidate is pushed.
+
+## Completed rollout - 2026-10-24
+
+The approved monitoring and dependency release is deployed to both staging and
+production at exact source `5fddf5301db1271bd308485110c02e05b833abed`.
+
+- Candidate gate passed all jobs:
+  https://github.com/ahmedsohair/AttendanceManagement/actions/runs/40061813679
+- `main` was fast-forwarded from `51bb652` to the tested source without force.
+  The repeat main gate passed all jobs:
+  https://github.com/ahmedsohair/AttendanceManagement/actions/runs/40061996419
+- Staging deployment `373HLu8JjqCyhu8PoGSSmfg6hYuE` is Ready / Production /
+  Current in the separate staging project, assigned to
+  `https://exampulse-stagings.vercel.app`. Its immutable URL is
+  `https://exampulse-stagings-6993hxlmb-ahmadsohair-1977s-projects.vercel.app`.
+- Production deployment `HWp5BG1tf6uCDKixhsEdUZ23WHSC` is Ready / Production /
+  Current in `attendance-management-admin`, assigned to `https://exampulse.xyz`.
+  Its immutable URL is `https://attendance-management-admin-mcnimkjzf.vercel.app`.
+  The existing deployment pipeline assigned domains; no failed check was
+  overridden and no production credential/environment setting was changed.
+- Canonical staging and production `/scan` returned 200. Production `/login`
+  returned 200; unauthenticated `/api/auth/me` and POST `/api/operations/check`
+  returned 401. The checker response retained `Cache-Control: no-store`. No
+  authenticated manual check or provider-send test was invoked.
+- Production scanner bundle `page-77d31fd2187a170b.js` retains Retry OCR and both
+  speculative model URLs and references only production Supabase project
+  `mtoyhpyxqhfwhcrysqon`, not staging `bjoguceapwquyczbhlyp`. Staging bundle
+  `page-28c828a5c4ef6da2.js` retained the corresponding features with staging
+  configuration only. No live phone/camera performance claim follows from this.
+- Signed-in production Health at `2026-10-24T04:28:34.861Z` reported two Active
+  exams, zero recent/stale scanners, zero pending/conflict totals, no current
+  threshold warnings and alert sending enabled. Its historical telemetry alert
+  remains visible with claim time `2026-10-24T04:00:39.599754Z`; history was not
+  cleared. The window includes one expected auth/me 401 from the public smoke
+  check, so this snapshot alone is not a zero-API-traffic policy test. Synthetic
+  policy tests and the verified source establish the idle-exam rule change.
+- The production Exams page independently confirmed `Test exam sohair` and
+  `Test Exam post` remain in Live Exam Sessions (2). No close action was used.
+- The first observed normal production check after rollout, scheduled for
+  `2026-10-24T04:30Z` and executed at `04:30:31Z`, returned HTTP 200 with
+  `{"status":"checked","accepted":0,"unknown":0,"suppressed":0}` in its
+  saved cron-job.org response. This was the existing scheduled job, not a manual
+  test invocation. No alert was attempted. It confirms operation after deployment,
+  not proof that an arbitrary future monitoring failure can always be detected.
+- Ignored local proof: `test-results/operations-release-20261024/production-ready.png`
+  and `production-health.png` in the same directory.
+
+No hosted database migration, attendance/roster write, exam-state change, real
+email send, credential rotation or scheduler-setting change was performed by
+this rollout. The naturally scheduled jobs remain enabled. The old production
+deployment `83vuD9cUDpjqrXX8RB7h4W2eSgk7` was retained, not deleted; it has the
+now-known dependency findings and old alert policy, so it is an emergency
+application rollback reference, not a newly security-certified release. Do not
+restore a database or clear device outboxes as an application rollback step.
+
+Railway shared-secret inventory, Supabase future-table grants, physical iPhone
+acceptance and exam-load/capacity verification remain separate outstanding work.
+The clean checks here do not prove absence of credential misuse or future bugs.
+
+Final rollout notes are kept in a local documentation-only commit rather than
+triggering another pair of deployment builds. Runtime source remains the tested
+`5fddf53` on both remote release branches.
