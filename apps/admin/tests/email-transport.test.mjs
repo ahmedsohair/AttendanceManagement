@@ -182,6 +182,21 @@ test("patched SMTP parser does not append comment-separated domains to a quoted 
   assert.deepEqual(result.envelope.to, ["user@example.com"]);
 });
 
+test("patched SMTP parser keeps nested comments and quoted group text out of the envelope", async () => {
+  const transport = nodemailer.createTransport({ streamTransport: true, buffer: true });
+  for (const to of [
+    "Staff (x(y) <other@attacker.test>) <staff@example.test>",
+    "Group: (a; <other@attacker.test>) <staff@example.test>;",
+    'Group: "a;" "<other@attacker.test>" <staff@example.test>;'
+  ]) {
+    const result = await transport.sendMail({ from: "sender@example.test", to, text: "Synthetic parser regression" });
+    assert.deepEqual(result.envelope.to, ["staff@example.test"]);
+  }
+  const quoted = await transport.sendMail({ from: "sender@example.test", to: '<"a@attacker.test>"@example.test>', text: "Synthetic parser regression" });
+  assert.equal(quoted.envelope.to.length, 1);
+  assert.ok(quoted.envelope.to[0].endsWith("@example.test"));
+});
+
 test("SMTP failures are wrapped with transient and permanent provider semantics", async (t) => {
   const cases = [
     { name: "connection failure", error: Object.assign(new Error("connection failed"), { code: "ECONNECTION" }), transient: true },

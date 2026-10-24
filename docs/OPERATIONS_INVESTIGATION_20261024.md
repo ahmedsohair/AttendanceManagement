@@ -197,3 +197,73 @@ with the existing hosted Web release gate's isolated checkout and pinned
 Node/npm install, rather than reinstalling through the old local dependency tree.
 Production rollout and final hosted evidence must be recorded separately once
 verified; this authorization alone does not establish that deployment succeeded.
+
+### Candidate gate result - deployment held
+
+- Candidate `17bca9a5bd10b302c4af78775dfb374bcb2ae6de` was committed and pushed
+  only to `hardening/staging`. The push also includes the previously local,
+  documentation-only `ccd690a` ancestor. `main` was not advanced.
+- Hosted gate:
+  https://github.com/ahmedsohair/AttendanceManagement/actions/runs/40060995096
+- Clean pinned-runtime install, full web tests, type-check, build, rehearsal
+  checks, secret scan and temporary-database migration validation passed. This
+  resolves the earlier local installation mismatch as a candidate-quality
+  concern; it does not repair the old main-checkout dependency installation.
+- The web dependency audit failed with actual findings, not a registry timeout.
+  A separate lockfile-only audit confirmed two affected packages: Nodemailer
+  (moderate) and Zod (high). No security check was bypassed or weakened.
+- Nodemailer 10.0.9 is affected by newly reported parser/DKIM advisories. A
+  same-major fix is available. Official references:
+  https://github.com/advisories/GHSA-8c8m-p3m8-cjg8
+  https://github.com/nodemailer/nodemailer/releases
+- Zod's reviewed advisory was updated October 23 and lists versions below 4.6.6
+  as affected. The shared package currently declares Zod 3. Its fixed-version
+  upgrade therefore needs explicit compatibility work around shared request
+  validation, not a blind audit-fix or a `zod/v3` import that hides the problem.
+  Official reference: https://github.com/advisories/GHSA-mrhx-c7xc-m3w5
+- Requested owner approval to extend this monitoring-only release to both
+  dependency repairs and validation compatibility testing. No such dependency
+  change has been made at this checkpoint.
+- Vercel staging candidate `CZ844feh1brwHu4cwUWeWEFB4Nkm` built but showed
+  `Checks Failed` / promotion blocked. Do not override that requirement.
+- Production-project Preview `DY33uYwzSViQKtraC8LbQ7gH3Dyj` built Ready but was
+  not promoted. A Ready build does not replace the failed security gate.
+- The canonical production deployment remains source `51bb652` /
+  `83vuD9cUDpjqrXX8RB7h4W2eSgk7`. No business data, exam states, production
+  credentials, schedulers or database schema were changed. Alert policy on
+  production remains the previous version pending a passing release gate.
+
+### Approved dependency remediation
+
+The owner explicitly approved fixing both dependencies and verifying them before
+deployment. The source update pins Nodemailer 10.2.1 and Zod 4.6.7; the generated
+lockfile changes only those resolutions and their workspace declarations.
+
+Zod is imported from its patched main entry point, not a legacy `zod/v3`
+compatibility entry. Explicit identifier and email regular expressions preserve
+the application's previous Zod 3 formats; no stricter UUID version/variant or
+different email default is silently adopted. Existing normalization, defaults,
+strict object handling, enum choices and maximum collection sizes are retained.
+The newer parser rejects oversized constrained arrays without producing an issue
+for every invalid element. Generic API error classification still recognizes
+`ZodError` and does not expose raw validation diagnostics.
+
+Added persistent tests cover request normalization/defaults/strictness, identifiers,
+emails, collection bounds, attendance/access enums, and SMTP recipient-envelope
+handling for nested comments, quoted group text and quoted local parts. SMTP
+tests use only in-memory stream transport; no email provider is contacted.
+
+Local verification used a separate ordinary Git clone at
+`C:\dev\exampulse-ops-release-20261024`, with its own non-linked `node_modules`.
+Node 22.22.2 and npm 12.2.1 were invoked from package-cache tooling; no global
+runtime or main-checkout dependencies were changed. No environment files were
+copied. The protobufjs postinstall remained blocked, consistent with the approved
+installer policy. Preserve this checkout unless cleanup is separately approved.
+
+Results in the isolated checkout: clean installation, full web suite, web
+type-check and zero-finding web production dependency audit passed. A separate
+before/after comparison against the untouched previous schemas passed 783 cases
+covering acceptance and normalized results. The oversized-array tests separately
+cover the intentional resource-exhaustion fix rather than expecting old issue
+enumeration behavior. Hosted release-gate and deployment results remain to be
+recorded after the updated candidate is pushed.

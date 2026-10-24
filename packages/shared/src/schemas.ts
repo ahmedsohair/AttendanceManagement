@@ -3,6 +3,9 @@ import { z } from "zod";
 const asciiControlCharacterPattern = /[\u0000-\u001f\u007f]/;
 const examDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const examStartTimePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+// Preserve the application's Zod 3 input formats while using the patched Zod 4 parser.
+const identifierPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const emailAddressPattern = /^(?!\.)(?!.*\.\.)([A-Z0-9_'+\-\.]*)[A-Z0-9_+-]@([A-Z0-9][A-Z0-9\-]*\.)+[A-Z]{2,}$/i;
 
 function isRealCalendarDate(value: string) {
   if (!examDatePattern.test(value)) {
@@ -45,7 +48,7 @@ export function normalizeRoomCode(value: string) {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
 }
 
-export const uuidSchema = z.string().uuid("A valid identifier is required.");
+export const uuidSchema = z.string().regex(identifierPattern, "A valid identifier is required.");
 
 export const emailAddressSchema = z
   .string()
@@ -54,7 +57,7 @@ export const emailAddressSchema = z
     message: "Email address contains invalid control characters."
   })
   .transform((value) => value.trim())
-  .pipe(z.string().email("Enter a valid email address."))
+  .pipe(z.string().regex(emailAddressPattern, "Enter a valid email address."))
   .transform((value) => value.toLowerCase());
 
 export const examDateSchema = z
