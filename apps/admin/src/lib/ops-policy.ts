@@ -6,11 +6,13 @@ export function evaluateOperations(input: {
   activeExams: number; truncated: boolean;
 }) {
   const api = summarizeTelemetry(input.records);
+  let scannerApiAttempted = false;
   const scanner = new Map<string, { event: string; browser: string; device: string; samples: number; errors: number; durations: number[] }>();
   for (const raw of input.scannerReports) {
     const report = validateScannerReport(raw);
     if (!report) continue;
     for (const metric of report.events) {
+      if (["lookup", "mark", "sync"].includes(metric.event) && metric.outcome !== "cancelled") scannerApiAttempted = true;
       const key = `${metric.event}/${report.browser}/${report.device}`;
       const group = scanner.get(key) || { event: metric.event, browser: report.browser, device: report.device, samples: 0, errors: 0, durations: [] };
       group.samples++; group.errors += Number(metric.outcome === "error");
@@ -28,7 +30,8 @@ export function evaluateOperations(input: {
   if (input.databaseMs >= 2000) alerts.push("database_slow");
   if (input.bounces > 0) alerts.push("email_bounces");
   if ([...scanner.values()].some((g) => ["boundary_error", "runtime_error", "unhandled_rejection", "ocr_init"].includes(g.event) && g.errors > 0)) alerts.push("scanner_errors");
-  if (input.activeExams > 0 && requests === 0) alerts.push("telemetry_missing");
+  // A published exam or idle heartbeat does not imply that API traffic is expected.
+  if (!input.truncated && input.activeExams > 0 && scannerApiAttempted && requests === 0) alerts.push("telemetry_missing");
   return { api, alerts, scanner: [...scanner.values()].map(({ durations, ...group }) => {
     durations.sort((a, b) => a - b);
     return { ...group, p95: durations.length ? durations[Math.ceil(durations.length * 0.95) - 1] : null };

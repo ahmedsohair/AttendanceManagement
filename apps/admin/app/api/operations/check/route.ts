@@ -1,6 +1,7 @@
 import { getOperationsSnapshot } from "@/lib/ops-monitoring";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { dispatchOperationsAlerts, validOperationsSecret } from "@/lib/ops-alerts";
+import { randomUUID } from "node:crypto";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -19,6 +20,21 @@ export async function POST(request: Request) {
     const results = await dispatchOperationsAlerts(snapshot.alerts, {
       claim: async (key) => {
         signal.throwIfAborted();
+        if (key === "telemetry_missing") {
+          const previous = snapshot.delivery.find((row) => row.key === key);
+          if (previous) {
+            const claimId = randomUUID();
+            const now = Date.now();
+            // Compare-and-swap preserves cross-request deduplication without a schema change.
+            const { data, error } = await db.from("ops_alerts").update({
+              claimed_at: new Date(now).toISOString(), claim_id: claimId, state: "sending"
+            }).eq("key", key).eq("claim_id", previous.claim_id)
+              .lte("claimed_at", new Date(now - 24 * 60 * 60000).toISOString())
+              .select("claim_id").abortSignal(AbortSignal.any([signal, AbortSignal.timeout(1500)]));
+            if (error) throw error;
+            return data?.[0]?.claim_id || null;
+          }
+        }
         const { data, error } = await db.rpc("ops_claim_alert", { p_key: key }).abortSignal(AbortSignal.any([signal, AbortSignal.timeout(1500)]));
         if (error) throw error;
         return data as string | null;

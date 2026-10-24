@@ -13,7 +13,29 @@ test("operational policy rejects low sample rate claims and exposes sampling lim
   assert.equal(result.api.groups[0].latencyMs.p95, 250);
   assert.deepEqual(evaluateOperations({ ...input, truncated: true }).alerts, []);
   assert.deepEqual(evaluateOperations({ ...input, records: [record] }).alerts, []);
-  assert.deepEqual(evaluateOperations({ ...input, records: [], databaseMs: 2500, bounces: 1 }).alerts, ["database_slow", "email_bounces", "telemetry_missing"]);
+  assert.deepEqual(evaluateOperations({ ...input, records: [], databaseMs: 2500, bounces: 1 }).alerts, ["database_slow", "email_bounces"]);
+});
+test("missing API telemetry needs actual scanner requests, not idle active exams", () => {
+  const input = { records: [], scannerReports: [], databaseMs: 10, bounces: 0, activeExams: 2, truncated: false };
+  const scanner = (event: string, outcome = "ok") => ({ version: 1, browser: "safari", device: "ios", events: [{ event, outcome, durationMs: 250 }] });
+  assert.deepEqual(evaluateOperations(input).alerts, []);
+  const heartbeat = { version: 1, browser: "safari", device: "ios", events: [], health: { deviceId: "synthetic-device", pending: 0, conflicts: 0 } };
+  assert.deepEqual(evaluateOperations({ ...input, scannerReports: [heartbeat] }).alerts, []);
+  for (const event of ["lookup", "mark", "sync"]) {
+    for (const outcome of ["ok", "error"]) {
+      const active = { ...input, scannerReports: [scanner(event, outcome)] };
+      assert.deepEqual(evaluateOperations(active).alerts, ["telemetry_missing"]);
+      assert.deepEqual(evaluateOperations({ ...active, records: [record] }).alerts, []);
+      assert.deepEqual(evaluateOperations({ ...active, activeExams: 0 }).alerts, []);
+      assert.deepEqual(evaluateOperations({ ...active, truncated: true }).alerts, []);
+    }
+    assert.deepEqual(evaluateOperations({ ...input, scannerReports: [scanner(event, "cancelled")] }).alerts, []);
+  }
+  for (const event of ["camera", "ocr_init", "ocr_prediction"]) {
+    assert.deepEqual(evaluateOperations({ ...input, scannerReports: [scanner(event)] }).alerts, []);
+  }
+  assert.deepEqual(evaluateOperations({ ...input, scannerReports: [scanner("lookup", "invalid")] }).alerts, []);
+  assert.deepEqual(evaluateOperations({ ...input, scannerReports: [scanner("ocr_init", "error")] }).alerts, ["scanner_errors"]);
 });
 test("scheduler secret fails closed and alert dispatch does not retry ambiguous sends", async () => {
   const secret = "x".repeat(40);

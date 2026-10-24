@@ -16,7 +16,7 @@ Earlier sections below describe the original local implementation boundaries; th
 
 ## Implementation and safety boundaries
 
-Local implementation now includes a protected `/health` page, bounded service-only operational storage, authenticated scanner heartbeats, API completion timing, sampled client errors/OCR timings, and a protected alert check with a shared 15-minute per-category cooldown. Monitoring is disabled by default. No production migration, deployment, account change, or real alert was performed during implementation.
+Local implementation now includes a protected `/health` page, bounded service-only operational storage, authenticated scanner heartbeats, API completion timing, sampled client errors/OCR timings, and a protected alert check. The original cooldown was 15 minutes per category; the October 24 local update limits missing-telemetry reminders to 24 hours while preserving the other category cooldowns. See `OPERATIONS_INVESTIGATION_20261024.md` for release status and the updated rule. Monitoring is disabled by default. No production migration, deployment, account change, or real alert was performed during implementation.
 
 API metrics cover business route handlers, not middleware rejections, server actions, framework failures before handler entry, browser-process termination, or hosting outages. Streaming export timing measures response creation, not download completion. Client events are sampled, not a crash-rate denominator. Request IDs correlate application logs and stored request observations; this does not add request-level PostgreSQL query tracing.
 
@@ -74,11 +74,11 @@ await fetch('/api/telemetry/scanner', {
 ```
 
 - Run the protected check. Confirm `scanner errors` appears on Health and an alert reaches `ahmad.sohair@gmail.com`, including checking junk. Provider `accepted` alone does not meet inbox acceptance.
-- Run the check again inside 15 minutes; the same category must be suppressed. Another independent category can still alert. Persistent conditions can alert again after cooldown; this is intentional.
+- Run the check again inside 15 minutes; the same category must be suppressed. Another independent category can still alert. The October 24 local update retains this policy for all categories except `telemetry_missing`, which allows at most one claim per 24 hours per environment, including unconfirmed sends. Quiet Active exams alone must not trigger missing-telemetry mail. Verify the deployed source before expecting the updated behavior.
 - Verify invalid/missing scheduler authorization returns 401 with no email. Flag off returns 404. Invalid provider configuration or failed metric queries must not report success. An ambiguous provider send is recorded `unknown` and is not retried inside the cooldown.
 - Record deployment SHA, UTC timestamp, check outcome, inbox confirmation and cooldown evidence without secrets. Synthetic observations expire from the 15-minute view; no business-record cleanup is needed.
 
-Thresholds: mark 5xx >=5% with at least 10 observations in a route/region group; overall API 5xx >=10% with at least 20 observations; monitoring-query round trip >=2 seconds; at least one recent bounce/complaint; sampled boundary/runtime/rejection/OCR-init error; or active exams with no observed API requests. Quiet active exams may trigger missing telemetry without an outage. API rate alerts are suppressed when the 10,000-row dashboard window is truncated. Fatal function/hosting failures need independent uptime monitoring because this application cannot alert while unavailable.
+Thresholds: mark 5xx >=5% with at least 10 observations in a route/region group; overall API 5xx >=10% with at least 20 observations; monitoring-query round trip >=2 seconds; at least one recent bounce/complaint; sampled boundary/runtime/rejection/OCR-init error. With the October 24 local update, missing API telemetry requires at least one Active exam, a valid non-cancelled scanner `lookup`, `mark` or `sync` observation, and zero valid API completion reports in the same 15-minute window. An idle scanner, OCR/camera activity or Active status alone is insufficient. API rate and missing-telemetry alerts are suppressed when the 10,000-row window is truncated. Scanner reports are sampled and best-effort: simultaneous loss of all telemetry cannot be inferred from silence, so fatal function/hosting failures still need independent uptime monitoring.
 
 ## Rollback and completion
 

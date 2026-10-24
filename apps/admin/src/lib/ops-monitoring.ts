@@ -45,7 +45,7 @@ export async function getOperationsSnapshot() {
   const scanners = await db.from("ops_scanners").select("seen_at,pending,conflicts").gte("seen_at", new Date(Date.now() - 86400000).toISOString()).order("seen_at", { ascending: false }).limit(1000).abortSignal(signal);
   const sessions = await db.from("exam_sessions").select("id,name", { count: "exact" }).eq("status", "active").limit(100).abortSignal(AbortSignal.timeout(3000));
   const bounces = await db.from("email_deliveries").select("id", { count: "exact", head: true }).in("status", ["bounced", "complained"]).gte("updated_at", since).abortSignal(AbortSignal.timeout(3000));
-  const delivery = await db.from("ops_alerts").select("key,claimed_at,state").order("claimed_at", { ascending: false }).abortSignal(AbortSignal.timeout(3000));
+  const delivery = await db.from("ops_alerts").select("key,claimed_at,claim_id,state").order("claimed_at", { ascending: false }).abortSignal(AbortSignal.timeout(3000));
   if (scanners.error || sessions.error || bounces.error || delivery.error) throw new Error("Operational status unavailable.");
   const fresh = scanners.data.filter((row) => Date.parse(row.seen_at) >= Date.now() - 90000);
   const rows = events.slice(0, 10000);
