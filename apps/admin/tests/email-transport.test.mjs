@@ -107,6 +107,11 @@ test("access-code email uses SMTP stream transport and renders its recipient and
   assert.equal(options.to, "invigilator@example.test");
   assert.equal(options.subject, "ExamPulse access code");
   assert.equal(options.attachments, undefined);
+  for (const body of [options.text, options.html]) {
+    assert.match(body, /activates a replacement code later/);
+    assert.match(body, /stop working for new sign-ins/);
+    assert.doesNotMatch(body, /If a new code is generated later/);
+  }
 
   const streamResult = captured.streamResults[0];
   assert.equal(streamResult.envelope.to[0], "invigilator@example.test");
@@ -152,6 +157,18 @@ test("assignment email renders exam details and attaches the harmless guide fixt
   assert.deepEqual(options.attachments[0].content, guideFixture);
   assert.equal(captured.guideReads.length, 1);
   assert.equal(path.basename(captured.guideReads[0]), "exampulse-invigilator-guide.pdf");
+  for (const body of [options.text, options.html]) {
+    assert.match(body, /New to ExamPulse\?/);
+    assert.match(body, /personal access code separately/);
+    assert.match(body, /This assignment email does not include a new code/);
+    assert.match(body, /Use your existing active code unless your administrator has replaced it/);
+    assert.match(body, /20-40 seconds, sometimes longer/);
+    assert.match(body, /Lookup still needs internet access/);
+    assert.match(body, /Retry OCR when enabled/);
+    assert.match(body, /choose your assigned room, and allow camera access when asked/);
+    assert.doesNotMatch(body, /model downloads|scanner initialization|staging|production/i);
+    assert.doesNotMatch(body, /Wait 20-40 seconds for the OCR scanner to load/);
+  }
 
   const streamResult = captured.streamResults[0];
   assert.equal(streamResult.envelope.to[0], "staff@example.test");

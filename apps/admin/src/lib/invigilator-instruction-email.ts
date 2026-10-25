@@ -127,15 +127,16 @@ function buildInstructionText({
     buildRoomList(rooms),
     "",
     "Access code:",
-    "Use your existing ExamPulse access code. If you no longer have it, contact the exam administrator before the exam.",
+    "New to ExamPulse? Your administrator must provide your personal access code separately. Look for an email titled 'ExamPulse access code' or a code shared privately by your administrator. This assignment email does not include a new code.",
+    "Used ExamPulse before? Use your existing active code unless your administrator has replaced it. If you have not received a code, cannot find it, or cannot sign in, contact the exam administrator before the exam.",
     "",
     `Open the scanner here: ${scannerUrl(appBaseUrl)}`,
     "",
     "Please read the attached ExamPulse Invigilator Guide before the exam. It contains detailed instructions on how to use the app, including troubleshooting steps for common scanning or access issues.",
     "",
     "Quick reminder:",
-    "- Open the scanner link on your phone.",
-    "- Wait 20-40 seconds for the OCR scanner to load the first time.",
+    "- Open the scanner link before the exam. Sign in, choose your assigned room, and allow camera access when asked.",
+    "- First setup can take around 20-40 seconds, sometimes longer. Use manual entry while waiting; Lookup still needs internet access. If setup fails, use Retry OCR when enabled.",
     "- Keep only the printed student number inside the red scan box.",
     "",
     queryLine(),
@@ -176,7 +177,8 @@ function buildInstructionHtml(input: InstructionEmailInput) {
           </div>
           <div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:14px;padding:18px;margin-bottom:22px">
             <div style="font-size:13px;font-weight:700;color:#be123c;letter-spacing:.12em;text-transform:uppercase">Access code</div>
-            <div style="font-size:15px;line-height:1.55;margin-top:8px">Use your existing ExamPulse access code. If you no longer have it, contact the exam administrator before the exam.</div>
+            <p style="font-size:15px;line-height:1.55;margin:8px 0 0"><strong>New to ExamPulse?</strong> Your administrator must provide your personal access code separately. Look for an email titled 'ExamPulse access code' or a code shared privately by your administrator. This assignment email does not include a new code.</p>
+            <p style="font-size:15px;line-height:1.55;margin:10px 0 0"><strong>Used ExamPulse before?</strong> Use your existing active code unless your administrator has replaced it. If you have not received a code, cannot find it, or cannot sign in, contact the exam administrator before the exam.</p>
           </div>
           <p style="text-align:center;margin:0 0 24px">
             <a href="${escapeHtml(scanner)}" style="display:inline-block;background:#e4002b;color:#ffffff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Open ExamPulse Scanner</a>
@@ -185,8 +187,8 @@ function buildInstructionHtml(input: InstructionEmailInput) {
             <p style="margin:0 0 16px;color:#334155;line-height:1.55">Please read the attached ExamPulse Invigilator Guide before the exam. It contains detailed instructions on how to use the app, including troubleshooting steps for common scanning or access issues.</p>
             <div style="font-weight:700;margin-bottom:8px">Quick reminder</div>
             <ul style="margin:0;padding-left:20px;line-height:1.7;color:#334155">
-              <li>Open the scanner link on your phone.</li>
-              <li>Wait 20-40 seconds for the OCR scanner to load the first time.</li>
+              <li>Open the scanner link before the exam. Sign in, choose your assigned room, and allow camera access when asked.</li>
+              <li>First setup can take around 20-40 seconds, sometimes longer. Use manual entry while waiting; Lookup still needs internet access. If setup fails, use Retry OCR when enabled.</li>
               <li>Keep only the printed student number inside the red scan box.</li>
             </ul>
           </div>
@@ -340,7 +342,7 @@ function buildAccessCodeText({ accessCode, appBaseUrl, fullName }: AccessCodeEma
     "",
     "Use this code to access any active exam rooms assigned to you.",
     "",
-    "Please keep this code secure. If a new code is generated later, this code will stop working.",
+    "Please keep this code secure. If your administrator activates a replacement code later, this code will stop working for new sign-ins.",
     "",
     queryLine(),
     "",
@@ -368,7 +370,7 @@ function buildAccessCodeHtml(input: AccessCodeEmailInput) {
             <a href="${escapeHtml(scanner)}" style="display:inline-block;background:#e4002b;color:#ffffff;text-decoration:none;font-weight:700;border-radius:999px;padding:14px 24px">Open ExamPulse Scanner</a>
           </p>
           <p style="margin:0;color:#334155;line-height:1.55">Use this code to access any active exam rooms assigned to you.</p>
-          <p style="margin:12px 0 0;color:#334155;line-height:1.55">Please keep this code secure. If a new code is generated later, this code will stop working.</p>
+          <p style="margin:12px 0 0;color:#334155;line-height:1.55">Please keep this code secure. If your administrator activates a replacement code later, this code will stop working for new sign-ins.</p>
           <p style="margin:22px 0 0;color:#475569;line-height:1.55">${escapeHtml(queryLine())}</p>
           ${closingHtml()}
         </div>
